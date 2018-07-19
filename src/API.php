@@ -5,7 +5,7 @@
  *
  * @since 2.3
  */
-class API extends \Util\Singleton
+class API
 {
     /** @var array Elenco delle risorse disponibili suddivise per categoria */
     protected static $resources;
@@ -95,7 +95,7 @@ class API extends \Util\Singleton
         $page = isset($request['page']) ? (int) $request['page'] : 0;
         $length = setting('Lunghezza pagine per API');
 
-        $database = Database::getConnection();
+        $database = database();
 
         $kind = 'retrieve';
         $resources = self::getResources()[$kind];
@@ -220,7 +220,7 @@ class API extends \Util\Singleton
         }
 
         // Database
-        $database = Database::getConnection();
+        $database = database();
         $dbo = $database;
 
         $database->query('START TRANSACTION');
@@ -406,7 +406,7 @@ class API extends \Util\Singleton
      */
     public static function isCompatible()
     {
-        $database = Database::getConnection();
+        $database = database();
 
         return version_compare($database->getMySQLVersion(), '5.6.5') >= 0;
     }

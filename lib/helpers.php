@@ -13,7 +13,7 @@
  */
 function database()
 {
-    return \Database::getConnection();
+    return container()['database'];
 }
 
 /**
@@ -28,7 +28,7 @@ function database()
  */
 function prepare($parameter)
 {
-    return \Database::getConnection()->prepare($parameter);
+    return database()->prepare($parameter);
 }
 
 /**
@@ -101,7 +101,7 @@ function setting($nome, $again = false)
  */
 function flash()
 {
-    return \App::flash();
+    return container()['flash'];
 }
 
 /**
@@ -113,7 +113,7 @@ function flash()
  */
 function auth()
 {
-    return \Auth::getInstance();
+    return container()['auth'];
 }
 
 /**
@@ -125,7 +125,7 @@ function auth()
  */
 function trans()
 {
-    return \Translator::getInstance();
+    return container()['translator'];
 }
 
 /**
@@ -137,7 +137,7 @@ function trans()
  */
 function formatter()
 {
-    return \Translator::getFormatter();
+    return container()['formatter'];
 }
 
 /**
@@ -153,7 +153,7 @@ function formatter()
  */
 function tr($string, $parameters = [], $operations = [])
 {
-    return \Translator::translate($string, $parameters, $operations);
+    return trans()->translate($string, $parameters, $operations);
 }
 
 // Retrocompatibilità (con la funzione gettext)
@@ -173,5 +173,5 @@ if (!function_exists('_')) {
  */
 function logger()
 {
-    return Monolog\Registry::getInstance('logs');
+    return container()['auth'];
 }

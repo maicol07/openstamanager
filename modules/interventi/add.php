@@ -101,7 +101,7 @@ if (empty($data)) {
     if (null !== filter('data')) {
         $data = filter('data');
     } else {
-        $data = date(Translator::getFormatter()->getDatePattern());
+        $data = date(formatter()->getDatePattern());
     }
 }
 

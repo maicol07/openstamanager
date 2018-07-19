@@ -22,7 +22,7 @@ class Settings
     public static function getSettings()
     {
         if (empty(self::$settings)) {
-            $database = Database::getConnection();
+            $database = database();
 
             $settings = [];
             $references = [];
@@ -105,7 +105,7 @@ class Settings
         }
 
         if (empty($validator) || $validator->validate($value)) {
-            $database = Database::getConnection();
+            $database = database();
 
             $database->update('zz_settings', [
                 'valore' => $value,

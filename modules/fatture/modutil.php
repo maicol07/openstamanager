@@ -8,7 +8,7 @@ function get_new_numerofattura($data)
     global $dir;
     global $id_segment;
 
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     if ($dir == 'uscita') {
         // recupero maschera per questo segmento
@@ -50,7 +50,7 @@ function get_new_numerosecondariofattura($data)
     global $dir;
     global $id_segment;
 
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // recupero maschera per questo segmento
     $rs_maschera = $dbo->fetchArray('SELECT pattern FROM zz_segments WHERE id = '.prepare($id_segment));
@@ -85,7 +85,7 @@ function get_new_numerosecondariofattura($data)
  */
 function elimina_scadenza($iddocumento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query2 = 'DELETE FROM co_scadenziario WHERE iddocumento='.prepare($iddocumento);
     $dbo->query($query2);
@@ -98,7 +98,7 @@ function elimina_scadenza($iddocumento)
  */
 function aggiungi_scadenza($iddocumento, $pagamento = '')
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $totale_da_pagare = 0.00;
     $totale_fattura = get_totale_fattura($iddocumento);
@@ -194,7 +194,7 @@ function aggiungi_scadenza($iddocumento, $pagamento = '')
  */
 function aggiorna_scadenziario($iddocumento, $totale_pagato, $data_pagamento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // Lettura righe scadenziario
     $query = "SELECT * FROM co_scadenziario WHERE iddocumento='$iddocumento' AND ABS(pagato) < ABS(da_pagare) ORDER BY scadenza ASC";
@@ -250,7 +250,7 @@ function aggiorna_scadenziario($iddocumento, $totale_pagato, $data_pagamento)
  */
 function elimina_movimento($iddocumento, $anche_prima_nota = 0)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query2 = 'DELETE FROM co_movimenti WHERE iddocumento='.prepare($iddocumento).' AND primanota='.prepare($anche_prima_nota);
     $dbo->query($query2);
@@ -264,7 +264,7 @@ function elimina_movimento($iddocumento, $anche_prima_nota = 0)
  */
 function aggiungi_movimento($iddocumento, $dir, $primanota = 0)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // Totale marca da bollo, inps, ritenuta, idagente
     $query = 'SELECT data, bollo, ritenutaacconto, rivalsainps FROM co_documenti WHERE id='.prepare($iddocumento);
@@ -463,7 +463,7 @@ function aggiungi_movimento($iddocumento, $dir, $primanota = 0)
  */
 function get_new_idmastrino($table = 'co_movimenti')
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query = 'SELECT MAX(idmastrino) AS maxidmastrino FROM '.$table;
     $rs = $dbo->fetchArray($query);
@@ -476,7 +476,7 @@ function get_new_idmastrino($table = 'co_movimenti')
  */
 function get_imponibile_fattura($iddocumento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query = 'SELECT SUM(co_righe_documenti.subtotale - co_righe_documenti.sconto) AS imponibile FROM co_righe_documenti GROUP BY iddocumento HAVING iddocumento='.prepare($iddocumento);
     $rs = $dbo->fetchArray($query);
@@ -489,7 +489,7 @@ function get_imponibile_fattura($iddocumento)
  */
 function get_totale_fattura($iddocumento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // Sommo l'iva di ogni riga al totale
     $query = 'SELECT SUM(iva) AS iva FROM co_righe_documenti GROUP BY iddocumento HAVING iddocumento='.prepare($iddocumento);
@@ -526,7 +526,7 @@ function get_totale_fattura($iddocumento)
  */
 function get_netto_fattura($iddocumento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query = 'SELECT ritenutaacconto, bollo FROM co_documenti WHERE id='.prepare($iddocumento);
     $rs = $dbo->fetchArray($query);
@@ -545,7 +545,7 @@ function get_netto_fattura($iddocumento)
  */
 function get_ivadetraibile_fattura($iddocumento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query = 'SELECT SUM(iva)-SUM(iva_indetraibile) AS iva_detraibile FROM co_righe_documenti GROUP BY iddocumento HAVING iddocumento='.prepare($iddocumento);
     $rs = $dbo->fetchArray($query);
@@ -558,7 +558,7 @@ function get_ivadetraibile_fattura($iddocumento)
  */
 function get_ivaindetraibile_fattura($iddocumento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $query = 'SELECT SUM(iva_indetraibile) AS iva_indetraibile FROM co_righe_documenti GROUP BY iddocumento HAVING iddocumento='.prepare($iddocumento);
     $rs = $dbo->fetchArray($query);
@@ -578,7 +578,7 @@ function ricalcola_costiagg_fattura($iddocumento, $idrivalsainps = '', $idritenu
 {
     global $dir;
 
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // Se ci sono righe in fattura faccio i conteggi, altrimenti azzero gli sconti e le spese aggiuntive (inps, ritenuta, marche da bollo)
     $query = 'SELECT COUNT(id) AS righe FROM co_righe_documenti WHERE iddocumento='.prepare($iddocumento);
@@ -618,7 +618,7 @@ function ricalcola_costiagg_fattura($iddocumento, $idrivalsainps = '', $idritenu
 
         // Leggo la marca da bollo se c'è e se il netto a pagare supera la soglia
         $bolli = ($dir == 'uscita') ? $bolli : setting('Importo marca da bollo');
-        $bolli = Translator::getFormatter()->parse($bolli);
+        $bolli = formatter()->parse($bolli);
 
         $marca_da_bollo = 0;
         if (abs($bolli) > 0 && abs($netto_a_pagare > setting("Soglia minima per l'applicazione della marca da bollo"))) {
@@ -650,7 +650,7 @@ function add_articolo_infattura($iddocumento, $idarticolo, $descrizione, $idiva,
     global $idddt;
     global $idordine;
 
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     if (empty($idddt)) {
         $idddt = 0;
@@ -725,7 +725,7 @@ function rimuovi_articolo_dafattura($idarticolo, $iddocumento, $idrigadocumento)
 {
     global $dir;
 
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // Leggo la quantità di questo articolo in fattura
     $query = 'SELECT qta, idintervento, idpreventivo, idordine, idddt, subtotale, descrizione FROM co_righe_documenti WHERE id='.prepare($idrigadocumento);
@@ -801,7 +801,7 @@ function rimuovi_articolo_dafattura($idarticolo, $iddocumento, $idrigadocumento)
 
 function rimuovi_riga_fattura($id_documento, $id_riga, $dir)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     // Leggo la quantità di questo articolo in fattura
     $riga = $dbo->fetchOne('SELECT * FROM co_righe_documenti WHERE id='.prepare($id_riga));

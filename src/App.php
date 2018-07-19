@@ -12,9 +12,6 @@ class App
     /** @var int Identificativo dell'elemento corrente */
     protected static $current_element;
 
-    /** @var \Util\Messages Gestione dei messaggi flash */
-    protected static $flash = null;
-
     /** @var bool Stato di debug */
     protected static $config = [];
 
@@ -135,22 +132,7 @@ class App
             self::$config['debug'] = $value;
         }
 
-        return self::$config['debug'];
-    }
-
-    /**
-     * Restituisce l'oggetto dedicato alla gestione dei messaggi per l'utente.
-     *
-     * @return \Util\Messages
-     */
-    public static function flash()
-    {
-        if (empty(self::$flash)) {
-            $storage = null;
-            self::$flash = new \Util\Messages($storage, 'messages');
-        }
-
-        return self::$flash;
+        return self::getConfig()['debug'];
     }
 
     /**
@@ -211,7 +193,7 @@ class App
 
         // Impostazione dei percorsi
         $paths = self::getPaths();
-        $lang = Translator::getInstance()->getCurrentLocale();
+        $lang = trans()->getCurrentLocale();
 
         // Sezioni: nome - percorso
         $sections = [
@@ -376,7 +358,7 @@ class App
      */
     protected static function getViews($element)
     {
-        $database = Database::getConnection();
+        $database = database();
 
         $user = Auth::user();
 

@@ -5,7 +5,7 @@ include_once __DIR__.'/../core.php';
 $paths = App::getPaths();
 $user = Auth::user();
 
-$messages = App::flash()->getMessages();
+$messages = flash()->getMessages();
 
 echo '<!DOCTYPE html>
 <html>
@@ -101,8 +101,8 @@ if (Auth::check()) {
 
                 cifre_decimali: '.setting('Cifre decimali per importi').',
 
-                decimals: "'.Translator::getFormatter()->getNumberSeparators()['decimals'].'",
-                thousands: "'.Translator::getFormatter()->getNumberSeparators()['thousands'].'",
+                decimals: "'.formatter()->getNumberSeparators()['decimals'].'",
+                thousands: "'.formatter()->getNumberSeparators()['thousands'].'",
 
                 search: search,
                 translations: translations,

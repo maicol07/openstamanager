@@ -139,7 +139,7 @@ function copyr($source, $destination, $ignores = [])
 function create_zip($source, $destination, $ignores = [])
 {
     if (!extension_loaded('zip')) {
-        App::flash()->error(tr('Estensione zip non supportata!'));
+        flash()->error(tr('Estensione zip non supportata!'));
 
         return false;
     }
@@ -163,7 +163,7 @@ function create_zip($source, $destination, $ignores = [])
         }
         $zip->close();
     } else {
-        App::flash()->error(tr("Errore durante la creazione dell'archivio!"));
+        flash()->error(tr("Errore durante la creazione dell'archivio!"));
     }
 
     return $result === true;
@@ -301,7 +301,7 @@ function translateTemplate()
 
     $template = ob_get_clean();
 
-    $template = \HTMLBuilder\HTMLBuilder::replace($template);
+    $template = container()['builder']->replace($template);
 
     $template = str_replace('$id_module$', $id_module, $template);
     $template = str_replace('$id_plugin$', $id_plugin, $template);
@@ -309,7 +309,7 @@ function translateTemplate()
 
     // Informazioni estese sulle azioni dell'utente
     if (Auth::check() && !empty(post('op'))) {
-        $database = \Database::getConnection();
+        $database = \database();
 
         $database->insert('zz_operations', [
             'id_module' => $id_module,
@@ -324,23 +324,23 @@ function translateTemplate()
     // Retrocompatibilità
     if (!empty($_SESSION['infos'])) {
         foreach ($_SESSION['infos'] as $message) {
-            App::flash()->info($message);
+            flash()->info($message);
         }
     }
     if (!empty($_SESSION['warnings'])) {
         foreach ($_SESSION['warnings'] as $message) {
-            App::flash()->warning($message);
+            flash()->warning($message);
         }
     }
     if (!empty($_SESSION['errors'])) {
         foreach ($_SESSION['errors'] as $message) {
-            App::flash()->error($message);
+            flash()->error($message);
         }
     }
 
     // Annullo le notifiche (AJAX)
     if (isAjaxRequest()) {
-        App::flash()->clearMessage('info');
+        flash()->clearMessage('info');
     }
 
     echo $template;

@@ -36,7 +36,7 @@ class Formatter
     /** @var array Pattern per SQL */
     protected $sql = [];
 
-    public function __construct($locale, $timestamp = null, $date = null, $time = null, $number = [])
+    public function __construct($locale, $timestamp = null, $date = null, $time = null, array $number = [])
     {
         if (class_exists('NumberFormatter')) {
             $this->numberFormatter = new NumberFormatter($locale, NumberFormatter::DECIMAL);

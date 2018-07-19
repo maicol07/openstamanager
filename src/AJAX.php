@@ -120,7 +120,7 @@ class AJAX
 
         $query = str_replace('|where|', !empty($where) ? 'WHERE '.implode(' AND ', $where) : '', $query);
 
-        $database = Database::getConnection();
+        $database = database();
         $rs = $database->fetchArray($query);
 
         $results = [];
@@ -160,7 +160,7 @@ class AJAX
         ];
 
         // Database
-        $database = Database::getConnection();
+        $database = database();
         $dbo = $database;
 
         require $file;
@@ -219,7 +219,7 @@ class AJAX
     protected static function getSearchResults($file, $term)
     {
         // Database
-        $database = Database::getConnection();
+        $database = database();
         $dbo = $database;
 
         // Ricerca anagrafiche per ragione sociale per potere mostrare gli interventi, fatture,
@@ -280,7 +280,7 @@ class AJAX
     protected static function getCompleteResults($file, $resource)
     {
         // Database
-        $database = Database::getConnection();
+        $database = database();
         $dbo = $database;
 
         ob_start();

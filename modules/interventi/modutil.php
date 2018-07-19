@@ -9,7 +9,7 @@ include_once __DIR__.'/../../core.php';
  */
 function get_ore_intervento($idintervento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
     $totale_ore = 0;
 
     $rs = $dbo->fetchArray('SELECT idintervento, TIMESTAMPDIFF( MINUTE, orario_inizio, orario_fine ) / 60 AS tot_ore FROM in_interventi_tecnici WHERE idintervento = '.prepare($idintervento));
@@ -31,7 +31,7 @@ function get_ore_intervento($idintervento)
  */
 function link_componente_to_articolo($idintervento, $idimpianto, $idarticolo, $qta)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     if (!empty($idimpianto) && !empty($idintervento)) {
         //Leggo la data dell'intervento
@@ -52,7 +52,7 @@ function link_componente_to_articolo($idintervento, $idimpianto, $idarticolo, $q
 
 function add_tecnico($idintervento, $idtecnico, $inizio, $fine, $idcontratto)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $rs = $dbo->fetchArray('SELECT idanagrafica, idsede, idtipointervento FROM in_interventi WHERE id='.prepare($idintervento));
     $idanagrafica = $rs[0]['idanagrafica'];
@@ -158,7 +158,7 @@ function add_tecnico($idintervento, $idtecnico, $inizio, $fine, $idcontratto)
 
 function get_costi_intervento($id_intervento)
 {
-    $dbo = Database::getConnection();
+    $dbo = database();
 
     $decimals = setting('Cifre decimali per importi');
 

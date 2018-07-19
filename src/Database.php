@@ -5,7 +5,7 @@
  *
  * @since 2.3
  */
-class Database extends Util\Singleton
+class Database
 {
     /** @var string Host del database */
     protected $host;
@@ -23,7 +23,7 @@ class Database extends Util\Singleton
     /** @var array Opzioni riguardanti la comunicazione (PDO) */
     protected $option = [];
 
-    /** @var DebugBar\DataCollector\PDO\TraceablePDO Classe PDO tracciabile */
+    /** @var DebugBar\DataCollector\PDO\TraceablePDO|PDO Classe PDO tracciabile */
     protected $pdo;
 
     /** @var bool Stato di installazione del database */
@@ -43,10 +43,8 @@ class Database extends Util\Singleton
      * @param array        $option
      *
      * @since 2.3
-     *
-     * @return Database
      */
-    protected function __construct($server, $username, $password, $database_name, $charset = null, $option = [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION])
+    public function __construct($server, $username, $password, $database_name, $charset = null, array $option = [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION])
     {
         if (is_array($server)) {
             $host = $server['host'];
@@ -56,9 +54,6 @@ class Database extends Util\Singleton
             $host = $temp[0];
             $port = !empty($temp[1]) ? $temp[1] : null;
         }
-
-        // Possibilità di specificare una porta per il servizio MySQL diversa dalla standard 3306
-        $port = !empty(App::getConfig()['port']) ? App::getConfig()['port'] : $port;
 
         $this->host = $host;
         if (!empty($port) && is_int($port * 1)) {
@@ -91,10 +86,6 @@ class Database extends Util\Singleton
                     $this->charset = 'utf8mb4';
                 }
 
-                // Fix per problemi di compatibilità delle password MySQL 4.1+ (da versione precedente)
-                $this->pdo->query('SET SESSION old_passwords = 0');
-                //$this->pdo->query('SET PASSWORD = PASSWORD('.$this->prepare($this->password).')');
-
                 // Impostazione del charset della comunicazione
                 if (!empty($this->charset)) {
                     $this->pdo->query("SET NAMES '".$this->charset."'");
@@ -110,34 +101,6 @@ class Database extends Util\Singleton
                 $this->signal($e, tr('Errore durante la connessione al database'), ['throw' => false, 'session' => false]);
             }
         }
-    }
-
-    /**
-     * Restituisce la connessione attiva al database, creandola nel caso non esista.
-     *
-     * @since 2.3
-     *
-     * @return Database
-     */
-    public static function getConnection($new = false, $data = [])
-    {
-        $class = get_called_class();
-
-        if (empty(parent::$instance[$class]) || !parent::$instance[$class]->isConnected() || $new) {
-            $config = App::getConfig();
-
-            // Sostituzione degli eventuali valori aggiuntivi
-            $config = array_merge($config, $data);
-
-            parent::$instance[$class] = new self($config['db_host'], $config['db_username'], $config['db_password'], $config['db_name']);
-        }
-
-        return parent::$instance[$class];
-    }
-
-    public static function getInstance()
-    {
-        return self::getConnection();
     }
 
     /**
@@ -825,7 +788,7 @@ class Database extends Util\Singleton
      *
      * @since 2.3
      */
-    protected function signal($e, $message, $options = [])
+    protected function signal($e, $message, array $options = [])
     {
         $options = array_merge([
             'session' => true,
@@ -842,7 +805,7 @@ class Database extends Util\Singleton
 
             $msg .= '<br><small>'.$e->getMessage().'</small>';
 
-            App::flash()->error($msg);
+            flash()->error($msg);
         }
 
         $error = $e->getMessage().' - '.$message;

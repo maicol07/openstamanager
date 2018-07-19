@@ -31,7 +31,7 @@ class FileManager implements ManagerInterface
         // Cartella delle anteprime
         $directory = \Uploads::getDirectory($options['id_module'], $options['id_plugin']);
 
-        $dbo = \Database::getConnection();
+        $dbo = database();
 
         // Codice HTML
         $result = '

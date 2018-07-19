@@ -20,7 +20,7 @@ class Plugins
     public static function getPlugins()
     {
         if (empty(self::$plugins)) {
-            $database = Database::getConnection();
+            $database = database();
 
             $results = $database->fetchArray('SELECT *, (SELECT directory FROM zz_modules WHERE id=idmodule_from) AS module_dir FROM zz_plugins');
 

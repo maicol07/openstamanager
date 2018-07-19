@@ -3,8 +3,8 @@
 switch ($resource) {
     case 'login':
         // Controllo sulle credenziali
-        if (Auth::getInstance()->attempt($request['username'], $request['password'])) {
-            $token = Auth::getInstance()->getToken();
+        if (auth()->attempt($request['username'], $request['password'])) {
+            $token = auth()->getToken();
 
             // Informazioni da restituire tramite l'API
             $results = $dbo->fetchArray('SELECT `ragione_sociale`, `codice`, `piva`, `codice_fiscale`, `indirizzo`, `citta`, `provincia`, (SELECT `nome` FROM `an_nazioni` WHERE `an_nazioni`.`id` = `an_anagrafiche`.`id_nazione`) AS nazione, `telefono`, `fax`, `cellulare`, `an_anagrafiche`.`email` FROM `zz_users` LEFT JOIN `an_anagrafiche` ON `an_anagrafiche`.`idanagrafica` = `zz_users`.`idanagrafica` WHERE `id` = '.prepare($user['id_utente']))[0];

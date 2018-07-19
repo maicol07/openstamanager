@@ -5,7 +5,7 @@
  *
  * @since 2.3
  */
-class Translator extends Util\Singleton
+class Translator
 {
     /** @var Intl\Formatter Oggetto per la conversione di date e numeri nella lingua selezionata */
     protected static $formatter;
@@ -18,7 +18,7 @@ class Translator extends Util\Singleton
     /** @var string Lingua selezionata */
     protected $locale;
 
-    public function __construct($default_locale = 'it', $fallback_locales = ['it'])
+    public function __construct($default_locale = 'it', array $fallback_locales = ['it'])
     {
         $translator = new Symfony\Component\Translation\Translator($default_locale);
         $this->locale = $default_locale;
@@ -110,24 +110,11 @@ class Translator extends Util\Singleton
      *
      * @param string $locale
      */
-    public function setLocale($locale, $formatter = [])
+    public function setLocale($locale)
     {
         if (!empty($locale) && $this->isLocaleAvailable($locale)) {
             $this->translator->setLocale($locale);
             $this->locale = $locale;
-
-            self::$formatter = new Intl\Formatter(
-                $this->locale,
-                empty($formatter['timestamp']) ? 'd/m/Y H:i' : $formatter['timestamp'],
-                empty($formatter['date']) ? 'd/m/Y' : $formatter['date'],
-                empty($formatter['time']) ? 'H:i' : $formatter['time'],
-                empty($formatter['number']) ? [
-                    'decimals' => ',',
-                    'thousands' => '.',
-                ] : $formatter['number']
-            );
-
-            self::$formatter->setPrecision(auth()->check() ? setting('Cifre decimali per importi') : 2);
         }
     }
 
@@ -161,9 +148,9 @@ class Translator extends Util\Singleton
      *
      * @return string
      */
-    public static function translate($string, $parameters = [], $operations = [])
+    public function translate($string, array $parameters = [], array $operations = [])
     {
-        $result = self::getInstance()->getTranslator()->trans($string, $parameters);
+        $result = $this->getTranslator()->trans($string, $parameters);
 
         // Operazioni aggiuntive sul risultato
         if (!empty($operations)) {
@@ -180,13 +167,23 @@ class Translator extends Util\Singleton
     }
 
     /**
-     * Restituisce il formato locale della data.
+     * Restituisce il gestore delle conversioni di date e numeri.
      *
      * @return Intl\Formatter
      */
     public static function getFormatter()
     {
         return self::$formatter;
+    }
+
+    /**
+     * Imposta il gestore delle conversioni di date e numeri.
+     *
+     * @param Intl\Formatter $formatter
+     */
+    public static function setFormatter(Intl\Formatter $formatter)
+    {
+        self::$formatter = $formatter;
     }
 
     /**
