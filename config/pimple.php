@@ -129,6 +129,9 @@ $container['logger'] = function ($c) {
     $logger->pushProcessor(new Monolog\Processor\UidProcessor());
     $logger->pushProcessor(new Monolog\Processor\WebProcessor());
 
+    // Imposta Monolog come gestore degli errori
+    Monolog\ErrorHandler::register($logger);
+
     $handlers = [];
     if (!API::isAPIRequest()) {
         // File di default

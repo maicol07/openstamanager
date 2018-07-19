@@ -43,16 +43,14 @@ require_once __DIR__.'/config/pimple.php';
 // Forza l'abilitazione del debug
 // $debug = App::debug(true);
 
+// Supporto grafico per il debug
+$whoops = container()['whoops'];
+
 // Logger per la segnalazione degli errori
 $logger = container()['logger'];
 
 // Registrazione globale del logger
 Monolog\Registry::addLogger($logger, 'logs');
-
-// Imposta Monolog come gestore degli errori
-Monolog\ErrorHandler::register($logger);
-
-$whoops = container()['whoops'];
 
 // Inizializzazione della sessione
 if (!API::isAPIRequest()) {
