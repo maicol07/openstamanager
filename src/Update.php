@@ -15,6 +15,40 @@ class Update
         'plugins',
     ];
 
+    protected static function getPhinx()
+    {
+        return require DOCROOT.'/vendor/robmorgan/phinx/app/phinx.php';
+    }
+
+    protected static function execute($command, array $args = [])
+    {
+        $app = static::getPhinx();
+        $command = $app->find($command);
+
+        $input = new Symfony\Component\Console\Input\ArrayInput(array_merge($args, [
+            '--configuration' => DOCROOT.'/config/phinx.php',
+        ]));
+        $output = new Symfony\Component\Console\Output\BufferedOutput();
+        $return_code = $command->run($input, $output);
+
+        return [
+            $return_code,
+            $output->fetch(),
+        ];
+    }
+
+    public static function status()
+    {
+        static::execute('status');
+    }
+
+    public static function toSQL()
+    {
+        static::status();
+
+        var_dump(static::execute('migrate', ['--dry-run' => '1']));
+    }
+
     /**
      * Controlla la presenza di aggiornamenti e prepara il database per la procedura.
      */
