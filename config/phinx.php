@@ -4,8 +4,9 @@ include __DIR__.'/../config.inc.php';
 
 return [
     'paths' => [
-        'migrations' => '%%PHINX_CONFIG_DIR%%/../update/migrations',
-        'seeds' => '%%PHINX_CONFIG_DIR%%/../update/seeds'
+        'migrations' => '%%PHINX_CONFIG_DIR%%/../update/migrations/*/',
+        'migrations' => '%%PHINX_CONFIG_DIR%%/../modules/*/migrations/*/',
+        'migrations' => '%%PHINX_CONFIG_DIR%%/../plugins/*/migrations/*/',
     ],
     'environments' => [
         'default_migration_table' => 'phinxlog',
