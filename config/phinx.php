@@ -11,6 +11,8 @@ return [
         'default_migration_table' => 'phinxlog',
         'default_database' => 'development',
 
+        'migration_base_class' => '\Util\Migration',
+
         'development' => [
             'adapter' => 'mysql',
             'host' => $db_host,
