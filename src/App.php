@@ -136,6 +136,8 @@ class App
     public static function definePaths($docroot)
     {
         if (!defined('DOCROOT')) {
+            $docroot = realpath($docroot);
+
             // Individuazione di $rootdir
             $rootdir = substr($_SERVER['SCRIPT_NAME'], 0, strrpos($_SERVER['SCRIPT_NAME'], '/')).'/';
             if (strrpos($rootdir, '/'.basename($docroot).'/') !== false) {

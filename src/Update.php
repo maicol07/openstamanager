@@ -49,6 +49,17 @@ class Update
         var_dump(static::execute('migrate', ['--dry-run' => '1']));
     }
 
+    public static function getMigrations()
+    {
+        $config = Phinx\Config\Config::fromPHP(DOCROOT.'/config/phinx.php');
+
+        $input = new Symfony\Component\Console\Input\ArrayInput([]);
+        $output = new Symfony\Component\Console\Output\BufferedOutput();
+
+        $m = new Phinx\Migration\Manager($config, $input, $output);
+        return $m->getMigrations('development');
+    }
+
     /**
      * Controlla la presenza di aggiornamenti e prepara il database per la procedura.
      */
@@ -401,7 +412,7 @@ class Update
      *
      * @return array|bool
      */
-    public static function doUpdate($rate = 20)
+    public static function doUpdate($rate = 20, $session = true)
     {
         set_time_limit(0);
         ignore_user_abort(true);
@@ -424,7 +435,9 @@ class Update
 
                     if ($start < $end) {
                         for ($i = $start; $i < $end; ++$i) {
-                            $database->query($queries[$i], [], tr('Aggiornamento fallito').': '.$queries[$i]);
+                            $database->query($queries[$i], [], tr('Aggiornamento fallito').': '.$queries[$i], [
+                                'session' => $session,
+                            ]);
 
                             $database->query('UPDATE `updates` SET `done` = :done WHERE id = :id', [
                                 ':done' => $i + 3,
