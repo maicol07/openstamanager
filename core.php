@@ -253,6 +253,3 @@ if (!API::isAPIRequest()) {
     $post = Filter::getPOST();
     $get = Filter::getGET();
 }
-
-Illuminate\Database\Capsule\Manager::table('zz_modules')->insert(['name' => 'test']);
-exit();
