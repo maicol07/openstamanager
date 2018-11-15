@@ -4,15 +4,16 @@ include __DIR__.'/../config.inc.php';
 
 return [
     'paths' => [
-        'migrations' => '%%PHINX_CONFIG_DIR%%/../update/migrations/*/',
-        'migrations' => '%%PHINX_CONFIG_DIR%%/../modules/*/migrations/*/',
-        'migrations' => '%%PHINX_CONFIG_DIR%%/../plugins/*/migrations/*/',
+        'migrations' => [
+            '%%PHINX_CONFIG_DIR%%/../update/migrations/*/',
+            '%%PHINX_CONFIG_DIR%%/../modules/*/migrations/*/',
+            '%%PHINX_CONFIG_DIR%%/../plugins/*/migrations/*/',
+        ],
+        'seeds' => '%%PHINX_CONFIG_DIR%%/../update/seeds/*/',
     ],
     'environments' => [
         'default_migration_table' => 'phinxlog',
         'default_database' => 'development',
-
-        'migration_base_class' => '\Util\Migration',
 
         'development' => [
             'adapter' => 'mysql',
@@ -24,5 +25,6 @@ return [
             'charset' => 'utf8',
         ],
     ],
+    'migration_base_class' => 'Update\Migration',
     'version_order' => 'creation'
 ];

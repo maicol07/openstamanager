@@ -1,6 +1,6 @@
 <?php
 
-use Util\Migration;
+use Update\Migration;
 use Illuminate\Database\Schema\Blueprint;
 
 class CreateZzGroupViewTable extends Migration
