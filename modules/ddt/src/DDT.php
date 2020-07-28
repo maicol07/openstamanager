@@ -17,6 +17,12 @@ class DDT extends Document
 
     protected $table = 'dt_ddt';
 
+    protected $casts = [
+        'bollo' => 'float',
+        'peso' => 'float',
+        'volume' => 'float',
+    ];
+
     protected $with = [
         'tipo',
     ];
@@ -100,6 +106,48 @@ class DDT extends Document
         return $this->tipo->dir;
     }
 
+    public function isImportabile()
+    {
+        $stati_non_importabili = ['Bozza', 'Fatturato'];
+
+        $database = database();
+        $causale = $database->fetchOne('SELECT * FROM `dt_causalet` WHERE `id` = '.prepare($this->idcausalet));
+
+        return $causale['is_importabile'] && !in_array($this->stato->descrizione, $stati_non_importabili);
+    }
+
+    /**
+     * Restituisce il peso calcolato sulla base degli articoli del documento.
+     *
+     * @return float
+     */
+    public function getPesoCalcolatoAttribute()
+    {
+        $righe = $this->getRighe();
+
+        $peso_lordo = $righe->sum(function ($item) {
+            return $item->isArticolo() ? $item->articolo->peso_lordo * $item->qta : 0;
+        });
+
+        return $peso_lordo;
+    }
+
+    /**
+     * Restituisce il volume calcolato sulla base degli articoli del documento.
+     *
+     * @return float
+     */
+    public function getVolumeCalcolatoAttribute()
+    {
+        $righe = $this->getRighe();
+
+        $volume = $righe->sum(function ($item) {
+            return $item->isArticolo() ? $item->articolo->volume * $item->qta : 0;
+        });
+
+        return $volume;
+    }
+
     public function anagrafica()
     {
         return $this->belongsTo(Anagrafica::class, 'idanagrafica');
@@ -137,7 +185,7 @@ class DDT extends Document
 
     /**
      * Effettua un controllo sui campi del documento.
-     * Viene richiamatp dalle modifiche alle righe del documento.
+     * Viene richiamato dalle modifiche alle righe del documento.
      */
     public function triggerEvasione(Description $trigger)
     {
@@ -170,7 +218,6 @@ class DDT extends Document
      *
      * @param string $data
      * @param string $direzione
-     * @param int    $id_segment
      *
      * @return string
      */

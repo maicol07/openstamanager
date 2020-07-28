@@ -51,7 +51,7 @@ const JS = gulp.parallel(() => {
         debugging: config.debug,
     }))
         .pipe(concat('app.min.js'))
-        //.pipe(minifyJS())
+        .pipe(minifyJS())
         .pipe(gulp.dest(config.production + '/' + config.paths.js));
 }, srcJS);
 
@@ -68,7 +68,7 @@ function srcJS() {
         config.development + '/' + config.paths.js + '/functions/*.js',
     ])
         .pipe(concat('functions.min.js'))
-        .pipe(minifyJS())
+        //.pipe(minifyJS())
         .pipe(gulp.dest(config.production + '/' + config.paths.js));
 
     return merge(js, indip);
@@ -122,6 +122,7 @@ function srcCSS() {
 
     var themes = gulp.src([
         config.development + '/' + config.paths.css + '/themes/*.{css,scss,less,styl}',
+        config.main.bowerDirectory + '/admin-lte/dist/css/skins/_all-skins.min.css',
     ])
         .pipe(gulpIf('*.scss', sass(), gulpIf('*.less', less(), gulpIf('*.styl', stylus()))))
         .pipe(autoprefixer())
@@ -379,6 +380,10 @@ function clean() {
 
 // Operazioni di default per la generazione degli assets
 const bower = gulp.series(clean, gulp.parallel(JS, CSS, images, fonts, phpDebugBar, ckeditor, colorpicker, i18n, pdfjs, hotkeys, chartjs, password_strength, csrf));
+
+// Debug su CSS e JS
+exports.srcJS = srcJS;
+exports.srcCSS = srcCSS;
 
 exports.bower = bower;
 exports.release = release;

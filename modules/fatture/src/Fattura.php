@@ -28,6 +28,8 @@ class Fattura extends Document
 
     protected $casts = [
         'bollo' => 'float',
+        'peso' => 'float',
+        'volume' => 'float',
     ];
 
     protected $with = [
@@ -190,6 +192,38 @@ class Fattura extends Document
     public function getDirezioneAttribute()
     {
         return $this->tipo->dir;
+    }
+
+    /**
+     * Restituisce il peso calcolato sulla base degli articoli del documento.
+     *
+     * @return float
+     */
+    public function getPesoCalcolatoAttribute()
+    {
+        $righe = $this->getRighe();
+
+        $peso_lordo = $righe->sum(function ($item) {
+            return $item->isArticolo() ? $item->articolo->peso_lordo * $item->qta : 0;
+        });
+
+        return $peso_lordo;
+    }
+
+    /**
+     * Restituisce il volume calcolato sulla base degli articoli del documento.
+     *
+     * @return float
+     */
+    public function getVolumeCalcolatoAttribute()
+    {
+        $righe = $this->getRighe();
+
+        $volume = $righe->sum(function ($item) {
+            return $item->isArticolo() ? $item->articolo->volume * $item->qta : 0;
+        });
+
+        return $volume;
     }
 
     // Calcoli
@@ -374,6 +408,20 @@ class Fattura extends Document
         $file = $this->uploads()->where('name', 'Fattura Elettronica')->first();
 
         return file_get_contents($file->filepath);
+    }
+
+    /**
+     * Restituisce le ricevute della fattura elettronica relativa al documento.
+     *
+     * @return iterable
+     */
+    public function getRicevute()
+    {
+        $nome = 'Ricevuta';
+
+        return $this->uploads()->filter(function ($item) use ($nome) {
+            return false !== strstr($item->name, $nome);
+        })->sortBy('created_at');
     }
 
     /**

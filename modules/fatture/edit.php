@@ -534,9 +534,43 @@ if ($tipodoc == 'Fattura accompagnatoria di vendita') {
 
     echo '
                 <div class="col-md-3">
-                    {[ "type": "select", "label": "'.tr('Tipo Resa').'", "name": "tipo_resa", "value":"$tipo_resa$", "values": '.json_encode($tipo_resa).', "readonly": '.intval($record['causale_desc'] != 'Reso').' ]}
+                    {[ "type": "select", "label": "'.tr('Tipo Resa').'", "name": "tipo_resa", "value": "$tipo_resa$", "values": '.json_encode($tipo_resa).', "readonly": '.intval($record['causale_desc'] != 'Reso').' ]}
                 </div>
+            </div>
+        </div>';
 
+    echo '
+        <div class="row">
+            <div class="col-md-3">
+                {[ "type": "number", "label": "'.tr('Peso').'", "name": "peso", "value": "$peso$", "readonly": "'.intval(empty($record['peso'])).'", "help": "'.tr('Il valore del campo Peso viene calcolato in automatico sulla base degli articoli inseriti nel documento, a meno dell\'impostazione di un valore manuale in questo punto').'" ]}
+            </div>
+
+            <div class="col-md-3">
+                {[ "type": "checkbox", "label": "'.tr('Modifica peso').'", "name": "peso_manuale", "value": '.intval(!empty($record['peso'])).', "help": "'.tr('Seleziona per modificare manualmente il campo Peso').'", "placeholder": "'.tr('Modifica peso').'" ]}
+
+                <script type="text/javascript">
+                    $(document).ready(function() {
+                        $("#peso_manuale").click(function(){
+                            $("#peso").prop("readonly", !$("#peso_manuale").is(":checked"));
+                        });
+                    });
+                </script>
+            </div>
+
+            <div class="col-md-3">
+                {[ "type": "number", "label": "'.tr('Volume').'", "name": "volume", "value": "$volume$", "readonly": "'.intval(empty($record['volume'])).'", "help": "'.tr('Il valore del campo Volume viene calcolato in automatico sulla base degli articoli inseriti nel documento, a meno dell\'impostazione di un valore manuale in questo punto').'" ]}
+            </div>
+
+            <div class="col-md-3">
+                {[ "type": "checkbox", "label": "'.tr('Modifica volume').'", "name": "volume_manuale", "value": '.intval(!empty($record['volume'])).', "help": "'.tr('Seleziona per modificare manualmente il campo Volume').'", "placeholder": "'.tr('Modifica volume').'" ]}
+
+                <script type="text/javascript">
+                    $(document).ready(function() {
+                        $("#volume_manuale").click(function(){
+                            $("#volume").prop("readonly", !$("#volume_manuale").is(":checked"));
+                        });
+                    });
+                </script>
             </div>
         </div>
     </div>';
@@ -600,7 +634,15 @@ if (!$block_edit) {
         }
 
         // Lettura ddt (entrata o uscita)
-        $ddt_query = 'SELECT COUNT(*) AS tot FROM dt_ddt WHERE idanagrafica='.prepare($record['idanagrafica']).' AND idstatoddt IN (SELECT id FROM dt_statiddt WHERE descrizione IN(\'Evaso\', \'Parzialmente evaso\', \'Parzialmente fatturato\')) AND idtipoddt IN (SELECT id FROM dt_tipiddt WHERE dir='.prepare($dir).') AND dt_ddt.id IN (SELECT idddt FROM dt_righe_ddt WHERE dt_righe_ddt.idddt = dt_ddt.id AND (qta - qta_evasa) > 0)';
+        $ddt_query = 'SELECT COUNT(*) AS tot FROM dt_ddt
+            LEFT JOIN `dt_causalet` ON `dt_causalet`.`id` = `dt_ddt`.`idcausalet`
+            LEFT JOIN `dt_statiddt` ON `dt_statiddt`.`id` = `dt_ddt`.`idstatoddt`
+            LEFT JOIN `dt_tipiddt` ON `dt_tipiddt`.`id` = `dt_ddt`.`idtipoddt`
+            WHERE idanagrafica='.prepare($record['idanagrafica']).'
+                AND `dt_statiddt`.`descrizione` IN (\'Evaso\', \'Parzialmente evaso\', \'Parzialmente fatturato\')
+                AND `dt_tipiddt`.`dir` = '.prepare($dir).'
+                AND `dt_causalet`.`is_importabile` = 1
+                AND dt_ddt.id IN (SELECT idddt FROM dt_righe_ddt WHERE dt_righe_ddt.idddt = dt_ddt.id AND (qta - qta_evasa) > 0)';
         $ddt = $dbo->fetchArray($ddt_query)[0]['tot'];
         echo '
 					<a class="btn btn-sm btn-primary'.(!empty($ddt) ? '' : ' disabled').'" data-href="'.$rootdir.'/modules/fatture/add_ddt.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="tooltip" data-title="Aggiungi ddt">
@@ -630,6 +672,10 @@ if (!$block_edit) {
                         <a class="btn btn-sm btn-primary'.(!empty($articoli) ? '' : ' disabled').'" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_articolo" data-toggle="tooltip" data-title="'.tr('Aggiungi articolo').'">
                             <i class="fa fa-plus"></i> '.tr('Articolo').'
                         </a>';
+    echo '
+            <a class="btn btn-sm btn-primary"data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_barcode" data-toggle="tooltip" data-title="'.tr('Aggiungi articoli tramite barcode').'">
+                <i class="fa fa-plus"></i> '.tr('Barcode').'
+            </a>';
 
     echo '
                         <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_riga" data-toggle="tooltip" data-title="'.tr('Aggiungi riga').'">

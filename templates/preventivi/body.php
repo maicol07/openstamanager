@@ -1,5 +1,7 @@
 <?php
 
+use Carbon\CarbonInterval;
+
 include_once __DIR__.'/../../core.php';
 
 $has_images = null;
@@ -31,30 +33,28 @@ echo '
             ], ['upper' => true]).'</b>
         </div>
 
-        <table>
-        <tr>
-            <td colspan="2" style="height:10mm;padding-top:2mm;">
-                <p class="small-bold">'.tr('Pagamento', [], ['upper' => true]).'</p>
-                <p>'.$pagamento['descrizione'].'</p>
-            </td>
-            <td colspan="2" style="height:10mm;padding-top:2mm;">
-                <p class="small-bold">'.tr('Banca di appoggio', [], ['upper' => true]).'</p>
-                <p><small>'.$banca['nome'].'</small></p>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2" style="height:10mm;padding-top:2mm;">
-                <p class="small-bold">'.tr('IBAN').'</p>
-                <p>'.$banca['iban'].'</p>
-            </td>
-            <td colspan="2" style="height:10mm;padding-top:2mm;">
-                <p class="small-bold">'.tr('BIC').'</p>
-                <p>'.$banca['bic'].'</p>
-            </td>
-        </tr>
+        <table class="table">
+            <tr>
+                <td colspan="2" style="height:10mm;padding-top:2mm;">
+                    <p class="small-bold">'.tr('Pagamento', [], ['upper' => true]).'</p>
+                    <p>'.$pagamento['descrizione'].'</p>
+                </td>
+                <td colspan="2" style="height:10mm;padding-top:2mm;">
+                    <p class="small-bold">'.tr('Banca di appoggio', [], ['upper' => true]).'</p>
+                    <p><small>'.$banca['nome'].'</small></p>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="height:10mm;padding-top:2mm;white-space: nowrap;">
+                    <p class="small-bold">'.tr('IBAN').'</p>
+                    <p>'.$banca['iban'].'</p>
+                </td>
+                <td colspan="2" style="height:10mm;padding-top:2mm;">
+                    <p class="small-bold">'.tr('BIC').'</p>
+                    <p>'.$banca['bic'].'</p>
+                </td>
+            </tr>
         </table>
-
-
     </div>
 
 	<div class="col-xs-6" style="margin-left: 10px">
@@ -325,25 +325,13 @@ echo '
 
         <td>';
 
-        if (!empty($documento['validita'])) {
-            $periodi = [
-                'd' => [
-                    'singular' => tr('giorno'),
-                    'plural' => tr('giorni')
-                ],
-                'm' => [
-                    'singular' => tr('mese'),
-                    'plural' => tr('mesi')
-                ],
-                'y' => [
-                    'singular' => tr('anno'),
-                    'plural' => tr('anni')
-                ],
-            ];
-            echo'
-            '.tr('_TOT_ _PERIOD_', [
-                '_TOT_' => $documento['validita'],
-                '_PERIOD_' => $periodi[$documento['validita_periodo']][$documento['validita'] == 1 ? 'singular' : 'plural']
+        if (!empty($documento->validita) && !empty($documento->tipo_validita)) {
+            $intervallo = CarbonInterval::make($documento->validita.' '.$documento->tipo_validita);
+
+            echo $intervallo->forHumans();
+        } elseif (!empty($documento->validita)) {
+            echo tr('_TOT_ giorni', [
+                '_TOT_' => $documento->validita,
             ]);
         } else {
             echo '-';
