@@ -1,34 +1,40 @@
 // Librerie NPM richieste per l'esecuzione
-var gulp = require('gulp');
-var merge = require('merge-stream');
-var del = require('del');
-var debug = require('gulp-debug');
-var shell = require('shelljs');
+const gulp = require('gulp');
+const merge = require('merge-stream');
+const del = require('del');
+const debug = require('gulp-debug');
 
-var mainBowerFiles = require('main-bower-files');
-var gulpIf = require('gulp-if');
+const mainBowerFiles = require('main-bower-files');
+const gulpIf = require('gulp-if');
 
 // Minificatori
-var minifyJS = require('gulp-uglify');
-var minifyCSS = require('gulp-clean-css');
-var minifyJSON = require('gulp-json-minify');
+const minifyJS = require('gulp-uglify');
+const minifyCSS = require('gulp-clean-css');
+const minifyJSON = require('gulp-json-minify');
 
 // Interpretatori CSS
-var sass = require('gulp-sass');
-var less = require('gulp-less');
-var stylus = require('gulp-stylus');
-var autoprefixer = require('gulp-autoprefixer');
+const sass = require('gulp-sass');
+const less = require('gulp-less');
+const stylus = require('gulp-stylus');
+const autoprefixer = require('gulp-autoprefixer');
 
 // Concatenatore
-var concat = require('gulp-concat');
+const concat = require('gulp-concat');
 
 // Altro
-var flatten = require('gulp-flatten');
-var rename = require('gulp-rename');
-var inquirer = require('inquirer');
+const flatten = require('gulp-flatten');
+const rename = require('gulp-rename');
+
+// Release
+const glob = require('globby');
+const md5File = require('md5-file')
+const fs = require('fs');
+const archiver = require('archiver');
+const shell = require('shelljs');
+const inquirer = require('inquirer');
 
 // Configurazione
-var config = {
+const config = {
     production: 'assets/dist', // Cartella di destinazione
     development: 'assets/src', // Cartella dei file di personalizzazione
     debug: false,
@@ -57,14 +63,14 @@ const JS = gulp.parallel(() => {
 
 // Elaborazione e minificazione di JS personalizzati
 function srcJS() {
-    var js = gulp.src([
+    const js = gulp.src([
         config.development + '/' + config.paths.js + '/*.js',
     ])
         .pipe(concat('custom.min.js'))
-        .pipe(minifyJS())
+        //.pipe(minifyJS())
         .pipe(gulp.dest(config.production + '/' + config.paths.js));
 
-    var indip = gulp.src([
+    const indip = gulp.src([
         config.development + '/' + config.paths.js + '/functions/*.js',
     ])
         .pipe(concat('functions.min.js'))
@@ -73,7 +79,6 @@ function srcJS() {
 
     return merge(js, indip);
 }
-
 
 // Elaborazione e minificazione di CSS
 const CSS = gulp.parallel(() => {
@@ -93,7 +98,7 @@ const CSS = gulp.parallel(() => {
 
 // Elaborazione e minificazione di CSS personalizzati
 function srcCSS() {
-    var css = gulp.src([
+    const css = gulp.src([
         config.development + '/' + config.paths.css + '/*.{css,scss,less,styl}',
     ])
         .pipe(gulpIf('*.scss', sass(), gulpIf('*.less', less(), gulpIf('*.styl', stylus()))))
@@ -105,7 +110,7 @@ function srcCSS() {
         .pipe(flatten())
         .pipe(gulp.dest(config.production + '/' + config.paths.css));
 
-    var print = gulp.src([
+    const print = gulp.src([
         config.development + '/' + config.paths.css + '/print/*.{css,scss,less,styl}',
         config.bowerDirectory + '/fullcalendar/fullcalendar.print.css',
     ], {
@@ -120,7 +125,7 @@ function srcCSS() {
         .pipe(flatten())
         .pipe(gulp.dest(config.production + '/' + config.paths.css));
 
-    var themes = gulp.src([
+    const themes = gulp.src([
         config.development + '/' + config.paths.css + '/themes/*.{css,scss,less,styl}',
         config.main.bowerDirectory + '/admin-lte/dist/css/skins/_all-skins.min.css',
     ])
@@ -141,7 +146,7 @@ function srcCSS() {
 const images = srcImages;
 /*
 gulp.parallel(() => {*/
-//var src = mainBowerFiles('**/*.{jpg,png,jpeg,gif}', {
+//const src = mainBowerFiles('**/*.{jpg,png,jpeg,gif}', {
 /*
 paths: config.main,
     debugging: config.debug,
@@ -185,8 +190,8 @@ function srcFonts() {
 
 function ckeditor() {
     return gulp.src([
-        config.main.bowerDirectory + '/ckeditor/{adapters,lang,skins,plugins}/**/*.{js,json,css,png}',
-        config.main.bowerDirectory + '/ckeditor/*.{js,css}',
+        config.main.bowerDirectory + '/ckeditor4/{adapters,lang,skins,plugins}/**/*.{js,json,css,png}',
+        config.main.bowerDirectory + '/ckeditor4/*.{js,css}',
     ])
         .pipe(gulp.dest(config.production + '/' + config.paths.js + '/ckeditor'));
 }
@@ -233,17 +238,17 @@ function csrf() {
 }
 
 function pdfjs() {
-    var web = gulp.src([
-        config.main.bowerDirectory + '/pdf/web/**/*',
-        '!' + config.main.bowerDirectory + '/pdf/web/cmaps/*',
-        '!' + config.main.bowerDirectory + '/pdf/web/*.map',
-        '!' + config.main.bowerDirectory + '/pdf/web/*.pdf',
+    const web = gulp.src([
+        config.main.bowerDirectory + '/pdf.js/web/**/*',
+        '!' + config.main.bowerDirectory + '/pdf.js/web/cmaps/*',
+        '!' + config.main.bowerDirectory + '/pdf.js/web/*.map',
+        '!' + config.main.bowerDirectory + '/pdf.js/web/*.pdf',
     ])
         .pipe(gulp.dest(config.production + '/pdfjs/web'));
 
-    var build = gulp.src([
-        config.main.bowerDirectory + '/pdf/build/*',
-        '!' + config.main.bowerDirectory + '/pdf/build/*.map',
+    const build = gulp.src([
+        config.main.bowerDirectory + '/pdf.js/build/*',
+        '!' + config.main.bowerDirectory + '/pdf.js/build/*.map',
     ])
         .pipe(gulp.dest(config.production + '/pdfjs/build'));
 
@@ -256,7 +261,7 @@ function i18n() {
         config.main.bowerDirectory + '/**/{i18n,lang,locale,locales}/*.{js,json}',
         config.development + '/' + config.paths.js + '/i18n/**/*.{js,json}',
         '!' + config.main.bowerDirectory + '/**/{src,plugins}/**',
-        '!' + config.main.bowerDirectory + '/ckeditor/**',
+        '!' + config.main.bowerDirectory + '/ckeditor4/**',
         '!' + config.main.bowerDirectory + '/summernote/**',
         '!' + config.main.bowerDirectory + '/jquery-ui/**',
     ])
@@ -282,24 +287,9 @@ function phpDebugBar() {
 
 // Operazioni per la release
 function release(done) {
-    var archiver = require('archiver');
-    var fs = require('fs');
-
-    // Rimozione file indesiderati
-    del([
-        './vendor/tecnickcom/tcpdf/fonts/*',
-        '!./vendor/tecnickcom/tcpdf/fonts/*helvetica*',
-        './vendor/mpdf/mpdf/tmp/*',
-        './vendor/mpdf/mpdf/ttfonts/*',
-        '!./vendor/mpdf/mpdf/ttfonts/DejaVuinfo.txt',
-        '!./vendor/mpdf/mpdf/ttfonts/DejaVu*Condensed*',
-        './vendor/maximebf/debugbar/src/DebugBar/Resources/vendor/*',
-        './vendor/respect/validation/tests/*',
-    ]);
-
     // Impostazione dello zip
-    var output = fs.createWriteStream('./release.zip');
-    var archive = archiver('zip');
+    let output = fs.createWriteStream('./release.zip', {flags: 'w'});
+    let archive = archiver('zip');
 
     output.on('close', function () {
         console.log('ZIP completato!');
@@ -311,65 +301,90 @@ function release(done) {
 
     archive.pipe(output);
 
-    // Aggiunta dei file
-    archive.glob('**/*', {
+    // Individuazione dei file da aggiungere
+    glob([
+        '**/*',
+        '!checksum.json',
+        '!.idea/**',
+        '!.git/**',
+        '!node_modules/**',
+        '!backup/**',
+        '!files/**',
+        '!logs/**',
+        '!config.inc.php',
+        '!**/*.(lock|phar|log|zip|bak|jar|txt)',
+        '!**/~*',
+        '!vendor/tecnickcom/tcpdf/examples/*',
+        '!vendor/tecnickcom/tcpdf/fonts/*',
+        'vendor/tecnickcom/tcpdf/fonts/*helvetica*',
+        '!vendor/mpdf/mpdf/tmp/*',
+        '!vendor/mpdf/mpdf/ttfonts/*',
+        'vendor/mpdf/mpdf/ttfonts/DejaVuinfo.txt',
+        'vendor/mpdf/mpdf/ttfonts/DejaVu*Condensed*',
+        '!vendor/maximebf/debugbar/src/DebugBar/Resources/vendor/*',
+        '!vendor/respect/validation/tests/*',
+    ], {
         dot: true,
-        ignore: [
-            '.git/**',
-            'node_modules/**',
-            'backup/**',
-            'files/**',
-            'logs/**',
-            'config.inc.php',
-            '**/*.lock',
-            '**/*.phar',
-            '**/*.log',
-            '**/*.zip',
-            '**/*.bak',
-            '**/*.jar',
-            '**/*.txt',
-            '**/~*',
-        ]
-    });
+    }).then(function (files){
+        // Aggiunta dei file con i relativi checksum
+        let checksum = {};
+        for (const file of files) {
+            if (fs.lstatSync(file).isDirectory()) {
+                archive.directory(file, file);
+            } else {
+                archive.file(file);
 
-    // Eccezioni
-    archive.file('backup/.htaccess');
-    archive.file('files/.htaccess');
-    archive.file('files/my_impianti/componente.ini');
-    archive.file('logs/.htaccess');
-
-    // Aggiunta del commit corrente nel file REVISION
-    archive.append(shell.exec('git rev-parse --short HEAD', {
-        silent: true
-    }).stdout, {
-        name: 'REVISION'
-    });
-
-    // Opzioni sulla release
-    inquirer.prompt([{
-        type: 'input',
-        name: 'version',
-        message: 'Numero di versione:',
-    }, {
-        type: 'confirm',
-        name: 'beta',
-        message: 'Versione beta?',
-        default: false,
-    }]).then(function (result) {
-        version = result.version;
-
-        if (result.beta) {
-            version += 'beta';
+                if (!file.startsWith('vendor')) {
+                    checksum[file] = md5File.sync(file);
+                }
+            }
         }
 
-        archive.append(version, {
-            name: 'VERSION'
+        // Eccezioni
+        archive.file('backup/.htaccess', {});
+        archive.file('files/.htaccess', {});
+        archive.file('files/my_impianti/componente.ini', {});
+        archive.file('logs/.htaccess', {});
+
+        // Aggiunta del file dei checksum
+        let checksumFile = fs.createWriteStream('./checksum.json', {flags: 'w'});
+        checksumFile.write(JSON.stringify(checksum));
+        checksumFile.close();
+        archive.file('checksum.json', {});
+
+        // Aggiunta del commit corrente nel file REVISION
+        archive.append(shell.exec('git rev-parse --short HEAD', {
+            silent: true
+        }).stdout, {
+            name: 'REVISION'
         });
 
-        // Completamento dello zip
-        archive.finalize();
+        // Opzioni sulla release
+        inquirer.prompt([{
+            type: 'input',
+            name: 'version',
+            message: 'Numero di versione:',
+        }, {
+            type: 'confirm',
+            name: 'beta',
+            message: 'Versione beta?',
+            default: false,
+        }]).then(function (result) {
+            let version = result.version;
 
-        done();
+            if (result.beta) {
+                version += 'beta';
+            }
+
+            archive.append(version, {
+                name: 'VERSION'
+            });
+
+            // Completamento dello zip
+            archive.finalize();
+
+            done();
+        });
     });
 }
 

@@ -213,7 +213,7 @@ echo '
 echo '
 <script>
     var n = '.$key.';
-    $(document).on("click", "#add", function(){
+    $(document).on("click", "#add", function() {
         cleanup_inputs();
 
         n++;
@@ -223,7 +223,7 @@ echo '
         restart_inputs();
     });
 
-    $(document).ready(function(){
+    $(document).ready(function() {
         $("#save").addClass("hide");
 
         $(".sortable" ).disableSelection();
@@ -236,13 +236,13 @@ echo '
                 update: function(event, ui) {
 
                     var order = "";
-                    $("div.panel-body.sortable  p[data-id]").each( function(){
+                    $("div.panel-body.sortable  p[data-id]").each( function() {
                         order += ","+$(this).data("id");
                     });
 
                     order = order.replace(/^,/, "");
 
-                    $.post("'.$rootdir.'/actions.php", {
+                    $.post(globals.rootdir + "/actions.php", {
                         id: ui.item.data("id"),
                         id_module: '.$id_module.',
                         id_record: '.$id_record.',

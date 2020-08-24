@@ -282,12 +282,10 @@ $riga = $contratto->getRiga($type, $id_riga);
         break;
 
     case 'update_position':
-        $orders = explode(',', $_POST['order']);
-        $order = 0;
+        $order = explode(',', post('order', true));
 
-        foreach ($orders as $idriga) {
-            $dbo->query('UPDATE `co_righe_contratti` SET `order`='.prepare($order).' WHERE id='.prepare($idriga));
-            ++$order;
+        foreach ($order as $i => $id_riga) {
+            $dbo->query('UPDATE `co_righe_contratti` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
         }
 
         break;
@@ -436,12 +434,17 @@ $riga = $contratto->getRiga($type, $id_riga);
         }
         $documento = $class::find($id_documento);
 
+        // Individuazione sede
+        $id_sede = ($documento->direzione == 'entrata') ? $documento->idsede_destinazione : $documento->idsede_partenza;
+        $id_sede = $id_sede ?: $documento->idsede;
+        $id_sede = $id_sede ?: 0;
+
         // Creazione del contratto al volo
         if (post('create_document') == 'on') {
             $contratto = Contratto::build($documento->anagrafica, $documento->nome);
 
             $contratto->idpagamento = $documento->idpagamento;
-            $contratto->idsede = $documento->idsede;
+            $contratto->idsede = $id_sede;
 
             $contratto->id_documento_fe = $documento->id_documento_fe;
             $contratto->codice_cup = $documento->codice_cup;

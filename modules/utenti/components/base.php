@@ -30,19 +30,19 @@ echo '
 		{[ "type": "select", "label": "'.tr('Collega ad una anagrafica').'", "name": "idanag", "required": 1, "ajax-source": "anagrafiche_utenti", "value": "'.$utente['id_anagrafica'].'", "icon-after": "add|'.Modules::get('Anagrafiche')['id'].(isset($gruppo) ? '|tipoanagrafica='.$gruppo : '').'" ]}
 		</div>
 	</div>
-	
+
 	<div class="row">
 		<div class="col-md-12">
-		    {[ "type": "select", "label": "'.tr('Sede').'", "name": "idsede[]",  "ajax-source": "sedi_azienda", "multiple": "1", "value":"'.($sedi ?: '').'", "help": "'.tr('Sede Azienda abilitata per la movimentazione degli articoli.').'" ]}
+		    {[ "type": "select", "label": "'.tr('Sede').'", "name": "idsede[]", "ajax-source": "sedi_azienda", "multiple": "1", "value":"'.($sedi ?: '').'", "help": "'.tr('Sede Azienda abilitata per la movimentazione degli articoli.').'" ]}
 		</div>
 	</div>';
 
 echo '
     <script type="text/javascript">
-        $(document).ready(function(){
-            $("#idanag").change(function(){
+        $(document).ready(function() {
+            $("#idanag").change(function() {
                 session_set("superselect,idanagrafica", $(this).val(), 0);
-    
+
                 $("#idsede").selectReset();
             })
         });

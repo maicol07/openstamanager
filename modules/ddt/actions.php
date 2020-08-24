@@ -286,6 +286,11 @@ switch (post('op')) {
         }
         $documento = $class::find($id_documento);
 
+    // Individuazione sede
+        $id_sede = ($documento->direzione == 'entrata') ? $documento->idsede_destinazione : $documento->idsede_partenza;
+        $id_sede = $id_sede ?: $documento->idsede;
+        $id_sede = $id_sede ?: 0;
+
         // Creazione del ddt al volo
         if (post('create_document') == 'on') {
             $tipo = Tipo::where('dir', $documento->direzione)->first();
@@ -297,7 +302,7 @@ switch (post('op')) {
             $ddt->codice_cup = $documento->codice_cup;
             $ddt->codice_cig = $documento->codice_cig;
             $ddt->num_item = $documento->num_item;
-            $ddt->idsede_destinazione = $documento->idsede;
+            $ddt->idsede_destinazione = $id_sede;
 
             $ddt->save();
 
@@ -366,27 +371,18 @@ switch (post('op')) {
         break;
 
     case 'add_serial':
-        $idriga = post('idriga');
-        $idarticolo = post('idarticolo');
+        $articolo = Articolo::find(post('idriga'));
 
         $serials = (array) post('serial');
-        foreach ($serials as $key => $value) {
-            if (empty($value)) {
-                unset($serials[$key]);
-            }
-        }
-
-        $dbo->sync('mg_prodotti', ['id_riga_ddt' => $idriga, 'dir' => $dir, 'id_articolo' => $idarticolo], ['serial' => $serials]);
+        $articolo->serials = $serials;
 
         break;
 
         case 'update_position':
-            $orders = explode(',', $_POST['order']);
-            $order = 0;
+            $order = explode(',', post('order', true));
 
-            foreach ($orders as $idriga) {
-                $dbo->query('UPDATE `dt_righe_ddt` SET `order`='.prepare($order).' WHERE id='.prepare($idriga));
-                ++$order;
+            foreach ($order as $i => $id_riga) {
+                $dbo->query('UPDATE `dt_righe_ddt` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
             }
 
             break;

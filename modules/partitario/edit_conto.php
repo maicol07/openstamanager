@@ -9,7 +9,7 @@ $lvl = get('lvl');
 if ($lvl == 2) {
     $query = 'SELECT *, idpianodeiconti1 AS idpianodeiconti FROM co_pianodeiconti2 WHERE id='.prepare($idconto);
 } else {
-    $query = 'SELECT *, idpianodeiconti2 AS idpianodeiconti FROM co_pianodeiconti3 WHERE id='.prepare($idconto);
+    $query = 'SELECT *, idpianodeiconti2 AS idpianodeiconti, (SELECT dir FROM co_pianodeiconti2 WHERE co_pianodeiconti2.id=co_pianodeiconti3.idpianodeiconti2) AS dir FROM co_pianodeiconti3 WHERE id='.prepare($idconto);
 }
 
 $info = $dbo->fetchOne($query);
@@ -31,6 +31,15 @@ $info = $dbo->fetchOne($query);
             {[ "type": "text", "label": "<?php echo tr('Descrizione'); ?>", "name": "descrizione", "required": 1, "value": <?php echo json_encode($info['descrizione']); ?> ]}
         </div>
     </div>
+    <div class="row">
+        <div class="col-md-4 <?php echo intval($lvl != 3 || $info['dir'] != 'uscita') ? 'hidden' : ''; ?>">
+            {[ "type": "number", "decimals": 0, "label": "<?php echo tr('Percentuale deducibile'); ?>", "name": "percentuale_deducibile", "value": "<?php echo $info['percentuale_deducibile']; ?>", "icon-after": "<i class=\"fa fa-percent\"></i>", "max-value": "100", "min-value": "0" ]}
+        </div>
+
+        <div class="col-md-4 <?php echo intval($lvl != 2) ? 'hidden' : ''; ?>">
+            {[ "type": "select", "label": "<?php echo tr('Utilizza come'); ?>", "name": "dir", "value": "<?php echo $info['dir']; ?>", "values": "list=\"entrata\":\"Ricavo\", \"uscita\":\"Costo\", \"\": \"Non usare\"" ]}
+        </div>
+    </div>
     <br>
 
     <div class="pull-right">
@@ -40,4 +49,6 @@ $info = $dbo->fetchOne($query);
     </div>
     <div class="clearfix"></div>
 </form>
+
+<script>$(document).ready(init)</script>
 

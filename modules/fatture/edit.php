@@ -172,9 +172,9 @@ elseif ($record['stato'] == 'Bozza') {
 				<div class="col-md-2" <?php echo ($dir == 'entrata') ? 'hidden' : ''; ?>>
                     {[ "type": "date", "label": "<?php echo tr('Data registrazione'); ?>", <?php echo $readonly; ?> "name": "data_registrazione", "required": 0, "value": "$data_registrazione$", "help": "<?php echo tr('Data in cui si è effettuata la registrazione della fattura in contabilità'); ?>" ]}
 				</div>
-
+                <!-- TODO: da nascondere per le fatture di vendita in quanto questa data sarà sempre uguale alla data di emissione -->
                 <div class="col-md-2" <?php echo ($is_fiscale) ? '' : 'hidden'; ?>>
-                    {[ "type": "date", "label": "<?php echo tr('Data competenza'); ?>", "name": "data_competenza", "required": 1, "value": "$data_competenza$", "min-date": "$data_registrazione$", "help": "<?php echo tr('Data nella quale considerare il movimento contabile, che può essere posticipato rispetto la data della fattura'); ?>" ]}
+                    {[ "type": "date", "class":"<?php echo (dateFormat($fattura->data_competenza) < dateFormat($fattura->data)) ? 'unblockable' : ''; ?>", "label": "<?php echo tr('Data competenza'); ?>", "name": "data_competenza", "required": 1, "value": "$data_competenza$", "min-date": "$data_registrazione$", "help": "<?php echo tr('Data nella quale considerare il movimento contabile, che può essere posticipato rispetto la data della fattura'); ?>" ]}
                 </div>
 
 
@@ -211,57 +211,41 @@ elseif ($record['stato'] == 'Bozza') {
                         ?>
 						{[ "type": "select", "label": "<?php echo tr('Fornitore'); ?>", "name": "idanagrafica", "required": 1, "ajax-source": "fornitori", "value": "$idanagrafica$" ]}
 					<?php
-                    } ?>
-                </div>
+                    }
 
+                    echo '
+                </div>';
 
-				<?php if ($dir == 'entrata') { ?>
+                    if ($dir == 'entrata') {
+                        echo '
 				<div class="col-md-6">
-					{[ "type": "select", "label": "<?php echo tr('Agente di riferimento'); ?>", "name": "idagente", "ajax-source": "agenti", "value": "$idagente_fattura$" ]}
-				</div>
-				<?php } ?>
+					{[ "type": "select", "label": "'.tr('Agente di riferimento').'", "name": "idagente", "ajax-source": "agenti", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "value": "$idagente_fattura$" ]}
+				</div>';
+                    }
 
-
-                <?php
                 // Conteggio numero articoli fatture
                 $articolo = $dbo->fetchArray('SELECT mg_articoli.id FROM ((mg_articoli INNER JOIN co_righe_documenti ON mg_articoli.id=co_righe_documenti.idarticolo) INNER JOIN co_documenti ON co_documenti.id=co_righe_documenti.iddocumento) WHERE co_documenti.id='.prepare($id_record));
-                if ($dir == 'uscita') {
-                    ?>
-                    <div class="col-md-6">
+                    $id_modulo_anagrafiche = Modules::get('Anagrafiche')['id'];
+                    $id_plugin_sedi = Plugins::get('Sedi')['id'];
+                    if ($dir == 'entrata') {
+                        echo '
+                <div class="col-md-3">
+                    {[ "type": "select", "label": "'.tr('Partenza merce').'", "name": "idsede_partenza", "ajax-source": "sedi_azienda", "value": "$idsede_partenza$", "readonly": "'.(sizeof($articolo) ? 1 : 0).'", "help": "'.tr("Sedi di partenza dell'azienda").'" ]}
+                </div>
 
-                        <?php
-                        echo Plugins::link('Sedi', $record['idsede_partenza'], null, null, 'class="pull-right"'); ?>
+                <div class="col-md-3">
+                    {[ "type": "select", "label": "'.tr('Destinazione merce').'", "name": "idsede_destinazione", "ajax-source": "sedi", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "value": "$idsede_destinazione$", "help": "'.tr('Sedi del destinatario').'", "icon-after": "add|'.$id_modulo_anagrafiche.'|id_plugin='.$id_plugin_sedi.'&id_parent='.$record['idanagrafica'].'||'.(intval($block_edit) ? 'disabled' : '').'" ]}
+                </div>';
+                    } else {
+                        echo '
+                <div class="col-md-3">
+                    {[ "type": "select", "label": "'.tr('Partenza merce').'", "name": "idsede_partenza", "ajax-source": "sedi", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "value": "$idsede_partenza$", "help": "'.tr('Sedi del mittente').'", "icon-after": "add|'.$id_modulo_anagrafiche.'|id_plugin='.$id_plugin_sedi.'&id_parent='.$record['idanagrafica'].'||'.(intval($block_edit) ? 'disabled' : '').'" ]}
+                </div>
 
-                        {[ "type": "select", "label": "<?php echo tr('Partenza merce'); ?>", "name": "idsede_partenza", "ajax-source": "sedi", "placeholder": "Sede legale", "value": "$idsede_partenza$", "icon-after": "add|<?php echo Modules::get('Anagrafiche')['id']; ?>|id_plugin=<?php echo Plugins::get('Sedi')['id']; ?>&id_parent=<?php echo $record['idanagrafica']; ?>||<?php echo (intval($block_edit)) ? 'disabled' : ''; ?>" ]}
-                    </div>
-
-                    <div class="col-md-6">
-
-                        <?php
-                        echo Plugins::link('Sedi', $record['idsede_destinazione'], null, null, 'class="pull-right"'); ?>
-
-                        {[ "type": "select", "label": "<?php echo tr('Destinazione merce'); ?>", "name": "idsede_destinazione", "ajax-source": "sedi_azienda",  "value": "$idsede_destinazione$", "readonly": "<?php echo (sizeof($articolo)) ? 1 : 0; ?>" ]}
-                    </div>
-                <?php
-                } else {
-                    ?>
-                    <div class="col-md-6">
-
-                        <?php
-                        echo Plugins::link('Sedi', $record['idsede_partenza'], null, null, 'class="pull-right"'); ?>
-
-                        {[ "type": "select", "label": "<?php echo tr('Partenza merce'); ?>", "name": "idsede_partenza", "ajax-source": "sedi_azienda", "placeholder": "Sede legale", "value": "$idsede_partenza$", "readonly": "<?php echo (sizeof($articolo)) ? 1 : 0; ?>"  ]}
-                    </div>
-
-                    <div class="col-md-6">
-
-                        <?php
-                        echo Plugins::link('Sedi', $record['idsede_destinazione'], null, null, 'class="pull-right"'); ?>
-
-                        {[ "type": "select", "label": "<?php echo tr('Destinazione merce'); ?>", "name": "idsede_destinazione", "ajax-source": "sedi",  "value": "$idsede_destinazione$", "readonly": "", "icon-after": "add|<?php echo Modules::get('Anagrafiche')['id']; ?>|id_plugin=<?php echo Plugins::get('Sedi')['id']; ?>&id_parent=<?php echo $record['idanagrafica']; ?>||<?php echo (intval($block_edit)) ? 'disabled' : ''; ?>" ]}
-                    </div>
-                <?php
-                }
+                <div class="col-md-3">
+                    {[ "type": "select", "label": "'.tr('Destinazione merce').'", "name": "idsede_destinazione", "ajax-source": "sedi_azienda", "value": "$idsede_destinazione$", "help": "'.tr("Sedi di arrivo dell'azienda").'" ]}
+                </div>';
+                    }
                 ?>
 			</div>
 			<hr>
@@ -282,7 +266,6 @@ elseif ($record['stato'] == 'Bozza') {
 					{[ "type": "select", "label": "<?php echo tr('Banca'); ?>", "name": "idbanca", "values": "query=SELECT id, CONCAT (nome, ' - ' , iban) AS descrizione FROM co_banche WHERE deleted_at IS NULL ORDER BY nome ASC", "value": "$idbanca$", "icon-after": "add|<?php echo Modules::get('Banche')['id']; ?>||", "extra": " <?php echo (intval($block_edit)) ? 'disabled' : ''; ?> " ]}
 				</div>
 
-
                 <?php
                 if ($record['stato'] != 'Bozza' && $record['stato'] != 'Annullata') {
                     $ricalcola = true;
@@ -302,10 +285,7 @@ elseif ($record['stato'] == 'Bozza') {
                     </button>';
                     }
                     echo '
-                        </div>
-                    ';
-
-                    echo '
+                    </div>
                     <div class="clearfix"></div>';
 
                     foreach ($scadenze as $scadenza) {
@@ -359,12 +339,10 @@ elseif ($record['stato'] == 'Bozza') {
 
                 <?php
                 if ($dir == 'entrata') {
-                    ?>
+                    echo '
                     <div class="col-md-3">
-                        {[ "type": "select", "label": "<?php echo tr("Dichiarazione d'intento"); ?>", "name": "id_dichiarazione_intento", "ajax-source": "dichiarazioni_intento", "value": "$id_dichiarazione_intento$" ]}
-                    </div>
-
-                    <?php
+                        {[ "type": "select", "label": "'.tr("Dichiarazione d'intento").'", "name": "id_dichiarazione_intento", "ajax-source": "dichiarazioni_intento", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "value": "$id_dichiarazione_intento$" ]}
+                    </div>';
                 }
                 ?>
             </div>
@@ -408,7 +386,7 @@ echo '
 
                 <script type="text/javascript">
                     $(document).ready(function() {
-                        $("#bollo_automatico").click(function(){
+                        $("#bollo_automatico").click(function() {
                             $("#bollo").attr("disabled", $(this).is(":checked"));
                         });
                     });
@@ -449,11 +427,11 @@ if ($tipodoc == 'Fattura accompagnatoria di vendita') {
                 </div>
 
                 <div class="col-md-3">
-                    {[ "type": "select", "label": "'.tr('Vettore').'", "name": "idvettore",  "ajax-source": "vettori",  "value": "$idvettore$", "icon-after": "add|'.Modules::get('Anagrafiche')['id'].'|tipoanagrafica=Vettore|'.((($record['idspedizione'] != 3) and ($record['stato'] == 'Bozza')) ? '' : 'disabled').'", "disabled": '.intval($record['idspedizione'] == 3).', "required": '.intval($record['idspedizione'] != 3).' ]}
+                    {[ "type": "select", "label": "'.tr('Vettore').'", "name": "idvettore", "ajax-source": "vettori", "value": "$idvettore$", "icon-after": "add|'.Modules::get('Anagrafiche')['id'].'|tipoanagrafica=Vettore|'.((($record['idspedizione'] != 3) and ($record['stato'] == 'Bozza')) ? '' : 'disabled').'", "disabled": '.intval($record['idspedizione'] == 3).', "required": '.intval($record['idspedizione'] != 3).' ]}
                 </div>
 
                 <script>
-                    $("#idspedizione").change( function(){
+                    $("#idspedizione").change(function() {
                         if ($(this).val() == 3) {
                             $("#idvettore").attr("required", false);
                             $("#idvettore").attr("disabled", true);
@@ -468,7 +446,7 @@ if ($tipodoc == 'Fattura accompagnatoria di vendita') {
                         }
                     });
 
-					$("#idcausalet").change( function(){
+					$("#idcausalet").change(function() {
                         if ($(this).val() == 3) {
                             $("#tipo_resa").attr("disabled", false);
                         }else{
@@ -550,7 +528,7 @@ if ($tipodoc == 'Fattura accompagnatoria di vendita') {
 
                 <script type="text/javascript">
                     $(document).ready(function() {
-                        $("#peso_manuale").click(function(){
+                        $("#peso_manuale").click(function() {
                             $("#peso").prop("readonly", !$("#peso_manuale").is(":checked"));
                         });
                     });
@@ -566,7 +544,7 @@ if ($tipodoc == 'Fattura accompagnatoria di vendita') {
 
                 <script type="text/javascript">
                     $(document).ready(function() {
-                        $("#volume_manuale").click(function(){
+                        $("#volume_manuale").click(function() {
                             $("#volume").prop("readonly", !$("#volume_manuale").is(":checked"));
                         });
                     });
@@ -575,22 +553,21 @@ if ($tipodoc == 'Fattura accompagnatoria di vendita') {
         </div>
     </div>';
 }
-?>
+
+echo '
 </form>
-
-
 
 <!-- RIGHE -->
 <div class="panel panel-primary">
 	<div class="panel-heading">
-		<h3 class="panel-title">Righe</h3>
+		<h3 class="panel-title">'.tr('Righe').'</h3>
 	</div>
 
 	<div class="panel-body">
 		<div class="row">
 			<div class="col-md-12">
-				<div class="pull-left">
-<?php
+				<div class="pull-left">';
+
 if (!$block_edit) {
     if (empty($record['ref_documento'])) {
         if ($dir == 'entrata') {
@@ -606,7 +583,7 @@ if (!$block_edit) {
             }
 
             echo '
-                    <div class="tip" data-toggle="tooltip" title="'.tr('Attività completate non collegate a preventivi o contratti e che non siano già state fatturate.').'" style="display:inline;">
+                    <div class="tip" data-toggle="tooltip" title="'.tr('Attività completate non collegate a preventivi o contratti e che non siano già state fatturate.').'">
                         <a class="btn btn-sm btn-primary '.(!empty($interventi) ? '' : ' disabled').'" data-href="'.$rootdir.'/modules/fatture/add_intervento.php?id_module='.$id_module.'&id_record='.$id_record.'" data-title="Aggiungi attività">
                             <i class="fa fa-plus"></i> Attività
                         </a>
@@ -616,7 +593,7 @@ if (!$block_edit) {
             $prev_query = 'SELECT COUNT(*) AS tot FROM co_preventivi WHERE idanagrafica='.prepare($record['idanagrafica']).' AND idstato IN(SELECT id FROM co_statipreventivi WHERE is_fatturabile = 1) AND default_revision=1 AND co_preventivi.id IN (SELECT idpreventivo FROM co_righe_preventivi WHERE co_righe_preventivi.idpreventivo = co_preventivi.id AND (qta - qta_evasa) > 0)';
             $preventivi = $dbo->fetchArray($prev_query)[0]['tot'];
             echo '
-                    <div class="tip" style="display:inline;">
+                    <div class="tip">
                         <a class="btn btn-sm btn-primary '.(!empty($preventivi) ? '' : ' disabled').'" data-href="'.$rootdir.'/modules/fatture/add_preventivo.php?id_module='.$id_module.'&id_record='.$id_record.'" data-title="Aggiungi preventivo" data-toggle="tooltip">
                             <i class="fa fa-plus"></i> Preventivo
                         </a>
@@ -626,7 +603,7 @@ if (!$block_edit) {
             $contr_query = 'SELECT COUNT(*) AS tot FROM co_contratti WHERE idanagrafica='.prepare($record['idanagrafica']).' AND idstato IN( SELECT id FROM co_staticontratti WHERE is_fatturabile = 1) AND co_contratti.id IN (SELECT idcontratto FROM co_righe_contratti WHERE co_righe_contratti.idcontratto = co_contratti.id AND (qta - qta_evasa) > 0)';
             $contratti = $dbo->fetchArray($contr_query)[0]['tot'];
             echo '
-                    <div class="tip" style="display:inline;">
+                    <div class="tip">
                         <a class="btn btn-sm btn-primary '.(!empty($contratti) ? '' : ' disabled').'"  data-href="'.$rootdir.'/modules/fatture/add_contratto.php?id_module='.$id_module.'&id_record='.$id_record.'" data-title="Aggiungi contratto" data-toggle="tooltip">
                             <i class="fa fa-plus"></i> Contratto
                         </a>
@@ -669,28 +646,29 @@ if (!$block_edit) {
 
     $articoli = $dbo->fetchNum($art_query);
     echo '
-                        <a class="btn btn-sm btn-primary'.(!empty($articoli) ? '' : ' disabled').'" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_articolo" data-toggle="tooltip" data-title="'.tr('Aggiungi articolo').'">
-                            <i class="fa fa-plus"></i> '.tr('Articolo').'
-                        </a>';
-    echo '
-            <a class="btn btn-sm btn-primary"data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_barcode" data-toggle="tooltip" data-title="'.tr('Aggiungi articoli tramite barcode').'">
-                <i class="fa fa-plus"></i> '.tr('Barcode').'
-            </a>';
+                    <button class="btn btn-sm btn-primary tip'.(!empty($articoli) ? '' : ' disabled').'" title="'.tr('Aggiungi articolo').'" onclick="gestioneArticolo(this)">
+                        <i class="fa fa-plus"></i> '.tr('Articolo').'
+                    </button>';
 
     echo '
-                        <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_riga" data-toggle="tooltip" data-title="'.tr('Aggiungi riga').'">
-                            <i class="fa fa-plus"></i> '.tr('Riga').'
-                        </a>';
+                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articoli tramite barcode').'" onclick="gestioneBarcode(this)">
+                        <i class="fa fa-plus"></i> '.tr('Barcode').'
+                    </button>';
 
     echo '
-                        <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_descrizione" data-toggle="tooltip" data-title="'.tr('Aggiungi descrizione').'">
-                            <i class="fa fa-plus"></i> '.tr('Descrizione').'
-                        </a>';
+                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi riga').'" onclick="gestioneRiga(this)">
+                        <i class="fa fa-plus"></i> '.tr('Riga').'
+                    </button>';
 
     echo '
-                        <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_sconto" data-toggle="tooltip" data-title="'.tr('Aggiungi sconto/maggiorazione').'">
-                            <i class="fa fa-plus"></i> '.tr('Sconto/maggiorazione').'
-                        </a>';
+                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi descrizione').'" onclick="gestioneDescrizione(this)">
+                        <i class="fa fa-plus"></i> '.tr('Descrizione').'
+                    </button>';
+
+    echo '
+                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi sconto/maggiorazione').'" onclick="gestioneSconto(this)">
+                        <i class="fa fa-plus"></i> '.tr('Sconto/maggiorazione').'
+                    </button>';
 }
 ?>
 				</div>
@@ -775,7 +753,8 @@ if ($dir == 'entrata') {
 
 echo '
 <script type="text/javascript">
-	$("#idanagrafica").change(function(){
+	$("#idanagrafica").change(function() {
+        updateSelectOption("idanagrafica", $(this).val());
         session_set("superselect,idanagrafica", $(this).val(), 0);
 
         $("#id_dichiarazione_intento").selectReset();';
@@ -789,7 +768,7 @@ echo '
 echo '
 	});
 
-    $("#ricalcola_scadenze").click(function(){
+    $("#ricalcola_scadenze").click(function() {
         swal({
             title: "'.tr('Desideri ricalcolare le scadenze?').'",
             type: "warning",
@@ -837,42 +816,39 @@ if (in_array($record[$field_name], $user->sedi)) {
 <?php
 }
 
-    echo '
+echo '
 <script>
+function gestioneArticolo(button) {
+    gestioneRiga(button, "is_articolo");
+}
 
-$(".btn-sm[data-toggle=\"tooltip\"]").each(function() {
-   $(this).on("click", function() {
-        var form = $("#edit-form");
-        var btn = $(this);
+function gestioneBarcode(button) {
+    gestioneRiga(button, "is_barcode");
+}
 
-        var restore = buttonLoading(btn);
+function gestioneSconto(button) {
+    gestioneRiga(button, "is_sconto");
+}
 
-        var valid = submitAjax(form, {}, function() {
-            buttonRestore(btn, restore);
-        }, function() {
-            buttonRestore(btn, restore);
-        });
+function gestioneDescrizione(button) {
+    gestioneRiga(button, "is_descrizione");
+}
 
-		// Procedo al salvataggio solo se tutti i campi obbligatori sono compilati, altrimenti mostro avviso
-        //form.find("input:disabled, select:disabled").removeAttr("disabled");
+async function gestioneRiga(button, options) {
+    // Salvataggio via AJAX
+    let valid = await salvaForm(button, $("#edit-form"));
 
-	    if(!valid) {
-			swal({
-                type: "error",
-                title: "'.tr('Errore').'",
-                text:  "'.tr('Alcuni campi obbligatori non sono stati compilati correttamente').'.",
-            });
+    // Apertura modal
+    if (valid) {
+        // Lettura titolo e chiusura tooltip
+        let title = $(button).tooltipster("content");
+        $(button).tooltipster("close")
 
-            $(document).one("show.bs.modal","#modals > div", function (e) {
-                return e.preventDefault();
-            });
-		}
-
-	    $(document).one("show.bs.modal","#modals > div", function () {
-            buttonRestore(btn, restore);
-        });
-	});
-});
+        // Apertura modal
+        options = options ? options : "is_riga";
+        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
+    }
+}
 
 $(document).ready(function () {
     $("#data_registrazione").on("dp.change", function (e) {

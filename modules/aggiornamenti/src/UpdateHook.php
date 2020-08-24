@@ -7,6 +7,9 @@ use Hooks\CachedManager;
 use Modules;
 use Update;
 
+/**
+ * Hook dedicato all'individuazione di nuove versioni del gestionale, pubblicate sulla repository ufficiale di GitHub.
+ */
 class UpdateHook extends CachedManager
 {
     protected static $client = null;
@@ -51,7 +54,7 @@ class UpdateHook extends CachedManager
 
         if (!$api['prerelease'] or setting('Abilita canale pre-release per aggiornamenti')) {
             $version[0] = ltrim($api['tag_name'], 'v');
-            $version[1] = (($api['prerelease']) ? 'prerelease' : 'stable');
+            $version[1] = !empty($api['prerelease']) ? 'beta' : 'stabile';
             $current = Update::getVersion();
 
             if (version_compare($current, $version[0]) < 0) {

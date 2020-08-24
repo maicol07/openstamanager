@@ -16,26 +16,30 @@ class Movimento extends Model
         'dare',
     ];
 
-    public static function build(Mastrino $mastrino, $id_conto, Scadenza $scadenza = null)
+    public static function build(Mastrino $mastrino, $id_conto, Fattura $documento = null, Scadenza $scadenza = null)
     {
         $model = parent::build();
 
+        // Informazioni dipendenti dal mastrino
         $model->idmastrino = $mastrino->idmastrino;
         $model->data = $mastrino->data;
         $model->descrizione = $mastrino->descrizione;
         $model->primanota = $mastrino->primanota;
         $model->is_insoluto = $mastrino->is_insoluto;
 
-        $model->id_scadenza = $scadenza ? $scadenza->id : null;
+        // Conto associato
+        $model->idconto = $id_conto;
 
-        $documento = $scadenza ? $scadenza->documento : null;
+        // Associazione al documento indicato
+        $documento_scadenza = $scadenza ? $scadenza->documento : null;
+        $documento = $documento ?: $documento_scadenza;
         if (!empty($documento)) {
-            $model->data_documento = $documento->data;
-            $model->iddocumento = $documento->id;
             $model->idanagrafica = $documento->idanagrafica;
+            $model->iddocumento = $documento->id;
         }
 
-        $model->idconto = $id_conto;
+        // Associazione alla scadenza indicata
+        $model->id_scadenza = $scadenza ? $scadenza->id : null;
 
         $model->save();
 
@@ -51,6 +55,16 @@ class Movimento extends Model
         }
 
         $this->totale = $totale;
+    }
+
+    public function save(array $options = [])
+    {
+        // Aggiornamento automatico di totale_reddito
+        $conto = database()->fetchOne('SELECT * FROM co_pianodeiconti3 WHERE id = '.prepare($this->id_conto));
+        $percentuale = floatval($conto['percentuale_deducibile']);
+        $this->totale_reddito = $this->totale * $percentuale / 100;
+
+        return parent::save($options);
     }
 
     // Attributi

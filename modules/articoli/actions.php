@@ -103,7 +103,7 @@ switch (post('op')) {
         $old_qta = $record['qta'];
         $movimento = $qta - $old_qta;
 
-        if ($movimento != 0) {
+        if (post('qta_manuale') == 1) {
             $descrizione_movimento = post('descrizione_movimento');
             $data_movimento = post('data_movimento');
 
@@ -161,16 +161,20 @@ switch (post('op')) {
     // Duplica articolo
     case 'copy':
         $new = $articolo->replicate();
+        $new->codice = post('codice');
         $new->qta = 0;
         $new->save();
 
         // Copia degli allegati
-        $allegati = $articolo->uploads();
-        foreach ($allegati as $allegato) {
-            $allegato->copia([
-                'id_module' => $new->getModule()->id,
-                'id_record' => $new->id,
-            ]);
+        $copia_allegati = post('copia_allegati');
+        if (!empty($copia_allegati)) {
+            $allegati = $articolo->uploads();
+            foreach ($allegati as $allegato) {
+                $allegato->copia([
+                    'id_module' => $new->getModule()->id,
+                    'id_record' => $new->id,
+                ]);
+            }
         }
 
         // Salvataggio immagine relativa

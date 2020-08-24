@@ -157,6 +157,7 @@ switch (post('op')) {
         $articolo->um = post('um') ?: null;
 
         $articolo->costo_unitario = post('costo_unitario') ?: 0;
+        $articolo->data_evasione = post('data_evasione') ?: null;
         $articolo->setPrezzoUnitario(post('prezzo_unitario'), post('idiva'));
         $articolo->setSconto(post('sconto'), post('tipo_sconto'));
 
@@ -216,6 +217,7 @@ switch (post('op')) {
         $riga->um = post('um') ?: null;
 
         $riga->costo_unitario = post('costo_unitario') ?: 0;
+        $riga->data_evasione = post('data_evasione') ?: null;
         $riga->setPrezzoUnitario(post('prezzo_unitario'), post('idiva'));
         $riga->setSconto(post('sconto'), post('tipo_sconto'));
 
@@ -286,30 +288,21 @@ switch (post('op')) {
         break;
 
     case 'add_serial':
-        $idriga = post('idriga');
-        $idarticolo = post('idarticolo');
+        $articolo = Articolo::find(post('idriga'));
 
         $serials = (array) post('serial');
-        foreach ($serials as $key => $value) {
-            if (empty($value)) {
-                unset($serials[$key]);
-            }
-        }
-
-        $dbo->sync('mg_prodotti', ['id_riga_ordine' => $idriga, 'dir' => $dir, 'id_articolo' => $idarticolo], ['serial' => $serials]);
+        $articolo->serials = $serials;
 
         break;
 
-        case 'update_position':
-            $orders = explode(',', $_POST['order']);
-            $order = 0;
+    case 'update_position':
+        $order = explode(',', post('order', true));
 
-            foreach ($orders as $idriga) {
-                $dbo->query('UPDATE `or_righe_ordini` SET `order`='.prepare($order).' WHERE id='.prepare($idriga));
-                ++$order;
-            }
+        foreach ($order as $i => $id_riga) {
+            $dbo->query('UPDATE `or_righe_ordini` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
+        }
 
-            break;
+        break;
 
     // Aggiunta di un documento in ordine
     case 'add_preventivo':
@@ -323,13 +316,18 @@ switch (post('op')) {
         }
         $documento = $class::find($id_documento);
 
+        // Individuazione sede
+        $id_sede = ($documento->direzione == 'entrata') ? $documento->idsede_destinazione : $documento->idsede_partenza;
+        $id_sede = $id_sede ?: $documento->idsede;
+        $id_sede = $id_sede ?: 0;
+
         // Creazione dell' ordine al volo
         if (post('create_document') == 'on') {
             $tipo = Tipo::where('dir', $documento->direzione)->first();
 
             $ordine = Ordine::build($documento->anagrafica, $tipo, post('data'));
             $ordine->idpagamento = $documento->idpagamento;
-            $ordine->idsede = $documento->idsede;
+            $ordine->idsede = $id_sede;
 
             $ordine->id_documento_fe = $documento->id_documento_fe;
             $ordine->codice_cup = $documento->codice_cup;

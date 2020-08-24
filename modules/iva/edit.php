@@ -48,7 +48,7 @@ if ($res) {
 
 			<div class="row">
                 <div class="col-md-4">
-					{[ "type": "checkbox", "label": "<?php echo tr('Esente'); ?>", "name": "esente", "id": "esente-edit", "value": "$esente$", "readonly": "<?php echo $is_readonly; ?>",  "extra": "<?php echo $attr; ?>"]}
+					{[ "type": "checkbox", "label": "<?php echo tr('Esente'); ?>", "name": "esente", "id": "esente-edit", "value": "$esente$", "readonly": "<?php echo $is_readonly; ?>", "extra": "<?php echo $attr; ?>"]}
 				</div>
 
 				<div class="col-md-4">
@@ -56,7 +56,7 @@ if ($res) {
 				</div>
 
 				<div class="col-md-4">
-					{[ "type": "number", "label": "<?php echo tr('Indetraibile'); ?>", "name": "indetraibile", "value": "$indetraibile$", "icon-after": "<i class=\"fa fa-percent\"></i>", "readonly": "<?php echo $is_readonly; ?>",  "extra": "<?php echo $attr; ?>", "max-value": "100" ]}
+					{[ "type": "number", "label": "<?php echo tr('Indetraibile'); ?>", "name": "indetraibile", "value": "$indetraibile$", "icon-after": "<i class=\"fa fa-percent\"></i>", "readonly": "<?php echo $is_readonly; ?>", "extra": "<?php echo $attr; ?>", "max-value": "100" ]}
 				</div>
 			</div>
 
@@ -66,11 +66,11 @@ if ($res) {
 				</div>
 
 				<div class="col-md-4">
-					{[ "type": "select", "label": "<?php echo tr('Codice Natura (Fatturazione Elettronica)'); ?>", "name": "codice_natura_fe", "value": "$codice_natura_fe$", "required": <?php echo intval($record['esente']); ?>, "disabled": <?php echo intval(!$record['esente']); ?>, "values": "query=SELECT codice as id, CONCAT(codice, ' - ', descrizione) AS descrizione FROM fe_natura", "readonly": "<?php echo $is_readonly; ?>",  "extra": "<?php echo $attr; ?>" ]}
+					{[ "type": "select", "label": "<?php echo tr('Codice Natura (Fatturazione Elettronica)'); ?>", "name": "codice_natura_fe", "value": "$codice_natura_fe$", "required": <?php echo intval($record['esente']); ?>, "disabled": <?php echo intval(!$record['esente']); ?>, "values": "query=SELECT codice as id, CONCAT(codice, ' - ', descrizione) AS descrizione FROM fe_natura", "readonly": "<?php echo $is_readonly; ?>", "extra": "<?php echo $attr; ?>" ]}
 				</div>
 
                 <div class="col-md-4">
-					{[ "type": "select", "label": "<?php echo tr('Esigibilità (Fatturazione Elettronica)'); ?>", "name": "esigibilita", "value": "$esigibilita$", "values": <?php echo json_encode($esigibilita); ?>, "required": 1, "readonly": "<?php echo $is_readonly; ?>",  "extra": "<?php echo $attr; ?>" ]}
+					{[ "type": "select", "label": "<?php echo tr('Esigibilità (Fatturazione Elettronica)'); ?>", "name": "esigibilita", "value": "$esigibilita$", "values": <?php echo json_encode($esigibilita); ?>, "required": 1, "readonly": "<?php echo $is_readonly; ?>", "extra": "<?php echo $attr; ?>" ]}
 				</div>
 			</div>
 
@@ -86,8 +86,8 @@ if ($res) {
 
 
 <script>
-$(document).ready(function(){
-    $('#esente-edit').change(function(){
+$(document).ready(function() {
+    $('#esente-edit').change(function() {
         var checkbox = $(this).parent().find('[type=hidden]');
 
         if (checkbox.val() == 1) {

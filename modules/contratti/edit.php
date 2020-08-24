@@ -53,20 +53,20 @@ $_SESSION['superselect']['permetti_movimento_a_zero'] = true;
                     {[ "type": "select", "label": "<?php echo tr('Cliente'); ?>", "name": "idanagrafica", "id": "idanagrafica_c", "required": 1, "value": "$idanagrafica$", "ajax-source": "clienti" ]}
                 </div>
 
+                <?php
+
+                echo '
                 <div class="col-md-3">
-                    {[ "type": "select", "label": "<?php echo tr('Sede'); ?>", "name": "idsede", "value": "$idsede$", "ajax-source": "sedi", "placeholder": "Sede legale" ]}
+                    {[ "type": "select", "label": "'.tr('Sede').'", "name": "idsede", "value": "$idsede$", "ajax-source": "sedi", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "placeholder": "Sede legale" ]}
                 </div>
 
 				<div class="col-md-3">
-                    <?php
-                    echo Plugins::link('Referenti', $record['idanagrafica'], null, null, 'class="pull-right"');
-                    ?>
-
-					{[ "type": "select", "label": "<?php echo tr('Referente'); ?>", "name": "idreferente", "value": "$idreferente$", "ajax-source": "referenti" ]}
+				    '.Plugins::link('Referenti', $record['idanagrafica'], null, null, 'class="pull-right"').'
+					{[ "type": "select", "label": "'.tr('Referente').'", "name": "idreferente", "value": "$idreferente$", "ajax-source": "referenti", "select-options": {"idanagrafica": '.$record['idanagrafica'].'} ]}
 				</div>
 
-				<div class="col-md-3">
-                    <?php
+				<div class="col-md-3">';
+
                         if ($record['idagente'] != 0) {
                             echo Modules::link('Anagrafiche', $record['idagente'], null, null, 'class="pull-right"');
                         }
@@ -115,7 +115,7 @@ $_SESSION['superselect']['permetti_movimento_a_zero'] = true;
 
 			<div class="row">
 				<div class="col-md-12">
-					{[ "type": "select", "multiple": "1", "label": "<?php echo tr('Impianti'); ?>", "name": "matricolaimpianto[]", "values": "query=SELECT idanagrafica, id AS id, IF(nome = '', matricola, CONCAT(matricola, ' - ', nome)) AS descrizione FROM my_impianti WHERE idanagrafica='$idanagrafica$' ORDER BY descrizione", "value": "$idimpianti$", "icon-after": "add|<?php echo Modules::get('MyImpianti')['id']; ?>|||<?php echo (empty($block_edit)) ? '' : 'disabled'; ?>" ]}
+					{[ "type": "select", "multiple": "1", "label": "<?php echo tr('Impianti'); ?>", "name": "matricolaimpianto[]", "values": "query=SELECT idanagrafica, id AS id, IF(nome = '', matricola, CONCAT(matricola, ' - ', nome)) AS descrizione FROM my_impianti WHERE idanagrafica='$idanagrafica$' ORDER BY descrizione", "value": "$idimpianti$", "icon-after": "add|<?php echo Modules::get('Impianti')['id']; ?>|||<?php echo (empty($block_edit)) ? '' : 'disabled'; ?>" ]}
 				</div>
             </div>
 
@@ -287,7 +287,8 @@ if (!empty($rs)) {
     echo '
                         </table>';
 }
-?>
+    echo '
+
 					</div>
 				</div>
 			</div>
@@ -295,52 +296,51 @@ if (!empty($rs)) {
 	</div>
 </form>
 
-
 <!-- RIGHE -->
 <div class="panel panel-primary">
     <div class="panel-heading">
-        <h3 class="panel-title"><?php echo tr('Righe'); ?></h3>
+        <h3 class="panel-title">'.tr('Righe').'</h3>
     </div>
 
-    <div class="panel-body">
-<?php
+    <div class="panel-body">';
+
 if (!$block_edit) {
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_articolo" data-toggle="tooltip" data-title="'.tr('Aggiungi articolo').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articolo').'" onclick="gestioneArticolo(this)">
                 <i class="fa fa-plus"></i> '.tr('Articolo').'
-            </a>';
+            </button>';
 
     echo '
-            <a class="btn btn-sm btn-primary"data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_barcode" data-toggle="tooltip" data-title="'.tr('Aggiungi articoli tramite barcode').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articoli tramite barcode').'" onclick="gestioneBarcode(this)">
                 <i class="fa fa-plus"></i> '.tr('Barcode').'
-            </a>';
+            </button>';
 
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_riga" data-toggle="tooltip" data-title="'.tr('Aggiungi riga').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi riga').'" onclick="gestioneRiga(this)">
                 <i class="fa fa-plus"></i> '.tr('Riga').'
-            </a>';
+            </button>';
 
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_descrizione" data-toggle="tooltip" data-title="'.tr('Aggiungi descrizione').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi descrizione').'" onclick="gestioneDescrizione(this)">
                 <i class="fa fa-plus"></i> '.tr('Descrizione').'
-            </a>';
+            </button>';
 
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_sconto" data-toggle="tooltip" data-title="'.tr('Aggiungi sconto/maggiorazione').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi sconto/maggiorazione').'" onclick="gestioneSconto(this)">
                 <i class="fa fa-plus"></i> '.tr('Sconto/maggiorazione').'
-            </a>';
+            </button>';
 }
-?>
+
+echo '
         <div class="clearfix"></div>
         <br>
 
         <div class="row">
-            <div class="col-md-12">
-<?php
+            <div class="col-md-12">';
 
-include $docroot.'/modules/contratti/row-list.php';
+include $structure->filepath('row-list.php');
 
-?>
+echo '
             </div>
         </div>
     </div>
@@ -351,45 +351,76 @@ include $docroot.'/modules/contratti/row-list.php';
 {( "name": "log_email", "id_module": "$id_module$", "id_record": "$id_record$" )}
 
 <script type="text/javascript">
-    $(document).ready(function(){
-        $('#data_accettazione').on("dp.change", function(){
-            if($(this).val()){
-                $('#data_rifiuto').attr('disabled', true);
-            }else{
-                $('#data_rifiuto').attr('disabled', false);
-            }
-        });
+function gestioneArticolo(button) {
+    gestioneRiga(button, "is_articolo");
+}
 
-        $('#data_rifiuto').on("dp.change", function(){
-            if($(this).val()){
-                $('#data_accettazione').attr('disabled', true);
-            }else{
-                $('#data_accettazione').attr('disabled', false);
-            }
-        });
+function gestioneBarcode(button) {
+    gestioneRiga(button, "is_barcode");
+}
 
-        $("#data_accettazione").trigger("dp.change");
-        $("#data_rifiuto").trigger("dp.change");
+function gestioneSconto(button) {
+    gestioneRiga(button, "is_sconto");
+}
+
+function gestioneDescrizione(button) {
+    gestioneRiga(button, "is_descrizione");
+}
+
+async function gestioneRiga(button, options) {
+    // Salvataggio via AJAX
+    let valid = await salvaForm(button, $("#edit-form"));
+
+    // Apertura modal
+    if (valid) {
+        // Lettura titolo e chiusura tooltip
+        let title = $(button).tooltipster("content");
+        $(button).tooltipster("close")
+
+        // Apertura modal
+        options = options ? options : "is_riga";
+        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
+    }
+}
+
+$(document).ready(function() {
+    $("#data_accettazione").on("dp.change", function() {
+        if($(this).val()){
+            $("#data_rifiuto").attr("disabled", true);
+        }else{
+            $("#data_rifiuto").attr("disabled", false);
+        }
     });
 
-	$('#idanagrafica_c').change( function(){
-        session_set('superselect,idanagrafica', $(this).val(), 0);
+    $("#data_rifiuto").on("dp.change", function() {
+        if($(this).val()){
+            $("#data_accettazione").attr("disabled", true);
+        }else{
+            $("#data_accettazione").attr("disabled", false);
+        }
+    });
 
-		$("#idsede").selectReset();
-	});
+    $("#data_accettazione").trigger("dp.change");
+    $("#data_rifiuto").trigger("dp.change");
+});
 
-	$('#codice_cig, #codice_cup').bind("keyup change", function(e) {
+$("#idanagrafica_c").change(function() {
+    updateSelectOption("idanagrafica", $(this).val());
+    session_set("superselect,idanagrafica", $(this).val(), 0);
 
-		if ($('#codice_cig').val() == '' && $('#codice_cup').val() == '' ){
-			$('#id_documento_fe').prop('required', false);
-		}else{
-			$('#id_documento_fe').prop('required', true);
-		}
+    $("#idsede").selectReset();
+});
 
-	});
-</script>
+$("#codice_cig, #codice_cup").bind("keyup change", function(e) {
 
-<?php
+    if ($("#codice_cig").val() == "" && $("#codice_cup").val() == "" ){
+        $("#id_documento_fe").prop("required", false);
+    }else{
+        $("#id_documento_fe").prop("required", true);
+    }
+});
+</script>';
+
 // Collegamenti diretti
 // Fatture o interventi collegati a questo contratto
 $elementi = $dbo->fetchArray('SELECT 0 AS `codice`, `co_documenti`.`id` AS `id`, `co_documenti`.`numero` AS `numero`, `co_documenti`.`numero_esterno` AS `numero_esterno`,  `co_documenti`.`data`, `co_tipidocumento`.`descrizione` AS `tipo_documento`, `co_tipidocumento`.`dir` AS `dir`  FROM `co_documenti` JOIN `co_tipidocumento` ON `co_tipidocumento`.`id` = `co_documenti`.`idtipodocumento` WHERE `co_documenti`.`id` IN (SELECT `iddocumento` FROM `co_righe_documenti` WHERE `idcontratto` = '.prepare($id_record).')'.'
@@ -461,7 +492,7 @@ if (!empty($elementi)) {
 ?>
 
 <script>
-$('#rinnovabile').on('change', function(){
+$('#rinnovabile').on('change', function() {
     if ($(this).is(':checked')) {
         $('#giorni_preavviso_rinnovo').prop('disabled', false);
     } else {

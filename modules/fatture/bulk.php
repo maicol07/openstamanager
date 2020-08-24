@@ -174,7 +174,7 @@ switch (post('op')) {
         break;
 
     case 'copy-bulk':
-        $list = array();
+        $list = [];
         foreach ($id_records as $id) {
             $fattura = Fattura::find($id);
             array_push($list, $fattura->numero_esterno);
@@ -202,17 +202,22 @@ switch (post('op')) {
                 $data = date('Y-m-d', strtotime('+1 year', strtotime($fattura->data)));
             }
 
-            $stato = Stato::where('descrizione', 'Bozza')->first();
-
             $new = $fattura->replicate();
-            $new->codice_stato_fe = null;
+
+            $new->data = $data;
             $new->id_segment = $id_segment;
             $new->numero = Fattura::getNextNumero($data, $dir, $id_segment);
             if (!empty($fattura->numero_esterno)) {
                 $new->numero_esterno = Fattura::getNextNumeroSecondario($data, $dir, $id_segment);
             }
+
+            $new->codice_stato_fe = null;
+            $new->progressivo_invio = null;
+            $new->data_stato_fe = null;
+
+            $stato = Stato::where('descrizione', 'Bozza')->first();
             $new->stato()->associate($stato);
-            $new->data = $data;
+
             $new->save();
 
             $righe = $fattura->getRighe();

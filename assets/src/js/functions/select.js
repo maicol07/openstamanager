@@ -74,20 +74,19 @@ function start_superselect() {
                         search: params.term,
                         page: params.page || 0,
                         length: params.length || 100,
-                    }
+                        options: this.data('select-options'), // Dati aggiuntivi
+                    };
                 },
                 processResults: function (data, params) {
                     params.page = params.page || 0;
                     params.length = params.length || 100;
 
-                    var response = {
+                    return {
                         results: data.results,
                         pagination: {
                             more: (params.page + 1) * params.length < data.recordsFiltered,
                         }
                     };
-
-                    return response;
                 },
                 cache: false
             },
@@ -112,7 +111,7 @@ jQuery.fn.selectReset = function (placeholder) {
     this.selectClear();
     this.empty();
 
-    if (placeholder != undefined) {
+    if (placeholder !== undefined) {
         this.next().find('.select2-selection__placeholder').text(placeholder);
         this.next().find('input.select2-search__field').attr('placeholder', placeholder);
     }
@@ -163,7 +162,7 @@ jQuery.fn.selectAdd = function (values) {
 
     values.forEach(function (item) {
         if (item.data) {
-            Object.keys(item.data).forEach(function(element) {
+            Object.keys(item.data).forEach(function (element) {
                 item['data-' + element] = item.data[element];
             });
         }
@@ -186,13 +185,41 @@ jQuery.fn.selectData = function () {
 
     $select_obj = obj.select2('data');
 
-    if ($select_obj[0] == undefined) {
+    if ($select_obj[0] === undefined) {
         return undefined;
     } else {
-        if ($select_obj[0].selected == false) {
+        if ($select_obj[0].selected === false) {
             return $select_obj[0];
         } else {
             return $select_obj[0].element.dataset;
         }
     }
 };
+
+/**
+ * Imposta il valore di un'opzione di un <select> creato con select2.
+ */
+jQuery.fn.setSelectOption = function (name, value) {
+    this.data('select-options')[name] = value;
+
+    return this;
+};
+
+/**
+ * Restituisce il valore impostato per un'opzione di un <select> creato con select2.
+ */
+jQuery.fn.getSelectOption = function (name) {
+    return this.data('select-options')[name];
+};
+
+/**
+ * Imposta il valore di un opzioni per tutti i select attivi della pagina.
+ *
+ * @param name
+ * @param value
+ */
+function updateSelectOption(name, value){
+    $(".superselectajax").each(function (){
+        $(this).setSelectOption(name, value);
+    })
+}

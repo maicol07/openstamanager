@@ -49,6 +49,14 @@ switch (post('op')) {
         $intervento->codice_cig = post('codice_cig');
         $intervento->save();
 
+        // Assegnazione dei tecnici all'intervento
+        $tecnici_assegnati = (array) post('tecnici_assegnati');
+        $dbo->sync('in_interventi_tecnici_assegnati', [
+            'id_intervento' => $id_record,
+        ], [
+            'id_tecnico' => $tecnici_assegnati,
+        ]);
+
         // Notifica chiusura intervento
         $stato = $dbo->selectOne('in_statiintervento', '*', ['idstatointervento' => post('idstatointervento')]);
         if (!empty($stato['notifica']) && !empty($stato['destinatari']) && $stato['idstatointervento'] != $record['idstatointervento']) {
@@ -59,7 +67,7 @@ switch (post('op')) {
             $mail->save();
         }
         aggiorna_sedi_movimenti('interventi', $id_record);
-        flash()->info(tr('Informazioni salvate correttamente!'));
+        flash()->info(tr('Attività modificata correttamente!'));
 
         break;
 
@@ -148,6 +156,14 @@ switch (post('op')) {
             }
         }
 
+        // Assegnazione dei tecnici all'intervento
+        $tecnici_assegnati = (array) post('tecnici_assegnati');
+        $dbo->sync('in_interventi_tecnici_assegnati', [
+            'id_intervento' => $id_record,
+        ], [
+            'id_tecnico' => $tecnici_assegnati,
+        ]);
+
         if (post('ref') == 'dashboard') {
             flash()->clearMessage('info');
             flash()->clearMessage('warning');
@@ -187,9 +203,9 @@ switch (post('op')) {
         break;
 
     case 'delete_riga':
-        $id_riga = post('idriga');
-        $type = post('type');
-$riga = $intervento->getRiga($type, $id_riga);
+        $id_riga = post('riga_id');
+        $type = post('riga_type');
+        $riga = $intervento->getRiga($type, $id_riga);
 
         if (!empty($riga)) {
             try {
@@ -328,9 +344,62 @@ $riga = $intervento->getRiga($type, $id_riga);
     case 'add_serial':
         $articolo = Articolo::find(post('idriga'));
 
-        $articolo->serials = post('serial');
+        $serials = (array) post('serial');
+        $articolo->serials = $serials;
 
         aggiorna_sedi_movimenti('interventi', $id_record);
+        break;
+
+    // Aggiunta di un documento in ordine
+    case 'add_documento':
+        $class = post('class');
+        $id_documento = post('id_documento');
+
+        // Individuazione del documento originale
+        if (!is_subclass_of($class, \Common\Document::class)) {
+            return;
+        }
+        $documento = $class::find($id_documento);
+
+        // Individuazione sede
+        $id_sede = ($documento->direzione == 'entrata') ? $documento->idsede_destinazione : $documento->idsede_partenza;
+        $id_sede = $id_sede ?: $documento->idsede;
+        $id_sede = $id_sede ?: 0;
+
+        // Creazione dell' ordine al volo
+        if (post('create_document') == 'on') {
+            $stato = Stato::find(post('id_stato_intervento'));
+            $tipo = TipoSessione::find(post('id_tipo_intervento'));
+
+            $intervento = Intervento::build($documento->anagrafica, $tipo, $stato, post('data'));
+            $intervento->idsede_destinazione = $id_sede;
+
+            $intervento->id_documento_fe = $documento->id_documento_fe;
+            $intervento->codice_cup = $documento->codice_cup;
+            $intervento->codice_cig = $documento->codice_cig;
+            $intervento->num_item = $documento->num_item;
+
+            $intervento->save();
+
+            $id_record = $intervento->id;
+        }
+
+        $righe = $documento->getRighe();
+        foreach ($righe as $riga) {
+            if (post('evadere')[$riga->id] == 'on' and !empty(post('qta_da_evadere')[$riga->id])) {
+                $qta = post('qta_da_evadere')[$riga->id];
+
+                $copia = $riga->copiaIn($intervento, $qta);
+                $copia->save();
+            }
+        }
+
+        // Messaggio informativo
+        $message = tr('_DOC_ aggiunto!', [
+            '_DOC_' => $documento->getReference(),
+        ]);
+        flash()->info($message);
+
         break;
 
     case 'firma':
@@ -353,7 +422,8 @@ $riga = $intervento->getRiga($type, $id_riga);
                     flash()->info(tr('Firma salvata correttamente!'));
                     flash()->info(tr('Attività completata!'));
 
-                    $stato = $dbo->selectOne('in_statiintervento', '*', ['codice' => 'OK']);
+                    $id_stato = setting("Stato dell'attività dopo la firma");
+                    $stato = $dbo->selectOne('in_statiintervento', '*', ['idstatointervento' => $id_stato]);
                     // Notifica chiusura intervento
                     if (!empty($stato['notifica']) && !empty($stato['destinatari'])) {
                         $template = Template::find($stato['id_email']);

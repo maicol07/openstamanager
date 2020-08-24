@@ -43,19 +43,31 @@ class ChoicesHandler implements HandlerInterface
             $extras[] = 'disabled';
         }
 
+        $class = '';
+        if (in_array('disabled', $extras)) {
+            $class = ' disabled';
+        }
+
         // Gestione dei placeholder
         $values['placeholder'] = isset($values['placeholder']) ? $values['placeholder'] : $values['label'];
 
         // Generazione del codice HTML
         // "+ this.checked" rende il valore booleano un numero
         $result = '
-    <div class="input-group">
-        <span class="input-group-addon before">
-            <input |attr| onchange="$(this).parent().find(\'[type=hidden]\').val( + this.checked)">
+        <div class="form-group">
             <input type="hidden" name="|name|" value="|value|">
-        </span>
-        <input type="text" class="form-control" placeholder="|placeholder|" disabled>
-    </div>';
+            <input type="checkbox" id="|id|" value="|value|" autocomplete="off" class="hidden" |attr| onchange="$(this).parent().find(\'[type = hidden]\').val(+this.checked)"/>
+            <div class="btn-group checkbox-buttons">
+                <label for="|id|" class="btn btn-default'.$class.'">
+                    <span class="fa fa-check text-success"></span>
+                    <span class="fa fa-close text-danger"></span>
+                </label>
+                <label for="|id|" class="btn btn-default active'.$class.'">
+                    <span class="text-success">'.tr('Attivato').'</span>
+                    <span class="text-danger">'.tr('Disattivato').'</span>
+                </label>
+            </div>
+        </div>';
 
         return $result;
     }

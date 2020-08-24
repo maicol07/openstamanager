@@ -274,6 +274,8 @@ switch (post('op')) {
         }
 
         $new->codice_stato_fe = null;
+        $new->progressivo_invio = null;
+        $new->data_stato_fe = null;
         $new->stato()->associate($stato);
         $new->save();
 
@@ -617,19 +619,15 @@ switch (post('op')) {
         $articolo = Articolo::find(post('idriga'));
 
         $serials = (array) post('serial');
-
         $articolo->serials = $serials;
-        $articolo->save();
 
         break;
 
     case 'update_position':
-        $orders = explode(',', $_POST['order']);
-        $order = 0;
+        $order = explode(',', post('order', true));
 
-        foreach ($orders as $idriga) {
-            $dbo->query('UPDATE `co_righe_documenti` SET `order`='.prepare($order).' WHERE id='.prepare($idriga));
-            ++$order;
+        foreach ($order as $i => $id_riga) {
+            $dbo->query('UPDATE `co_righe_documenti` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
         }
 
         break;

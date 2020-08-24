@@ -3,6 +3,7 @@
 include_once __DIR__.'/../../core.php';
 
 $block_edit = $record['flag_completato'];
+$module_anagrafiche = Modules::get('Anagrafiche');
 
 unset($_SESSION['superselect']['idanagrafica']);
 unset($_SESSION['superselect']['idsede_partenza']);
@@ -35,10 +36,13 @@ $_SESSION['superselect']['permetti_movimento_a_zero'] = false;
                     ?>
 					{[ "type": "select", "label": "<?php echo tr('Cliente'); ?>", "name": "idanagrafica", "required": 1, "values": "query=SELECT an_anagrafiche.idanagrafica AS id, ragione_sociale AS descrizione FROM an_anagrafiche INNER JOIN (an_tipianagrafiche_anagrafiche INNER JOIN an_tipianagrafiche ON an_tipianagrafiche_anagrafiche.idtipoanagrafica=an_tipianagrafiche.idtipoanagrafica) ON an_anagrafiche.idanagrafica=an_tipianagrafiche_anagrafiche.idanagrafica WHERE descrizione='Cliente' AND deleted_at IS NULL ORDER BY ragione_sociale", "value": "$idanagrafica$", "ajax-source": "clienti", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
 				</div>
+<?php
 
+                echo '
 				<div class="col-md-3">
-					{[ "type": "select", "label": "<?php echo tr('Sede destinazione'); ?>", "name": "idsede_destinazione","value": "$idsede_destinazione$", "ajax-source": "sedi", "placeholder": "Sede legale", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
-				</div>
+					{[ "type": "select", "label": "'.tr('Sede destinazione').'", "name": "idsede_destinazione","value": "$idsede_destinazione$", "ajax-source": "sedi", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "placeholder": "'.tr('Sede legale').'", "readonly": "'.$record['flag_completato'].'" ]}
+				</div>';
+                ?>
 
 				<div class="col-md-3">
 					<?php
@@ -47,9 +51,12 @@ $_SESSION['superselect']['permetti_movimento_a_zero'] = false;
 					{[ "type": "select", "label": "<?php echo tr('Per conto di'); ?>", "name": "idclientefinale", "value": "$idclientefinale$", "ajax-source": "clienti", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
 				</div>
 
+                <?php
+                echo '
 				<div class="col-md-3">
-					{[ "type": "select", "label": "<?php echo tr('Referente'); ?>", "name": "idreferente", "value": "$idreferente$", "ajax-source": "referenti", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
-				</div>
+					{[ "type": "select", "label": "'.tr('Referente').'", "name": "idreferente", "value": "$idreferente$", "ajax-source": "referenti", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "readonly": "'.intval($record['flag_completato']).'" ]}
+				</div>';
+                ?>
 			</div>
 
 			<!-- RIGA 2 -->
@@ -119,8 +126,17 @@ $_SESSION['superselect']['permetti_movimento_a_zero'] = false;
 				<div class="col-md-4">
 					{[ "type": "select", "label": "<?php echo tr('Stato'); ?>", "name": "idstatointervento", "required": 1, "values": "query=SELECT idstatointervento AS id, descrizione, colore AS _bgcolor_ FROM in_statiintervento WHERE deleted_at IS NULL", "value": "$idstatointervento$", "class": "unblockable" ]}
 				</div>
-			</div>
+<?php
 
+$tecnici_assegnati = $database->fetchArray('SELECT id_tecnico FROM in_interventi_tecnici_assegnati WHERE id_intervento = '.prepare($id_record));
+$tecnici_assegnati = array_column($tecnici_assegnati, 'id_tecnico');
+echo '
+                <div class="col-md-4">
+                    {[ "type": "select", "label": "'.tr('Tecnici assegnati').'", "multiple": "1", "name": "tecnici_assegnati[]", "ajax-source": "tecnici", "value": "'.implode(',', $tecnici_assegnati).'", "icon-after": "add|'.$module_anagrafiche['id'].'|tipoanagrafica=Tecnico" ]}
+                </div>';
+
+?>
+			</div>
 
 			<!-- RIGA 5 -->
 			<div class="row">
@@ -231,30 +247,30 @@ $_SESSION['superselect']['permetti_movimento_a_zero'] = false;
 
 if (!$block_edit) {
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_articolo" data-toggle="tooltip" data-title="'.tr('Aggiungi articolo').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articolo').'" onclick="gestioneArticolo(this)">
                 <i class="fa fa-plus"></i> '.tr('Articolo').'
-            </a>';
+            </button>';
 
     echo '
-            <a class="btn btn-sm btn-primary"data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_barcode" data-toggle="tooltip" data-title="'.tr('Aggiungi articoli tramite barcode').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articoli tramite barcode').'" onclick="gestioneBarcode(this)">
                 <i class="fa fa-plus"></i> '.tr('Barcode').'
-            </a>';
+            </button>';
 
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_riga" data-toggle="tooltip" data-title="'.tr('Aggiungi riga').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi riga').'" onclick="gestioneRiga(this)">
                 <i class="fa fa-plus"></i> '.tr('Riga').'
-            </a>';
+            </button>';
 
     /*
-        echo '
-                <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_descrizione" data-toggle="tooltip" data-title="'.tr('Aggiungi descrizione').'">
-                    <i class="fa fa-plus"></i> '.tr('Descrizione').'
-                </a>';
-    */
     echo '
-            <a class="btn btn-sm btn-primary" data-href="'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&is_sconto" data-toggle="tooltip" data-title="'.tr('Aggiungi sconto/maggiorazione').'">
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi descrizione').'" onclick="gestioneDescrizione(this)">
+                <i class="fa fa-plus"></i> '.tr('Descrizione').'
+            </button>';*/
+
+    echo '
+            <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi sconto/maggiorazione').'" onclick="gestioneSconto(this)">
                 <i class="fa fa-plus"></i> '.tr('Sconto/maggiorazione').'
-            </a>';
+            </button>';
 }
 
 // Conteggio numero articoli intervento per eventuale blocco della sede di partenza
@@ -264,7 +280,7 @@ $articoli = $intervento->articoli;
                 </div>
 
                 <div class="col-md-3">
-                    {[ "type": "select", "label": "<?php echo tr('Partenza merce'); ?>", "name": "idsede_partenza",  "ajax-source": "sedi_azienda",  "value": "$idsede_partenza$", "readonly": "<?php echo ($record['flag_completato'] || !$articoli->isEmpty()) ? 1 : 0; ?>" ]}
+                    {[ "type": "select", "label": "<?php echo tr('Partenza merce'); ?>", "name": "idsede_partenza", "ajax-source": "sedi_azienda", "value": "$idsede_partenza$", "readonly": "<?php echo ($record['flag_completato'] || !$articoli->isEmpty()) ? 1 : 0; ?>" ]}
                 </div>
             </div>
 
@@ -320,73 +336,101 @@ include $structure->filepath('row-list.php');
             '_PERSON_' => '<b>'.$record['firma_nome'].'</b>',
         ]).'</div>';
         }
-        ?>
+
+        echo '
 	</div>
 </div>
 
-<script>
-	$('#idanagrafica').change( function(){
-		session_set('superselect,idanagrafica', $(this).val(), 0);
-
-		$("#idsede_destinazione").selectReset();
-		$("#idpreventivo").selectReset();
-		$("#idcontratto").selectReset();
-
-		if (($(this).val())) {
-			if (($(this).selectData().idzona)){
-				$('#idzona').val($(this).selectData().idzona).change();
-
-			}else{
-				$('#idzona').val('').change();
-			}
-			//session_set('superselect,idzona', $(this).selectData().idzona, 0);
-		}
-
-	});
-
-	$('#idpreventivo').change( function(){
-		if($('#idcontratto').val() && $(this).val()){
-			$('#idcontratto').val('').trigger('change');
-		}
-	});
-
-	$('#idcontratto').change( function(){
-		if($('#idpreventivo').val() && $(this).val()){
-			$('#idpreventivo').val('').trigger('change');
-			$('input[name=idcontratto_riga]').val('');
-		}
-	});
-
-	$('#matricola').change( function(){
-		session_set('superselect,marticola', $(this).val(), 0);
-	});
-
-	$('#idsede').change( function(){
-		if (($(this).val())) {
-			if (($(this).selectData().idzona)){
-				$('#idzona').val($(this).selectData().idzona).change();
-			}else{
-				$('#idzona').val('').change();
-			}
-			//session_set('superselect,idzona', $(this).selectData().idzona, 0);
-		}
-	});
-
-	$('#codice_cig, #codice_cup').bind("keyup change", function(e) {
-
-		if ($('#codice_cig').val() == '' && $('#codice_cup').val() == '' ){
-			$('#id_documento_fe').prop('required', false);
-		}else{
-			$('#id_documento_fe').prop('required', true);
-		}
-
-	});
-
-</script>
-
 {( "name": "log_email", "id_module": "$id_module$", "id_record": "$id_record$" )}
 
-<?php
+<script>
+function gestioneArticolo(button) {
+    gestioneRiga(button, "is_articolo");
+}
+
+function gestioneBarcode(button) {
+    gestioneRiga(button, "is_barcode");
+}
+
+function gestioneSconto(button) {
+    gestioneRiga(button, "is_sconto");
+}
+
+function gestioneDescrizione(button) {
+    gestioneRiga(button, "is_descrizione");
+}
+
+async function gestioneRiga(button, options) {
+    // Salvataggio via AJAX
+    let valid = await salvaForm(button, $("#edit-form"));
+
+    // Apertura modal
+    if (valid) {
+        // Lettura titolo e chiusura tooltip
+        let title = $(button).tooltipster("content");
+        $(button).tooltipster("close");
+
+        // Apertura modal
+        options = options ? options : "is_riga";
+        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
+    }
+}
+
+$("#idanagrafica").change(function () {
+    updateSelectOption("idanagrafica", $(this).val());
+    session_set("superselect,idanagrafica", $(this).val(), 0);
+
+    $("#idsede_destinazione").selectReset();
+    $("#idpreventivo").selectReset();
+    $("#idcontratto").selectReset();
+
+    if (($(this).val())) {
+        if (($(this).selectData().idzona)) {
+            $("#idzona").val($(this).selectData().idzona).change();
+
+        } else {
+            $("#idzona").val("").change();
+        }
+    }
+});
+
+$("#idpreventivo").change(function () {
+    if ($("#idcontratto").val() && $(this).val()) {
+        $("#idcontratto").val("").trigger("change");
+    }
+});
+
+$("#idcontratto").change(function () {
+    if ($("#idpreventivo").val() && $(this).val()) {
+        $("#idpreventivo").val("").trigger("change");
+        $("input[name=idcontratto_riga]").val("");
+    }
+});
+
+$("#matricola").change(function () {
+    session_set("superselect,marticola", $(this).val(), 0);
+});
+
+$("#idsede").change(function () {
+    if (($(this).val())) {
+        if (($(this).selectData().idzona)) {
+            $("#idzona").val($(this).selectData().idzona).change();
+        } else {
+            $("#idzona").val("").change();
+        }
+        //session_set("superselect,idzona", $(this).selectData().idzona, 0);
+    }
+});
+
+$("#codice_cig, #codice_cup").bind("keyup change", function (e) {
+    if ($("#codice_cig").val() == "" && $("#codice_cup").val() == "") {
+        $("#id_documento_fe").prop("required", false);
+    } else {
+        $("#id_documento_fe").prop("required", true);
+    }
+});
+</script>';
+
 // Collegamenti diretti
 // Fatture collegate a questo intervento
 $elementi = $dbo->fetchArray('SELECT `co_documenti`.*, `co_tipidocumento`.`descrizione` AS tipo_documento, `co_statidocumento`.`descrizione` AS stato_documento, `co_tipidocumento`.`dir` FROM `co_documenti` JOIN `co_tipidocumento` ON `co_tipidocumento`.`id` = `co_documenti`.`idtipodocumento` JOIN `co_statidocumento` ON `co_statidocumento`.`id` = `co_documenti`.`idstatodocumento` WHERE `co_documenti`.`id` IN (SELECT `iddocumento` FROM `co_righe_documenti` WHERE `idintervento` = '.prepare($id_record).') ORDER BY `data`');

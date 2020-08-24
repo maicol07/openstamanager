@@ -25,10 +25,11 @@ class AJAX
      * @param mixed  $search
      * @param int    $page
      * @param int    $length
+     * @param array  $options
      *
      * @return array
      */
-    public static function select($resource, $elements = [], $search = null, $page = 0, $length = 100)
+    public static function select($resource, $elements = [], $search = null, $page = 0, $length = 100, $options = [])
     {
         if (!isset($elements)) {
             $elements = [];
@@ -44,7 +45,7 @@ class AJAX
             $results = self::getSelectResults($file, $resource, $elements, [
                 'offset' => $page * $length,
                 'length' => $length,
-            ], $search);
+            ], $search, $options);
 
             if (isset($results)) {
                 break;
@@ -52,10 +53,10 @@ class AJAX
         }
 
         $total = $results['recordsFiltered'] ?: count($results);
-        $list = $results['results'] ? $results['results'] : $results;
+        $list = isset($results['results']) ? $results['results'] : $results;
 
         return [
-            'results' => $list,
+            'results' => $list ?: [],
             'recordsFiltered' => $total,
         ];
     }
@@ -215,13 +216,12 @@ class AJAX
      * @param array  $elements
      * @param array  $limit
      * @param mixed  $search
+     * @param array  $options
      *
      * @return array|null
      */
-    protected static function getSelectResults($file, $resource, $elements = [], $limit = [], $search = null)
+    protected static function getSelectResults($file, $resource, $elements = [], $limit = [], $search = null, $options = [])
     {
-        $superselect = self::getSelectInfo();
-
         $where = [];
         $filter = [];
         $search_fields = [];
@@ -234,6 +234,9 @@ class AJAX
         // Database
         $dbo = $database = database();
 
+        // Opzioni di selezione
+        $superselect = $options;
+
         require $file;
 
         if (!isset($results) && !empty($query)) {
@@ -241,14 +244,6 @@ class AJAX
         }
 
         return isset($results) ? $results : null;
-    }
-
-    /**
-     * Restituisce le informazioni aggiuntive per i select.
-     */
-    protected static function getSelectInfo()
-    {
-        return !empty($_SESSION['superselect']) ? $_SESSION['superselect'] : [];
     }
 
     /**

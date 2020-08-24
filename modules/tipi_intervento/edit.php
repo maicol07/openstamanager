@@ -38,7 +38,7 @@ include_once __DIR__.'/../../core.php';
 				</div>
 
 				<div class="col-md-4">
-					{[ "type": "number", "label": "<?php echo tr('Addebito diritto ch.'); ?>", "name": "costo_diritto_chiamata", "required": 1, "value": "$costo_diritto_chiamata$", "icon-after": "<i class='fa fa-euro'></i>",  "help": "<?php echo tr('Addebito al Cliente per il diritto di chiamata'); ?>" ]}
+					{[ "type": "number", "label": "<?php echo tr('Addebito diritto ch.'); ?>", "name": "costo_diritto_chiamata", "required": 1, "value": "$costo_diritto_chiamata$", "icon-after": "<i class='fa fa-euro'></i>", "help": "<?php echo tr('Addebito al Cliente per il diritto di chiamata'); ?>" ]}
 				</div>
 			</div>
 		</div>
@@ -61,7 +61,7 @@ include_once __DIR__.'/../../core.php';
 				</div>
 
 				<div class="col-md-4">
-					{[ "type": "number", "label": "<?php echo tr('Costo diritto ch.'); ?>", "name": "costo_diritto_chiamata_tecnico", "required": 1, "value": "$costo_diritto_chiamata_tecnico$", "icon-after": "<i class='fa fa-euro'></i>",  "help": "<?php echo tr('Costo interno per il diritto di chiamata'); ?>" ]}
+					{[ "type": "number", "label": "<?php echo tr('Costo diritto ch.'); ?>", "name": "costo_diritto_chiamata_tecnico", "required": 1, "value": "$costo_diritto_chiamata_tecnico$", "icon-after": "<i class='fa fa-euro'></i>", "help": "<?php echo tr('Costo interno per il diritto di chiamata'); ?>" ]}
 				</div>
 			</div>
 		</div>
@@ -82,8 +82,6 @@ SELECT `co_preventivi`.`idtipointervento`, id, numero, data_bozza AS data, "Prev
 UNION
 SELECT `co_promemoria`.`idtipointervento`, idcontratto AS id, numero, data_richiesta AS data, "Promemoria contratto" AS tipo_documento FROM `co_promemoria` LEFT JOIN co_contratti ON co_promemoria.idcontratto=co_contratti.id WHERE `co_promemoria`.`idtipointervento` = '.prepare($id_record).'
 ORDER BY `idtipointervento`');
-
-
 
 if (!empty($elementi)) {
     echo '
@@ -108,17 +106,17 @@ if (!empty($elementi)) {
 
         if (in_array($elemento['tipo_documento'], ['Intervento'])) {
             $modulo = 'Interventi';
-		}
-		if (in_array($elemento['tipo_documento'], ['Sessione intervento'])) {
+        }
+        if (in_array($elemento['tipo_documento'], ['Sessione intervento'])) {
             $modulo = 'Interventi';
-		}
+        }
         if (in_array($elemento['tipo_documento'], ['Anagrafica'])) {
             $modulo = 'Anagrafiche';
-		}
+        }
         if (in_array($elemento['tipo_documento'], ['Preventivo'])) {
             $modulo = 'Preventivi';
-		}
-		if (in_array($elemento['tipo_documento'], ['Promemoria contratto'])) {
+        }
+        if (in_array($elemento['tipo_documento'], ['Promemoria contratto'])) {
             $modulo = 'Contratti';
         }
         $id = $elemento['id'];
