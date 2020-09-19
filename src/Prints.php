@@ -1,4 +1,23 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+use Mpdf\Mpdf;
 
 /**
  * Classe per la gestione delle informazioni relative alle stampe installate.
@@ -442,14 +461,19 @@ class Prints
         include DOCROOT.'/templates/info.php';
 
         // Instanziamento dell'oggetto mPDF
-        $mpdf = new \Mpdf\Mpdf([
+        $mpdf = new Mpdf([
             'format' => $settings['format'],
             'orientation' => strtoupper($settings['orientation']) == 'L' ? 'L' : 'P',
             'font-size' => $settings['font-size'],
             'margin_left' => $settings['margins']['left'],
             'margin_right' => $settings['margins']['right'],
-            'setAutoBottomMargin' => 'stretch',
-            'setAutoTopMargin' => 'stretch',
+
+            'setAutoTopMargin' => $settings['margins']['top'] === 'auto' ? 'stretch' : false,
+            'margin_top' => $settings['margins']['top'] === 'auto' ? 0 : $settings['margins']['top'], // Disabilitato se setAutoTopMargin impostato
+
+            'setAutoBottomMargin' => $settings['margins']['bottom'] === 'auto' ? 'stretch' : false,
+            'margin_bottom' => $settings['margins']['bottom'] === 'auto' ? 0 : $settings['margins']['bottom'], // Disabilitato se setAutoBottomMargin impostato
+
             'default_font' => 'dejavusanscondensed',
 
             // Abilitazione per lo standard PDF/A

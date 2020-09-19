@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/../../core.php';
 
@@ -12,6 +29,7 @@ use Modules\Fatture\Fattura;
 use Modules\Fatture\Stato;
 use Modules\Fatture\Tipo;
 use Plugins\ExportFE\FatturaElettronica;
+use Util\XML;
 
 $module = Modules::get($id_module);
 
@@ -192,14 +210,14 @@ switch (post('op')) {
     // Ricalcolo scadenze
     case 'controlla_totali':
         try {
-            $xml = \Util\XML::read($fattura->getXML());
+            $xml = XML::read($fattura->getXML());
 
             // Totale basato sul campo ImportoTotaleDocumento
-            //$dati_generali = $xml['FatturaElettronicaBody']['DatiGenerali']['DatiGeneraliDocumento'];
-            //$totale_documento = abs(floatval($dati_generali['ImportoTotaleDocumento']));
+            $dati_generali = $xml['FatturaElettronicaBody']['DatiGenerali']['DatiGeneraliDocumento'];
+            $totale_documento_indicato = abs(floatval($dati_generali['ImportoTotaleDocumento']));
 
             // Calcolo del totale basato sui DatiRiepilogo
-            if (empty($totale_documento)) {
+            if (empty($totale_documento) && empty($dati_generali['ScontoMaggiorazione'])) {
                 $totale_documento = 0;
 
                 $riepiloghi = $xml['FatturaElettronicaBody']['DatiBeniServizi']['DatiRiepilogo'];
@@ -212,6 +230,8 @@ switch (post('op')) {
                 }
 
                 $totale_documento = abs($totale_documento);
+            } else {
+                $totale_documento = $totale_documento_indicato;
             }
 
             $totale_documento = $fattura->isNota() ? -$totale_documento : $totale_documento;
@@ -407,6 +427,13 @@ switch (post('op')) {
             $id_dettaglio_fornitore = post('id_dettaglio_fornitore')[$id_articolo];
             $id_iva = $originale->idiva_vendita ? $originale->idiva_vendita : setting('Iva predefinita');
 
+            $id_conto = ($fattura->direzione == 'entrata') ? setting('Conto predefinito fatture di vendita') : setting('Conto predefinito fatture di acquisto');
+            if ($fattura->direzione == 'entrata' && !empty($originale->idconto_vendita)) {
+                $id_conto = $originale->idconto_vendita;
+            } elseif ($fattura->direzione == 'uscita' && !empty($originale->idconto_acquisto)) {
+                $id_conto = $originale->idconto_acquisto;
+            }
+
             // Inversione quantità per Note
             if (!empty($record['is_reversed'])) {
                 $qta = -$qta;
@@ -423,6 +450,7 @@ switch (post('op')) {
             }
             $articolo->setSconto($sconto, $tipo_sconto);
             $articolo->qta = $qta;
+            $articolo->idconto = $id_conto;
 
             $articolo->save();
         }
@@ -654,9 +682,11 @@ switch (post('op')) {
             $tipo = Tipo::where('descrizione', $descrizione)->first();
 
             $fattura = Fattura::build($documento->anagrafica, $tipo, post('data'), post('id_segment'));
+
             $fattura->idpagamento = $documento->idpagamento;
             $fattura->idsede_destinazione = $documento->idsede;
             $fattura->id_ritenuta_contributi = post('id_ritenuta_contributi') ?: null;
+
             $fattura->save();
 
             $id_record = $fattura->id;
@@ -690,6 +720,12 @@ switch (post('op')) {
 
                 $copia->save();
             }
+        }
+
+        // Modifica finale dello stato
+        if (post('create_document') == 'on') {
+            $fattura->idstatodocumento = post('id_stato');
+            $fattura->save();
         }
 
         ricalcola_costiagg_fattura($id_record);

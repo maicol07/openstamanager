@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/core.php';
 
@@ -77,6 +94,20 @@ echo '
 		</div>';
 
 redirectOperation($id_module, isset($id_parent) ? $id_parent : $id_record);
+
+// Interfaccia per la modifica dell'ordine e della visibilità delle colonne (Amministratore)
+if ($user->is_admin && str_contains($module['option'], '|select|')) {
+    echo '
+<button type="button" class="btn btn-xs btn-primary pull-right" onclick="modificaColonne(this)">
+    <i class="fa fa-th-list"></i> '.tr('Modifica colonne').'
+</button>
+
+<script>
+function modificaColonne(button) {
+    openModal("'.tr('Modifica colonne').'", globals.rootdir + "/actions.php?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&op=aggiorna_colonne")
+}
+</script>';
+}
 
 // Widget in basso
 echo '{( "name": "widgets", "id_module": "'.$id_module.'", "position": "right", "place": "controller" )}';

@@ -1,8 +1,23 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/../../core.php';
-
-unset($_SESSION['superselect']['id_categoria']);
 
 ?><form action="" method="post" id="add-form">
 	<input type="hidden" name="op" value="add">
@@ -85,6 +100,7 @@ $(document).ready(function () {
     var original = sub.parent().find(".input-group-addon button").data("href");
 
     $('#add-form').find('#categoria').change(function() {
+        updateSelectOption("id_categoria", $(this).val());
         session_set('superselect,id_categoria', $(this).val(), 0);
 
         sub.selectReset();

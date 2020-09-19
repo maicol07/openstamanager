@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 namespace Modules\Articoli;
 
@@ -7,7 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules;
 use Modules\Interventi\Components\Articolo as ArticoloIntervento;
 use Modules\Iva\Aliquota;
-use Plugins\FornitoriArticolo\Dettaglio;
+use Plugins\DettagliArticolo\DettaglioFornitore;
 use Traits\RecordTrait;
 use Uploads;
 
@@ -183,7 +200,7 @@ class Articolo extends Model
     public function movimentiComposti()
     {
         return $this->movimenti()
-            ->selectRaw('*, sum(qta) as qta_documento, IFNULL(reference_type, UUID()) as tipo_gruppo')
+            ->selectRaw('*, sum(qta) as qta_documento, IFNULL(reference_type, id) as tipo_gruppo')
             ->groupBy('tipo_gruppo', 'reference_id');
     }
 
@@ -199,7 +216,7 @@ class Articolo extends Model
 
     public function dettaglioFornitori()
     {
-        return $this->hasMany(Dettaglio::class, 'id_articolo');
+        return $this->hasMany(DettaglioFornitore::class, 'id_articolo');
     }
 
     public function dettaglioFornitore($id_fornitore)

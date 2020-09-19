@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 namespace Common\Components;
 
@@ -6,7 +23,7 @@ use Common\Document;
 use Illuminate\Database\Eloquent\Builder;
 use Modules\Articoli\Articolo as Original;
 use Modules\Articoli\Movimento;
-use Plugins\FornitoriArticolo\Dettaglio;
+use Plugins\DettagliArticolo\DettaglioFornitore;
 use UnexpectedValueException;
 
 abstract class Article extends Row
@@ -172,7 +189,7 @@ abstract class Article extends Row
 
     public function dettaglioFornitore()
     {
-        return $this->belongsTo(Dettaglio::class, 'id_dettaglio_fornitore')->withTrashed();
+        return $this->belongsTo(DettaglioFornitore::class, 'id_dettaglio_fornitore')->withTrashed();
     }
 
     public function movimentazione($value = true)

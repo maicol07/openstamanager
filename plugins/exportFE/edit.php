@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/init.php';
 
@@ -107,8 +124,7 @@ $ultima_ricevuta = $fattura->getRicevute()->last();
 if (!empty($record['codice_stato_fe'])) {
     if ($record['codice_stato_fe'] == 'GEN') {
         echo '
-		<div class="alert alert-info"><i class="fa fa-info-circle"></i> '.tr("La fattura è stata generata ed è pronta per l'invio").'.</div>
-		';
+		<div class="alert alert-info"><i class="fa fa-info-circle"></i> '.tr("La fattura è stata generata ed è pronta per l'invio").'.</div>';
     } else {
         $stato_fe = database()->fetchOne('SELECT codice, descrizione, icon FROM fe_stati_documento WHERE codice='.prepare($record['codice_stato_fe']));
 
@@ -123,7 +139,7 @@ if (!empty($record['codice_stato_fe'])) {
         echo '
 <div class="alert alert-'.$class.'">
     <div class="pull-right">
-        <i class="fa fa-clock-o tip" title="'.tr('Data e ora ricezione').'" ></i> '.Translator::timestampToLocale($record['data_stato_fe']).'';
+        <i class="fa fa-clock-o tip" title="'.tr('Data e ora ricezione').'"></i> '.Translator::timestampToLocale($record['data_stato_fe']);
 
         if (!empty($ultima_ricevuta)) {
             echo '

@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/../../core.php';
 
@@ -430,6 +447,7 @@ echo '
             /* plugins: [interactionPlugin, dayGridPlugin, timeGridPlugin], */
             /* locales: allLocales, */
             locale: globals.locale,
+            slotEventOverlap: false,
             hiddenDays: globals.dashboard.show_sunday ? [] : [0],
             header: {
                 left: "prev,next today",
@@ -471,7 +489,7 @@ echo '
                     name = "id_intervento";
                 }
 
-                openModal(globals.dashboard.drop.title, globals.dashboard.drop.url + "&data=" + data + "&orario_inizio=" + ora_dal + "&orario_fine=" + ora_al + "&ref=dashboard&idcontratto=" + $(this).data("idcontratto") + "&" + name + "=" + $(this).data("id"));
+                openModal(globals.dashboard.drop.title, globals.dashboard.drop.url + "&data=" + data + "&orario_inizio=" + ora_dal + "&orario_fine=" + ora_al + "&ref=dashboard&idcontratto=" + $(this).data("idcontratto") + "&" + name + "=" + $(this).data("id") + "&id_tecnico=" + $(this).data("id_tecnico"));
 
                 // Ricaricamento dei dati alla chiusura del modal
                 $(this).remove();
@@ -492,6 +510,11 @@ echo '
                 let data_fine = moment(end).format("YYYY-MM-DD");
                 let orario_inizio = moment(start).format("HH:mm");
                 let orario_fine = moment(end).format("HH:mm");
+
+                // Fix selezione di un giorno avanti per vista mensile
+                if (globals.dashboard.calendar.fullCalendar("getView").name == "month") {
+                    data_fine = moment(end).subtract(1, "days").format("YYYY-MM-DD");
+                }
 
                 openModal(globals.dashboard.select.title, globals.dashboard.select.url + "&ref=dashboard&data=" + data + "&data_fine=" + data_fine + "&orario_inizio=" + orario_inizio + "&orario_fine=" + orario_fine);
             },

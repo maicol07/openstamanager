@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 use Modules\Iva\Aliquota;
 
@@ -9,17 +26,6 @@ $block_edit = !empty($note_accredito) || $record['stato'] == 'Emessa' || $record
 $rs = $dbo->fetchArray('SELECT co_tipidocumento.descrizione, dir FROM co_tipidocumento INNER JOIN co_documenti ON co_tipidocumento.id=co_documenti.idtipodocumento WHERE co_documenti.id='.prepare($id_record));
 $dir = $rs[0]['dir'];
 $tipodoc = $rs[0]['descrizione'];
-
-unset($_SESSION['superselect']['idanagrafica']);
-unset($_SESSION['superselect']['idsede_partenza']);
-unset($_SESSION['superselect']['idsede_destinazione']);
-unset($_SESSION['superselect']['codice_modalita_pagamento_fe']);
-$_SESSION['superselect']['idsede_partenza'] = $record['idsede_partenza'];
-$_SESSION['superselect']['idsede_destinazione'] = $record['idsede_destinazione'];
-$_SESSION['superselect']['idanagrafica'] = $record['idanagrafica'];
-$_SESSION['superselect']['ddt'] = $dir;
-$_SESSION['superselect']['split_payment'] = $record['split_payment'];
-$_SESSION['superselect']['permetti_movimento_a_zero'] = ($dir == 'uscita' ? true : false);
 
 if ($dir == 'entrata') {
     $conto = 'vendite';
@@ -268,16 +274,21 @@ elseif ($record['stato'] == 'Bozza') {
 
                 <?php
                 if ($record['stato'] != 'Bozza' && $record['stato'] != 'Annullata') {
-                    $ricalcola = true;
+                    $scadenze = $fattura->scadenze;
 
-                    $scadenze = $dbo->fetchArray('SELECT * FROM co_scadenziario WHERE iddocumento = '.prepare($id_record));
+                    $ricalcola = true;
+                    foreach ($scadenze as $scadenza) {
+                        $ricalcola = empty(floatval($scadenza->pagato)) && $ricalcola;
+                    }
+
                     echo '
                 <div class="col-md-3">
                     <p class="pull-left"><strong>'.tr('Scadenze').'</strong></p>
 
                     <div class="btn-group pull-right">
                         '.Modules::link('Scadenzario', $scadenze[0]['id'], tr('<i class="fa fa-edit tip" title="'.tr('Modifica scadenze').'"></i>'), '', 'class="btn btn-xs btn-primary"');
-                    //Ricalcola scadenze disponibile solo per fatture di acquisto
+
+                    // Ricalcola scadenze disponibile solo per fatture di acquisto
                     if ($fattura->isFE() && $ricalcola && $module['name'] == 'Fatture di acquisto') {
                         echo '
                     <button type="button" class="btn btn-info btn-xs pull-right tip" title="'.tr('Ricalcola le scadenze').'. '.tr('Per ricalcolare correttamente le scadenze, imposta la fattura di acquisto nello stato \'\'Bozza\'\' e correggi il documento come desiderato, poi re-imposta lo stato \'\'Emessa\'\' e utilizza questa funzione').'." id="ricalcola_scadenze">
@@ -289,25 +300,29 @@ elseif ($record['stato'] == 'Bozza') {
                     <div class="clearfix"></div>';
 
                     foreach ($scadenze as $scadenza) {
-                        echo '
-                    <p>'.Translator::dateToLocale($scadenza['scadenza']).': ';
+                        $pagamento_iniziato = !empty(floatval($scadenza->pagato));
 
-                        if ($scadenza['pagato'] == $scadenza['da_pagare']) {
+                        echo '
+                    <p>'.dateFormat($scadenza['scadenza']).': ';
+
+                        if ($pagamento_iniziato) {
                             echo '
                         <strike>';
                         }
 
-                        echo(empty($scadenza['da_pagare']) ? '<i class="fa fa-exclamation-triangle"></i> ' : '').moneyFormat($scadenza['da_pagare']);
+                        echo(empty($scadenza->da_pagare) ? '<i class="fa fa-exclamation-triangle"></i>' : '').moneyFormat($scadenza->da_pagare);
 
-                        if ($scadenza['pagato'] == $scadenza['da_pagare']) {
+                        if ($pagamento_iniziato) {
                             echo '
                         </strike>';
                         }
 
+                        if ($pagamento_iniziato && $scadenza->pagato != $scadenza->da_pagare) {
+                            echo ' ('.moneyFormat($scadenza->da_pagare - $scadenza->pagato).')';
+                        }
+
                         echo '
                     </p>';
-
-                        $ricalcola = empty(floatval($scadenza['pagato'])) && $ricalcola;
                     }
 
                     echo '
@@ -651,22 +666,22 @@ if (!$block_edit) {
                     </button>';
 
     echo '
-                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articoli tramite barcode').'" onclick="gestioneBarcode(this)">
+                    <button type="button" class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articoli tramite barcode').'" onclick="gestioneBarcode(this)">
                         <i class="fa fa-plus"></i> '.tr('Barcode').'
                     </button>';
 
     echo '
-                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi riga').'" onclick="gestioneRiga(this)">
+                    <button type="button" class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi riga').'" onclick="gestioneRiga(this)">
                         <i class="fa fa-plus"></i> '.tr('Riga').'
                     </button>';
 
     echo '
-                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi descrizione').'" onclick="gestioneDescrizione(this)">
+                    <button type="button" class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi descrizione').'" onclick="gestioneDescrizione(this)">
                         <i class="fa fa-plus"></i> '.tr('Descrizione').'
                     </button>';
 
     echo '
-                    <button class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi sconto/maggiorazione').'" onclick="gestioneSconto(this)">
+                    <button type="button" class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi sconto/maggiorazione').'" onclick="gestioneSconto(this)">
                         <i class="fa fa-plus"></i> '.tr('Sconto/maggiorazione').'
                     </button>';
 }
@@ -691,14 +706,8 @@ if ($dir == 'entrata') {
 		<div class="clearfix"></div>
 		<br>
 
-		<div class="row">
-			<div class="col-md-12">
-<?php
-
-include $structure->filepath('row-list.php');
-
-?>
-			</div>
+        <div class="row">
+			<div class="col-md-12" id="righe"></div>
 		</div>
 	</div>
 </div>
@@ -850,18 +859,33 @@ async function gestioneRiga(button, options) {
     }
 }
 
-$(document).ready(function () {
-    $("#data_registrazione").on("dp.change", function (e) {
-        var data = $("#data_competenza");
-        data.data("DateTimePicker").minDate(e.date);
+/**
+ * Funzione dedicata al caricamento dinamico via AJAX delle righe del documento.
+ */
+function caricaRighe() {
+    let container = $("#righe");
 
-        if(data.data("DateTimePicker").date() < e.date){
-            data.data("DateTimePicker").date(e.date);
+    localLoading(container, true);
+    return $.get("'.$structure->fileurl('row-list.php').'?id_module='.$id_module.'&id_record='.$id_record.'", function(data) {
+        container.html(data);
+        localLoading(container, false);
+    });
+}
+
+$(document).ready(function () {
+    caricaRighe();
+
+    $("#data_registrazione").on("dp.change", function (e) {
+        let data_competenza = $("#data_competenza");
+        data_competenza.data("DateTimePicker").minDate(e.date);
+
+        if(data_competenza.data("DateTimePicker").date() < e.date){
+            data_competenza.data("DateTimePicker").date(e.date);
         }
     });
 
     $("#data").on("dp.change", function (e) {
-        var data_competenza = $("#data_competenza");
+        let data_competenza = $("#data_competenza");
         data_competenza.data("DateTimePicker").minDate(e.date);
 
         if(data_competenza.data("DateTimePicker").date() < e.date){

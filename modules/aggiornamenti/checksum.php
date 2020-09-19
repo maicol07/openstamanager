@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/../../core.php';
 
@@ -58,7 +75,7 @@ foreach ($checksum as $file => $md5) {
 // Schermata di visualizzazione degli errori
 if (!empty($errors)) {
     echo '
-<p>'.tr("Segue l'elenco dei file che presentano checksum diverso rispetto a quello regitrato nella versione ufficiale").'.</p>
+<p>'.tr("Segue l'elenco dei file che presentano checksum diverso rispetto a quello registrato nella versione ufficiale").'.</p>
 <div class="alert alert-warning">
     <i class="fa fa-warning"></i>
     '.tr('Attenzione: questa funzionalità può presentare dei risultati falsamente positivi, sulla base del contenuto del file _FILE_', [

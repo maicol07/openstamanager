@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 namespace Util;
 
@@ -65,7 +82,7 @@ class Ini
      */
     public static function readFile($filename)
     {
-        $filename = (file_exists($filename)) ? $filename : DOCROOT.'/files/my_impianti/'.$filename;
+        $filename = (file_exists($filename)) ? $filename : DOCROOT.'/files/impianti/'.$filename;
 
         $contents = file_get_contents($filename);
 
@@ -115,18 +132,18 @@ class Ini
     /**
      * Predispone il form dedicato alla modifica dei contenuti della struttura INI.
      *
-     * @param string $contenut
+     * @param string $contenuto
      *
      * @return array
      */
-    public static function getFields($contenut)
+    public static function getFields($contenuto)
     {
         $result = [];
 
         // Caricamento campi dell'eventuale componente selezionato
-        if (!empty($contenut)) {
+        if (!empty($contenuto)) {
             $random = rand();
-            $array = self::read($contenut);
+            $array = self::read($contenuto);
 
             if (is_array($array)) {
                 $result[] = '
@@ -141,14 +158,21 @@ class Ini
                         $tipo = ($array[$sezione]['tipo'] == 'input') ? 'text' : $array[$sezione]['tipo'];
                         $valore = $array[$sezione]['valore'];
 
-                        $opzioni = str_contains($array[$sezione]['opzioni'], ',') ? explode(',', $array[$sezione]['opzioni']) : [];
+                        $opzioni = str_contains($array[$sezione]['opzioni'] ?: '', ',') ? explode(',', $array[$sezione]['opzioni']) : [];
                         $values = [];
                         foreach ($opzioni as $o) {
                             $values[] = '\"'.addslashes(addslashes($o)).'\": \"'.addslashes(addslashes($o)).'\"';
                         }
 
-                        $result[] = '
+                        $input = '
                     {[ "type": "'.$tipo.'", "label": "'.$nome.':", "name": "'.$nome.'", "value": '.json_encode($valore).', "id": "'.$nome.'_'.$random.'" '.(!empty($values) ? ', "values": "list='.implode(', ', $values).'"' : '').' ]}';
+
+                        if ($tipo == 'span') {
+                            $input .= '
+                    <input type="hidden" name="'.$nome.'" value="'.$valore.'">';
+                        }
+
+                        $result[] = $input;
                     }
                 }
             }

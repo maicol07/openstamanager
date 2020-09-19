@@ -1,15 +1,26 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/../../core.php';
 
 // Imposto come azienda l'azienda predefinita per selezionare le sedi a cui ho accesso
-$_SESSION['superselect']['idanagrafica'] = setting('Azienda predefinita');
-
-// Azzero le sedi selezionate
-unset($_SESSION['superselect']['idsede_partenza']);
-unset($_SESSION['superselect']['idsede_destinazione']);
-$_SESSION['superselect']['idsede_partenza'] = 0;
-$_SESSION['superselect']['idsede_destinazione'] = 0;
+// select-options
 
 ?>
 <form action="" method="post" id="add-form">
@@ -24,7 +35,7 @@ $_SESSION['superselect']['idsede_destinazione'] = 0;
 
     <div class="row">
         <div class="col-md-4">
-            {["type": "select", "label": "<?php echo tr('Articolo'); ?>", "name": "idarticolo", "ajax-source": "articoli", "value": "", "required": 1, "select-options": {"permetti_movimento_a_zero": 1} ]}
+            {["type": "select", "label": "<?php echo tr('Articolo'); ?>", "name": "idarticolo", "ajax-source": "articoli", "value": "", "required": 1, "select-options": {"permetti_movimento_a_zero": 1, "idanagrafica": <?php echo setting('Azienda predefinita'); ?>, "idsede_partenza": 0, "idsede_destinazione": 0} ]}
         </div>
 
         <div class="col-md-2">

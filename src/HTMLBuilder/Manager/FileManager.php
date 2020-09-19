@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 namespace HTMLBuilder\Manager;
 
@@ -42,7 +59,7 @@ class FileManager implements ManagerInterface
         <div class="panel-heading">
             <h3 class="panel-title">'.tr('Allegati').'</h3>
         </div>
-        <div class="panel-body"><div id="loading_'.$attachment_id.'" class="text-center hide" style="position:relative;top:100px;z-index:2;opacity:0.5;"><i class="fa fa-refresh fa-spin fa-3x fa-fw"></i><span class="sr-only">'.tr('Caricamento...').'</span></div>';
+        <div class="panel-body">';
         }
 
         $count = 0;
@@ -284,17 +301,15 @@ $(document).ready(function() {
         });
     });
 
-    function getFilenameAndExtension(pathfilename){
-
-        var filenameextension = pathfilename.replace(/^.*[\\\/]/, \'\');
-        var filename = filenameextension.substring(0, filenameextension.lastIndexOf(\'.\'));
-        var ext = filenameextension.split(\'.\').pop();
+    function getFilenameAndExtension(path) {
+        let filename_extension = path.replace(/^.*[\\\/]/, \'\');
+        let filename = filename_extension.substring(0, filename_extension.lastIndexOf(\'.\'));
+        let ext = filename_extension.split(\'.\').pop();
 
         return [filename, ext];
-
     }
 
-    // Autocompletamento nome
+    // Auto-completamento nome
     $("#'.$attachment_id.' #blob").change(function(){
         var nome = $("#'.$attachment_id.' #nome_allegato");
 
@@ -354,20 +369,17 @@ $(document).ready(function() {
 });
 
 function show_'.$attachment_id.'() {
-    $("#loading_'.$attachment_id.'").removeClass("hide");
+    localLoading($("#'.$attachment_id.' .panel-body"), true);
 }
 
 function reload_'.$attachment_id.'() {
     $("#'.$attachment_id.'").load(globals.rootdir + "/ajax.php?op=list_attachments&id_module='.$options['id_module'].'&id_record='.$options['id_record'].'&id_plugin='.$options['id_plugin'].'", function() {
-
-        $("#loading_'.$attachment_id.'").addClass("hide");
-
+        localLoading($("#'.$attachment_id.' .panel-body"), false);
 
         var id = $("#'.$attachment_id.' table tr").eq(-1).attr("id");
-        if (id !== undefined)
-            $("#"+id).effect("highlight", {}, 1500);
-
-
+        if (id !== undefined) {
+            $("#" + id).effect("highlight", {}, 1500);
+        }
     });
 }
 </script>';

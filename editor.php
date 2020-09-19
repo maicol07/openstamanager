@@ -1,4 +1,21 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 include_once __DIR__.'/core.php';
 
@@ -70,10 +87,11 @@ if (empty($record) || !$has_access) {
     }
 
     echo '
-		<div class="nav-tabs-custom">
-			<ul class="nav nav-tabs pull-right" id="tabs" role="tablist">
-				<li class="pull-left active header">
-					<a data-toggle="tab" href="#tab_0">
+
+        <div class="nav-tabs-custom">
+            <ul class="nav nav-tabs pull-right" id="tabs" role="tablist">
+                <li class="pull-left active header">
+                    <a data-toggle="tab" href="#tab_0">
                         <i class="'.$structure['icon'].'"></i> '.$structure['title'];
 
     // Pulsante "Aggiungi" solo se il modulo è di tipo "table" e se esiste il template per la popup
@@ -84,48 +102,11 @@ if (empty($record) || !$has_access) {
 
     echo '
 					</a>
-				</li>';
+				</li>
 
-    // Tab per le informazioni sulle operazioni
-    if (Auth::admin()) {
-        echo '
-				<li class="bg-warning">
-					<a data-toggle="tab" href="#tab_info" id="link-tab_info">'.tr('Info').'</a>
-				</li>';
-    }
-
-    // Tab per le note interne
-    if ($structure->permission != '-' && $structure->use_notes) {
-        $notes = $structure->recordNotes($id_record);
-
-        echo '
-				<li class="bg-info">
-					<a data-toggle="tab" href="#tab_note" id="link-tab_note">
-					    '.tr('Note interne').'
-					    <span class="badge">'.($notes->count() ?: '').'</span>
-                    </a>
-				</li>';
-    }
-
-    // Tab per le checklist
-    if ($structure->permission != '-' && $structure->use_checklists) {
-        echo '
-				<li class="bg-success">
-					<a data-toggle="tab" href="#tab_checks" id="link-tab_checks">'.tr('Checklist').'</a>
-				</li>';
-    }
-
-    $plugins = $dbo->fetchArray('SELECT id, title FROM zz_plugins WHERE idmodule_to='.prepare($id_module)." AND position='tab' AND enabled = 1 ORDER BY zz_plugins.order DESC");
-
-    // Tab dei plugin
-    foreach ($plugins as $plugin) {
-        echo '
-				<li>
-					<a data-toggle="tab" href="#tab_'.$plugin['id'].'" id="link-tab_'.$plugin['id'].'">'.$plugin['title'].'</a>
-				</li>';
-    }
-
-    echo '
+				<li class="control-sidebar-toggle">
+                    <a data-toggle="control-sidebar" style="cursor: pointer">'.tr('Plugin').'</a>
+                </li>
 			</ul>
 
 			<div class="tab-content">

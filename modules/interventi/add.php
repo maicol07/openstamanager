@@ -1,12 +1,25 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
 
 use Modules\Interventi\Intervento;
 
 include_once __DIR__.'/../../core.php';
-
-// Rimozione dei parametri di sessione usati sui select combinati (sedi, preventivi, contratti, impianti)
-unset($_SESSION['superselect']['idanagrafica']);
-unset($_SESSION['superselect']['idsede']);
 
 // Lettura dei parametri di interesse
 $id_anagrafica = filter('idanagrafica');
@@ -25,7 +38,7 @@ if (null == $orario_inizio || '00:00:00' == $orario_inizio) {
 }
 
 // Un utente del gruppo Tecnici può aprire attività solo a proprio nome
-$id_tecnico = null;
+$id_tecnico = filter('id_tecnico');
 if ($user['gruppo'] == 'Tecnici' && !empty($user['idanagrafica'])) {
     $id_tecnico = $user['idanagrafica'];
 }
@@ -127,8 +140,6 @@ $fine_sessione = $data_fine.' '.$orario_fine;
 // Calcolo del nuovo codice
 $new_codice = Intervento::getNextCodice($data);
 
-$_SESSION['superselect']['idanagrafica'] = $id_anagrafica;
-
 echo '
 <form action="" method="post" id="add-form">
 	<input type="hidden" name="op" value="add">
@@ -215,7 +226,7 @@ echo '
                 </div>
 
                 <div class="col-md-4">
-                    {[ "type": "select", "label": "'.tr('Impianto').'", "multiple": 1, "name": "idimpianti[]", "value": "'.$impianti_collegati.'", "ajax-source": "impianti-cliente", "icon-after": "add|'.Modules::get('Impianti')['id'].'|source=Attività" ]}
+                    {[ "type": "select", "label": "'.tr('Impianto').'", "multiple": 1, "name": "idimpianti[]", "value": "'.$impianti_collegati.'", "ajax-source": "impianti-cliente", "select-options": {"idanagrafica": '.($id_anagrafica ?: '""').'}, "icon-after": "add|'.Modules::get('Impianti')['id'].'|id_anagrafica='.$id_anagrafica.'" ]}
                 </div>
 
                 <div class="col-md-4">
@@ -276,6 +287,9 @@ echo '
 					{[ "type": "select", "label": "'.tr('Tecnici').'", "multiple": "1", "name": "idtecnico[]", "required": '.($origine_dashboard ? 1 : 0).', "ajax-source": "tecnici", "value": "'.$id_tecnico.'", "icon-after": "add|'.$module_anagrafiche['id'].'|tipoanagrafica=Tecnico||'.(empty($id_tecnico) ? '' : 'disabled').'" ]}
 				</div>
 			</div>
+
+            <div id="info-conflitti-add"></div>
+
 		</div>
 	</div>
 
@@ -358,6 +372,10 @@ echo '
         }
     });
 
+	input("idtecnico").change(function() {
+	    calcolaConflittiTecnici();
+	});
+
     // Gestione della modifica dell\'anagrafica
 	anagrafica.change(function() {
         updateSelectOption("idanagrafica", $(this).val());
@@ -390,6 +408,7 @@ echo '
 
     // Gestione della modifica della sede selezionato
 	sede.change(function() {
+        updateSelectOption("idsede_destinazione", $(this).val());
 		session_set("superselect,idsede_destinazione", $(this).val(), 0);
         input("idimpianti").getElement().selectReset();
 
@@ -422,7 +441,8 @@ echo '
 
     // Gestione delle modifiche agli impianti selezionati
 	input("idimpianti").change(function() {
-		session_set("superselect,marticola", $(this).val(), 0);
+        updateSelectOption("matricola", $(this).val());
+		session_set("superselect,matricola", $(this).val(), 0);
 
         input("componenti").setDisabled(!$(this).val())
             .getElement().selectReset();
@@ -487,5 +507,16 @@ if (filter('orario_fine') !== null) {
             //TODO: da gestire via ajax
             //$("#elenco_interventi > tbody").load(globals.rootdir + "/modules/contratti/plugins/contratti.pianificazioneinterventi.php?op=get_interventi_pianificati&idcontratto='.$id_contratto.'");
         }
+    }
+
+    function calcolaConflittiTecnici() {
+        let tecnici = input("idtecnico").get();
+
+        return $("#info-conflitti-add").load("'.$module->fileurl('occupazione_tecnici.php').'", {
+            "id_module": globals.id_module,
+            "tecnici[]": tecnici,
+            "inizio": input("orario_inizio").get(),
+            "fine": input("orario_fine").get(),
+        });
     }
 </script>';

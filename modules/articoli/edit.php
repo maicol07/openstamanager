@@ -1,8 +1,25 @@
 <?php
+/*
+ * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
+ * Copyright (C) DevCode s.n.c.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
+use Util\Ini;
 
 include_once __DIR__.'/../../core.php';
-
-$_SESSION['superselect']['id_categoria'] = $record['id_categoria'];
 
 ?><form action="" method="post" id="edit-form" enctype="multipart/form-data">
 	<input type="hidden" name="backto" value="record-edit">
@@ -37,7 +54,7 @@ $_SESSION['superselect']['id_categoria'] = $record['id_categoria'];
                         </div>
 
                         <div class="col-md-6">
-                            {[ "type": "select", "label": "<?php echo tr('Sottocategoria'); ?>", "name": "subcategoria", "value": "$id_sottocategoria$", "ajax-source": "sottocategorie" ]}
+                            {[ "type": "select", "label": "<?php echo tr('Sottocategoria'); ?>", "name": "subcategoria", "value": "$id_sottocategoria$", "ajax-source": "sottocategorie", "select-options": <?php echo json_encode(['id_categoria' => $record['id_categoria']]); ?> ]}
                         </div>
                     </div>
                 </div>
@@ -226,11 +243,11 @@ echo '
                     <div class="form-group">
                         <label for="componente_filename">'.tr('Seleziona un componente').':</label>';
     echo "
-                        <select class=\"form-control superselect\" id=\"componente_filename\" name=\"componente_filename\" onchange=\"$.post('".$rootdir."/modules/my_impianti/actions.php', {op: 'load_componente', idarticolo: '".$id_record."', filename: $(this).find('option:selected').val() }, function(response){ $('#info_componente').html( response ); start_superselect();    $('.datepicker').datetimepicker({  locale: globals.locale, format: 'L' } ); } );\">\n";
+                        <select class=\"form-control superselect\" id=\"componente_filename\" name=\"componente_filename\" onchange=\"$.post('".$rootdir."/modules/impianti/actions.php', {op: 'load_componente', idarticolo: '".$id_record."', filename: $(this).find('option:selected').val() }, function(response){ $('#info_componente').html( response ); start_superselect();    $('.datepicker').datetimepicker({  locale: globals.locale, format: 'L' } ); } );\">\n";
     echo '
                             <option value="0">'.tr('Nessuno').'</option>';
 
-    $cmp = \Util\Ini::getList($docroot.'/files/my_impianti/');
+    $cmp = Ini::getList($docroot.'/files/impianti/');
 
     if (count($cmp) > 0) {
         for ($c = 0; $c < count($cmp); ++$c) {
@@ -249,7 +266,7 @@ echo '
     echo '
             <div id="info_componente">';
 
-    genera_form_componente($record['contenuto']);
+    crea_form_componente($record['contenuto']);
 
     echo '
             </div>';
@@ -260,53 +277,48 @@ echo '
 
 	<div class="panel panel-primary">
 		<div class="panel-heading">
-			<h3 class="panel-title">'.tr('Prezzo articolo per listino').'</h3>
+			<h3 class="panel-title">'.tr('Prezzo articolo secondo i piani di sconto/rincaro').'</h3>
 		</div>
 
 		<div class="panel-body">';
 
-        $rsl = $dbo->fetchArray('SELECT * FROM mg_listini ORDER BY id ASC');
+        $listini = $dbo->fetchArray('SELECT * FROM mg_listini ORDER BY id ASC');
 
-        $rsart = $dbo->fetchArray('SELECT id, prezzo_vendita FROM mg_articoli WHERE id='.prepare($id_record));
-
-        if (count($rsl) > 0) {
+        if (!empty($listini)) {
             echo '
-            <div class="row">
-                <div class="col-md-12 col-lg-6">
-                    <table class="table table-striped table-condensed table-bordered">
-                        <tr>
-                            <th>'.tr('Listino').'</th>
-                            <th>'.tr('Prezzo di vendita finale').'</th>
-                        </tr>';
+            <table class="table table-striped table-condensed table-bordered">
+                <tr>
+                    <th>'.tr('Piano di sconto/rincaro').'</th>
+                    <th>'.tr('Prezzo di vendita finale').'</th>
+                </tr>';
 
             // listino base
             echo '
-                        <tr>
-                            <td>'.tr('Base').'</td>
-                            <td>'.moneyFormat($rsart[0]['prezzo_vendita']).'</td>
-                        </tr>';
+                <tr>
+                    <td>'.tr('Base').'</td>
+                    <td>'.moneyFormat($articolo->prezzo_vendita).'</td>
+                </tr>';
 
-            for ($i = 0; $i < count($rsl); ++$i) {
+            foreach ($listini as $listino) {
+                $prezzo_vendita = $articolo->prezzo_vendita - $articolo->prezzo_vendita * $listino['prc_guadagno'] / 100;
                 echo '
-                        <tr>
-                            <td>'.$rsl[$i]['nome'].'</td>
-                            <td>'.moneyFormat($rsart[0]['prezzo_vendita'] - $rsart[0]['prezzo_vendita'] / 100 * $rsl[$i]['prc_guadagno']).'</td>
-                        </tr>';
+                <tr>
+                    <td>'.$listino['nome'].'</td>
+                    <td>'.moneyFormat($prezzo_vendita).'</td>
+                </tr>';
             }
 
             echo '
-                    </table>
-                </div>
-            </div>';
+            </table>';
         } else {
             echo '
-            <div class="alert alert-info">
-                '.tr('Non ci sono listini caricati').'... '.Modules::link('Listini', null, tr('Crea il primo listino')).'
-            </div>';
+    <div class="alert alert-info">
+        '.tr('Non ci sono piani di sconto/rincaro caricati').'... '.Modules::link('Listini', null, tr('Crea')).'
+    </div>';
         }
 echo '
-		</div>
-	</div>';
+        </div>
+    </div>';
 ?>
 </form>
 
@@ -314,7 +326,8 @@ echo '
 
 <script>
 $("#categoria").change(function() {
-	session_set("superselect,id_categoria", $(this).val(), 0);
+    updateSelectOption("id_categoria", $(this).val());
+
 	$("#subcategoria").val(null).trigger("change");
 });
 
