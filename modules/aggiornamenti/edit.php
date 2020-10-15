@@ -20,8 +20,8 @@
 include_once __DIR__.'/../../core.php';
 
 // Personalizzazioni di codice
-if (function_exists(custom)) {
-    $custom = custom();
+if (function_exists('customComponents')) {
+    $custom = customComponents();
     $tables = customTables();
     if (!empty($custom) || !empty($tables)) {
         echo '
@@ -174,7 +174,7 @@ function search(button) {
                 </h3>
             </div>
             <div class="box-body">
-                <form action="'.ROOTDIR.'/controller.php?id_module='.$id_module.'" method="post" enctype="multipart/form-data" id="update">
+                <form action="'.base_path().'/controller.php?id_module='.$id_module.'" method="post" enctype="multipart/form-data" id="update">
                     <input type="hidden" name="op" value="upload">
 
 			        {[ "type": "file", "name": "blob", "required": 1, "accept": ".zip" ]}
@@ -236,7 +236,7 @@ echo '
 <div>
     <h3>'.tr('Requisiti').'</h3>';
 
-include DOCROOT.'/include/init/requirements.php';
+include base_dir().'/include/init/requirements.php';
 
 echo '
 

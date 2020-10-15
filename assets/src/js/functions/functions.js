@@ -16,12 +16,21 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-// Modal
+/**
+ * Modal gestito da versioni precedenti.
+ * @param title
+ * @param href
+ * @param init_modal
+ */
 function launch_modal(title, href, init_modal) {
     openModal(title, href);
 }
 
-// Modal
+/**
+ * Modal.
+ * @param title
+ * @param href
+ */
 function openModal(title, href) {
     // Fix - Select2 does not function properly when I use it inside a Bootstrap modal.
     $.fn.modal.Constructor.prototype.enforceFocus = function () {
@@ -73,6 +82,11 @@ function openModal(title, href) {
     }
 }
 
+/**
+ *
+ * @param event
+ * @param link
+ */
 function openLink(event, link) {
     if (event.ctrlKey) {
         window.open(link);
@@ -103,7 +117,9 @@ function getUrlVars() {
     });
 }
 
-// Data e ora (orologio)
+/**
+ * Data e ora (orologio)
+ */
 function clock() {
     $('#datetime').html(moment().formatPHP(globals.timestamp_format));
     setTimeout('clock()', 1000);
@@ -141,33 +157,6 @@ function session_set(session_array, value, clear, reload) {
 
 function session_keep_alive() {
     $.get(globals.rootdir + '/core.php');
-}
-
-/**
- * Funzione per gestire i contatori testuali nel formato x/total.
- * Viene dato un id del campo da verificare come input, viene letto il testo nella forma [0-9]/[0-9] e viene fatto
- * il replate del primo numero in base a quanti elementi sono stati trovati (valore passato per parametro)
- */
-function update_counter(id, new_value) {
-    new_text = $('#' + id).html();
-
-    // Estraggo parte numerica (formato x/total)
-    pattern = /([^0-9]+)([0-9]+)\/([0-9]+)([^0-9]+)/;
-    new_text = new_text.replace(pattern, "$1" + new_value + "/$3$4");
-
-    // Estraggo totale (parte numerica dopo lo slash /)
-    matches = pattern.exec(new_text);
-    total = matches[3];
-
-    $('#' + id).html(new_text);
-
-    if (new_value == total) {
-        $('#' + id).removeClass('btn-warning').removeClass('btn-danger').addClass('btn-success');
-    } else if (new_value == 0) {
-        $('#' + id).removeClass('btn-warning').removeClass('btn-success').addClass('btn-danger');
-    } else {
-        $('#' + id).removeClass('btn-success').removeClass('btn-danger').addClass('btn-warning');
-    }
 }
 
 function setContrast(backgroundcolor) {
@@ -237,9 +226,7 @@ function message(element) {
         confirmButtonText: button,
         confirmButtonClass: btn_class,
         onOpen: function () {
-            start_superselect();
-            start_inputmask();
-            start_datepickers();
+            restart_inputs();
         },
         preConfirm: function () {
             $form = $('#swal-form');
@@ -468,8 +455,10 @@ function prepareForm(form) {
     }
 }
 
+/**
+ * Visualizzazione dei messaggi attivi tramite toastr.
+ */
 function renderMessages() {
-    // Visualizzazione messaggi
     $.ajax({
         url: globals.rootdir + '/ajax.php',
         type: 'get',
@@ -506,6 +495,9 @@ function replaceAll(str, find, replace) {
     return str.replace(new RegExp(find, "g"), replace);
 }
 
+/**
+ * @deprecated
+ */
 function cleanup_inputs() {
     $('.bound').removeClass("bound");
 
@@ -518,18 +510,30 @@ function cleanup_inputs() {
     });
 }
 
+/**
+ * @deprecated
+ */
 function restart_inputs() {
+    // Generazione degli input
+    $('.openstamanager-input').each(function () {
+        input(this);
+    });
+    /*
     start_datepickers();
     start_inputmask();
 
+    initNumbers();
     start_superselect();
 
     // Autosize per le textarea
-    autosize($('.autosize'));
+    initTextareaInput($('.autosize'));
+     */
 }
 
+/**
+ * Messaggio di avviso salvataggio a comparsa sulla destra solo nella versione a desktop intero
+ */
 function alertPush() {
-    // Messaggio di avviso salvataggio a comparsa sulla destra solo nella versione a desktop intero
     if ($(window).width() > 1023) {
         var i = 0;
 
@@ -559,6 +563,13 @@ function alertPush() {
     });
 }
 
+/**
+ *
+ * @param button
+ * @param form
+ * @param data
+ * @returns {Promise<unknown>}
+ */
 function salvaForm(button, form, data = {}) {
     return new Promise(function (resolve, reject) {
         // Caricamento visibile nel pulsante
@@ -648,4 +659,78 @@ function hideTableColumn(table, column) {
             }
         }
     }
+}
+
+/**
+ * Loads a JavaScript file and returns a Promise for when it is loaded
+ */
+function loadScript(src, async = true, defer = true) {
+    if (!globals.dynamicScripts) {
+        globals.dynamicScripts = {};
+    }
+
+    return new Promise((resolve, reject) => {
+        // Caricamento già completato
+        if (globals.dynamicScripts[src] && globals.dynamicScripts[src] === "done") {
+            resolve();
+            return;
+        }
+
+        // Aggiunta del resolve all'elenco per lo script
+        if (!globals.dynamicScripts[src]) {
+            globals.dynamicScripts[src] = [];
+        }
+        globals.dynamicScripts[src].push(resolve);
+
+        // Ricerca dello script esistente
+        let found = Array.prototype.slice.call(document.scripts).find(el => el.getAttribute("src") === src);
+        if (found) {
+            return;
+        }
+
+        // Caricamento dinamico dello script
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.async = async;
+        script.defer = defer;
+
+        script.onload = function () {
+            for (resolve of globals.dynamicScripts[src]) {
+                resolve();
+            }
+
+            globals.dynamicScripts[src] = "done";
+        }
+
+        script.onerror = reject;
+        script.src = src;
+        document.head.append(script);
+    })
+}
+
+function aggiungiContenuto(endpoint_selector, template_selector, replaces = {}) {
+    let template = $(template_selector);
+    let endpoint = $(endpoint_selector);
+
+    // Distruzione degli input interni
+    template.find('.openstamanager-input').each(function () {
+        input(this).destroy();
+    });
+
+    // Contenuto da sostituire
+    let content = template.html();
+    for ([key, value] of Object.entries(replaces)) {
+        content = replaceAll(content, key, value);
+    }
+
+    // Aggiunta del contenuto
+    let element = $(content);
+    endpoint.append(element);
+
+    // Rigenerazione degli input interni
+    element.find('.openstamanager-input').each(function () {
+        input(this).trigger("change");
+    });
+
+    return element;
 }

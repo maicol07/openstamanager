@@ -18,6 +18,7 @@
  */
 
 use Carbon\Carbon;
+use Plugins\ImportFE\FatturaElettronica;
 
 include_once __DIR__.'/../../core.php';
 
@@ -28,7 +29,7 @@ $(document).ready(function() {
 });
 </script>';
 
-$skip_link = $has_next ? ROOTDIR.'/editor.php?id_module='.$id_module.'&id_plugin='.$id_plugin.'&id_record='.($id_record + 1).'&sequence='.get('sequence') : ROOTDIR.'/editor.php?id_module='.$id_module;
+$skip_link = $has_next ? base_path().'/editor.php?id_module='.$id_module.'&id_plugin='.$id_plugin.'&id_record='.($id_record + 1).'&sequence='.get('sequence') : base_path().'/editor.php?id_module='.$id_module;
 
 if (empty($fattura_pa)) {
     if (!empty($error)) {
@@ -170,11 +171,11 @@ if (!empty($pagamenti)) {
     // Scadenze di pagamento
     foreach ($metodi as $metodo) {
         $descrizione = !empty($metodo['ModalitaPagamento']) ? $database->fetchOne('SELECT descrizione FROM fe_modalita_pagamento WHERE codice = '.prepare($metodo['ModalitaPagamento']))['descrizione'] : '';
-        $data = !empty($metodo['DataScadenzaPagamento']) ? Translator::dateToLocale($metodo['DataScadenzaPagamento']).' ' : '';
+        $data = !empty($metodo['DataScadenzaPagamento']) ? FatturaElettronica::parseDate($metodo['DataScadenzaPagamento']) : '';
 
         echo '
 				<li>
-				    '.$data.'
+				    '.dateFormat($data).'
 				    '.moneyFormat($metodo['ImportoPagamento']).'
                     ('.$descrizione.')
                 </li>';
@@ -380,7 +381,7 @@ if (!empty($righe)) {
                 </div>
 
                 <div class="col-md-3">
-                    {[ "type": "select", "name": "selezione_riferimento['.$key.']", "ajax-source": "riferimenti-fe", "select-options": '.json_encode(['id_anagrafica' => $anagrafica ? $anagrafica->id : '']).', "required": 0, "label": "'.tr('Riferimento').'", "icon-after": '.json_encode('<button type="button" onclick="rimuoviRiferimento(this)" class="btn btn-primary disabled" id="rimuovi_riferimento_'.$key.'"><i class="fa fa-close"></i></button>').' ]}
+                    {[ "type": "select", "name": "selezione_riferimento['.$key.']", "ajax-source": "riferimenti-fe", "select-options": '.json_encode(['id_anagrafica' => $anagrafica ? $anagrafica->id : '']).', "label": "'.tr('Riferimento').'", "icon-after": '.json_encode('<button type="button" onclick="rimuoviRiferimento(this)" class="btn btn-primary disabled" id="rimuovi_riferimento_'.$key.'"><i class="fa fa-close"></i></button>').' ]}
                 </div>
             </td>
         </tr>';

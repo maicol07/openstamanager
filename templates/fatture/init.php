@@ -35,7 +35,7 @@ $record = $dbo->fetchOne('SELECT *,
     (SELECT descrizione FROM dt_aspettobeni WHERE id=idaspettobeni) AS aspettobeni,
     (SELECT descrizione FROM dt_spedizione WHERE id=idspedizione) AS spedizione,
     (SELECT ragione_sociale FROM an_anagrafiche WHERE idanagrafica=idvettore) AS vettore,
-    (SELECT id FROM co_banche WHERE id=idbanca) AS id_banca,
+    (SELECT id FROM co_banche WHERE id = id_banca_azienda) AS id_banca,
     (SELECT is_fiscale FROM zz_segments WHERE id = id_segment) AS is_fiscale
 FROM co_documenti WHERE id='.prepare($id_record));
 
@@ -43,9 +43,9 @@ $record['rivalsainps'] = floatval($record['rivalsainps']);
 $record['ritenutaacconto'] = floatval($record['ritenutaacconto']);
 $record['bollo'] = floatval($record['bollo']);
 
-$nome_banca = $banca['appoggiobancario'];
-$iban_banca = $banca['codiceiban'];
-$bic_banca = $banca['bic'];
+$nome_banca = $banca->nome;
+$iban_banca = $banca->iban;
+$bic_banca = $banca->bic;
 
 $module_name = ($record['dir'] == 'entrata') ? 'Fatture di vendita' : 'Fatture di acquisto';
 
@@ -67,7 +67,7 @@ $tipo_doc = ($fattura_accompagnatoria) ? 'Fattura accompagnatoria di vendita' : 
 // Leggo i dati della destinazione (se 0=sede legale, se!=altra sede da leggere da tabella an_sedi)
 $destinazione = '';
 if (!empty($record['idsede_destinazione'])) {
-    $rsd = $dbo->fetchArray('SELECT (SELECT codice FROM an_anagrafiche WHERE idanagrafica=an_sedi.idanagrafica) AS codice, (SELECT ragione_sociale FROM an_anagrafiche WHERE idanagrafica=an_sedi.idanagrafica) AS ragione_sociale, nomesede, indirizzo, indirizzo2, cap, citta, provincia, piva, codice_fiscale FROM an_sedi WHERE idanagrafica='.prepare($id_cliente).' AND id='.prepare($record['idsede_destinazione']));
+    $rsd = $dbo->fetchArray('SELECT (SELECT codice FROM an_anagrafiche WHERE idanagrafica=an_sedi.idanagrafica) AS codice, (SELECT ragione_sociale FROM an_anagrafiche WHERE idanagrafica=an_sedi.idanagrafica) AS ragione_sociale, nomesede, indirizzo, indirizzo2, cap, citta, provincia, piva, codice_fiscale, id_nazione FROM an_sedi WHERE idanagrafica='.prepare($id_cliente).' AND id='.prepare($record['idsede_destinazione']));
 
     if (!empty($rsd[0]['nomesede'])) {
         $destinazione .= $rsd[0]['nomesede'].'<br/>';
@@ -86,6 +86,12 @@ if (!empty($record['idsede_destinazione'])) {
     }
     if (!empty($rsd[0]['provincia'])) {
         $destinazione .= ' ('.$rsd[0]['provincia'].')';
+    }
+    if (!empty($rsd[0]['id_nazione'])) {
+        $nazione = $database->fetchOne("SELECT * FROM an_nazioni WHERE id = ".prepare($rsd[0]['id_nazione']));
+        if ($nazione['iso2']!='IT'){
+            $destinazione .= ' - '.$nazione['name'];
+        }
     }
 }
 

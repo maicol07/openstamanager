@@ -20,7 +20,7 @@
 include_once __DIR__.'/../../core.php';
 
 // Creazione righe fantasma
-$autofill = new \Util\Autofill($options['pricing'] ? 6 : 3);
+$autofill = new \Util\Autofill($options['pricing'] ? 7 : 4);
 $rows_per_page = 16;
 if (!empty($options['last-page-footer'])) {
     $rows_per_page += 10;
@@ -33,14 +33,15 @@ echo "
     <thead>
         <tr>
             <th class='text-center' style='width:5%'>".tr('#', [], ['upper' => true])."</th>
+            <th class='text-center'>".tr('Cod.', [], ['upper' => true])."</th>
             <th class='text-center'>".tr('Descrizione', [], ['upper' => true])."</th>
-            <th class='text-center' style='width:10%'>".tr('Q.tà', [], ['upper' => true]).'</th>';
+            <th class='text-center'>".tr('Q.tà', [], ['upper' => true]).'</th>';
 
 if ($options['pricing']) {
     echo "
-            <th class='text-center' style='width:15%'>".tr('Prezzo unitario', [], ['upper' => true])."</th>
-            <th class='text-center' style='width:15%'>".tr('Importo', [], ['upper' => true])."</th>
-            <th class='text-center' style='width:10%'>".tr('IVA', [], ['upper' => true]).' (%)</th>';
+            <th class='text-center'>".tr('Prezzo unitario', [], ['upper' => true])."</th>
+            <th class='text-center'>".tr('Importo', [], ['upper' => true])."</th>
+            <th class='text-center'>".tr('IVA', [], ['upper' => true]).' (%)</th>';
 }
 
             echo '
@@ -62,11 +63,36 @@ foreach ($righe as $riga) {
     <tr>
         <td class="text-center" style="vertical-align: middle">
             '.$num.'
-        </td>';
+        </td>
+
+        <td class="text-center" nowrap="nowrap" style="vertical-align: middle">';
+
+        if ($riga->isArticolo()) {
+            echo $riga->codice;
+            $source_type = 'Modules\DDT\Components\Articolo';
+        }else{
+            echo '-';
+            $source_type = 'Modules\DDT\Components\Riga';
+        }
 
     echo'
+        </td>
+        
         <td>
             '.nl2br($r['descrizione']);
+    
+    //Riferimenti odrini/ddt righe
+    if (  $riga->referenceTargets()->count() ){
+       
+        $source = $source_type::find($riga->id);
+        $riferimenti = $source->referenceTargets;
+        
+        foreach ($riferimenti as $riferimento) {
+        
+            echo '
+            <br><small>'.$riferimento->target->descrizione.'<br>'.reference($riferimento->target->getDocument()).'</small>';
+        }
+    }
 
     if ($riga->isArticolo()) {
         // Codice articolo
@@ -90,8 +116,9 @@ foreach ($righe as $riga) {
     }
 
     // Aggiunta dei riferimenti ai documenti
+    /*
     if (setting('Riferimento dei documenti nelle stampe') && $riga->hasOriginal()) {
-        $ref = $riga->getOriginal()->parent->getReference();
+        $ref = $riga->getOriginal()->getDocument()->getReference();
 
         if (!empty($ref)) {
             echo '
@@ -100,20 +127,21 @@ foreach ($righe as $riga) {
             $autofill->count($ref, true);
         }
     }
+    */
 
     echo '
         </td>';
 
     if (!$riga->isDescrizione()) {
         echo '
-            <td class="text-center">
+            <td class="text-center" nowrap="nowrap">
                 '.Translator::numberToLocale(abs($riga->qta), 'qta').' '.$r['um'].'
             </td>';
 
         if ($options['pricing']) {
             // Prezzo unitario
             echo '
-            <td class="text-right">
+            <td class="text-right" nowrap="nowrap">
 				'.moneyFormat($riga->prezzo_unitario);
 
             if ($riga->sconto > 0) {
@@ -130,13 +158,13 @@ foreach ($righe as $riga) {
 
             // Imponibile
             echo '
-            <td class="text-right">
+            <td class="text-right" nowrap="nowrap">
 				'.moneyFormat($riga->totale_imponibile).'
             </td>';
 
             // Iva
             echo '
-            <td class="text-center">
+            <td class="text-center" nowrap="nowrap">
                 '.Translator::numberToLocale($riga->aliquota->percentuale, 0).'
             </td>';
         }

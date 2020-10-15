@@ -85,7 +85,7 @@ class FatturaElettronica
     {
         $documento = $this->getDocumento();
 
-        return !empty($documento['progressivo_invio']) && file_exists(DOCROOT.'/'.static::getDirectory().'/'.$this->getFilename());
+        return !empty($documento['progressivo_invio']) && file_exists(base_dir().'/'.static::getDirectory().'/'.$this->getFilename());
     }
 
     /**
@@ -301,6 +301,7 @@ class FatturaElettronica
         database()->update('co_documenti', [
             'progressivo_invio' => $this->getDocumento()['progressivo_invio'],
             'codice_stato_fe' => 'GEN',
+            'id_ricevuta_principale' => null,
             'data_stato_fe' => date('Y-m-d H:i:s'),
         ], ['id' => $this->getDocumento()['id']]);
 
@@ -362,6 +363,9 @@ class FatturaElettronica
                 'xmlns:ds' => 'http://www.w3.org/2000/09/xmldsig#',
                 'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
                 'xsi:schemaLocation' => 'http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2.1 http://www.fatturapa.gov.it/export/fatturazione/sdi/fatturapa/v1.2.1/Schema_del_file_xml_FatturaPA_versione_1.2.1.xsd',
+
+                // Attributo SistemaEmittente
+                'SistemaEmittente' => 'OpenSTAManager',
             ];
             foreach ($attributes as $key => $value) {
                 $rootNode->setAttribute($key, $value);
@@ -825,7 +829,7 @@ class FatturaElettronica
 
         if (!empty($id_ritenuta)) {
             $percentuale = database()->fetchOne('SELECT percentuale FROM co_ritenutaacconto WHERE id = '.prepare($id_ritenuta))['percentuale'];
-
+            // Con la nuova versione in vigore dal 01/01/2021, questo nodo diventa ripetibile.
             $result['DatiRitenuta'] = [
                 'TipoRitenuta' => (Validate::isValidTaxCode($azienda['codice_fiscale']) and $cliente['tipo'] == 'Privato') ? 'RT01' : 'RT02',
                 'ImportoRitenuta' => $totale_ritenutaacconto,
@@ -835,11 +839,13 @@ class FatturaElettronica
         }
 
         // Bollo (2.1.1.6)
+        // ImportoBollo --> con la nuova versione in vigore dal 01/01/2021, la compilazione di questo nodo è diventata facoltativa.
+        // considerato che l'importo è noto e può essere solo di 2,00 Euro.
         $riga_bollo = $documento->rigaBollo;
         if (!empty($riga_bollo)) {
             $result['DatiBollo'] = [
                 'BolloVirtuale' => 'SI',
-                'ImportoBollo' => $riga_bollo->totale,
+                //'ImportoBollo' => $riga_bollo->totale,
             ];
         }
 
@@ -1185,8 +1191,8 @@ class FatturaElettronica
             $descrizione = str_replace('’', ' ', $descrizione);
 
             // Aggiunta dei riferimenti ai documenti
-            if (setting('Riferimento dei documenti in Fattura Elettronica') && $riga->hasOriginal()) {
-                $descrizione .= "\n".$riga->getOriginal()->parent->getReference();
+            if (setting('Riferimento dei documenti in Fattura Elettronica') && $riga->hasOriginalComponent()) {
+                $descrizione .= "\n".$riga->getOriginalComponent()->getDocument()->getReference();
             }
 
             $dettaglio['Descrizione'] = $descrizione;
@@ -1414,14 +1420,14 @@ class FatturaElettronica
                 'ImportoPagamento' => abs($scadenza['da_pagare']),
             ];
 
-            if (!empty($banca['appoggiobancario'])) {
-                $pagamento['IstitutoFinanziario'] = $banca['appoggiobancario'];
+            if (!empty($banca->nome)) {
+                $pagamento['IstitutoFinanziario'] = $banca->nome;
             }
-            if (!empty($banca['codiceiban'])) {
-                $pagamento['IBAN'] = clean($banca['codiceiban']);
+            if (!empty($banca->iban)) {
+                $pagamento['IBAN'] = clean($banca->iban);
             }
-            if (!empty($banca['bic'])) {
-                $pagamento['BIC'] = $banca['bic'];
+            if (!empty($banca->bic)) {
+                $pagamento['BIC'] = $banca->bic;
             }
 
             $result[]['DettaglioPagamento'] = $pagamento;
@@ -1454,7 +1460,7 @@ class FatturaElettronica
         // Inclusione
         foreach ($allegati as $allegato) {
             if ($allegato['category'] == 'Allegati Fattura Elettronica') {
-                $file = DOCROOT.'/'.$directory.'/'.$allegato['filename'];
+                $file = base_dir().'/'.$directory.'/'.$allegato['filename'];
 
                 $attachments[] = [
                     'NomeAttachment' => $allegato['name'],
@@ -1482,7 +1488,7 @@ class FatturaElettronica
         $dir = static::getDirectory();
 
         $print = Prints::getModulePredefinedPrint($id_module);
-        $info = Prints::render($print['id'], $documento['id'], DOCROOT.'/'.$dir);
+        $info = Prints::render($print['id'], $documento['id'], base_dir().'/'.$dir);
 
         $name = 'Stampa allegata';
         $is_presente = database()->fetchNum('SELECT id FROM zz_files WHERE id_module = '.prepare($id_module).' AND id_record = '.prepare($documento['id']).' AND name = '.prepare($name));

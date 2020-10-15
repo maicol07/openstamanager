@@ -135,12 +135,13 @@ switch (post('op')) {
             // Sincronizzazione con il promemoria indicato
             if (!empty($id_promemoria)) {
                 $promemoria = Promemoria::find($id_promemoria);
-                $promemoria->pianifica($intervento);
+                $promemoria->pianifica($intervento, false);
             }
 
             // Collegamenti intervento/impianti
             $impianti = (array) post('idimpianti');
             if (!empty($impianti)) {
+                $impianti = array_unique($impianti);
                 foreach ($impianti as $impianto) {
                     $dbo->insert('my_impianti_interventi', [
                         'idintervento' => $id_record,
@@ -166,8 +167,8 @@ switch (post('op')) {
         }
 
         // Collegamenti tecnici/interventi
-        $idtecnici = post('idtecnico');
         if (!empty(post('orario_inizio')) && !empty(post('orario_fine'))) {
+            $idtecnici = post('idtecnico');
             foreach ($idtecnici as $idtecnico) {
                 add_tecnico($id_record, $idtecnico, post('orario_inizio'), post('orario_fine'), $idcontratto);
             }
@@ -192,10 +193,10 @@ switch (post('op')) {
     // Eliminazione intervento
     case 'delete':
         try {
-            $intervento->delete();
-
             // Eliminazione associazioni tra interventi e contratti
             $dbo->query('UPDATE co_promemoria SET idintervento = NULL WHERE idintervento='.prepare($id_record));
+
+            $intervento->delete();
 
             // Elimino il collegamento al componente
             $dbo->query('DELETE FROM my_impianto_componenti WHERE idintervento='.prepare($id_record));
@@ -315,10 +316,7 @@ switch (post('op')) {
         }
 
         $sconto->descrizione = post('descrizione');
-        $sconto->id_iva = post('idiva');
-
-        $sconto->sconto_unitario = post('sconto_unitario');
-        $sconto->tipo_sconto = 'UNT';
+        $sconto->setScontoUnitario(post('sconto_unitario'), post('idiva'));
 
         $sconto->save();
 
@@ -411,6 +409,13 @@ switch (post('op')) {
             }
         }
 
+        // Modifica finale dello stato
+    /*
+        if (post('create_document') == 'on') {
+            $intervento->idstatointervento = post('id_stato_intervento');
+            $intervento->save();
+        }*/
+
         // Messaggio informativo
         $message = tr('_DOC_ aggiunto!', [
             '_DOC_' => $documento->getReference(),
@@ -420,7 +425,7 @@ switch (post('op')) {
         break;
 
     case 'firma':
-        if (directory(DOCROOT.'/files/interventi')) {
+        if (directory(base_dir().'/files/interventi')) {
             if (post('firma_base64') != '') {
                 // Salvataggio firma
                 $firma_file = 'firma_'.time().'.jpg';
@@ -433,7 +438,7 @@ switch (post('op')) {
                     $constraint->aspectRatio();
                 });
 
-                if (!$img->save(DOCROOT.'/files/interventi/'.$firma_file)) {
+                if (!$img->save(base_dir().'/files/interventi/'.$firma_file)) {
                     flash()->error(tr('Impossibile creare il file!'));
                 } elseif ($dbo->query('UPDATE in_interventi SET firma_file='.prepare($firma_file).', firma_data=NOW(), firma_nome = '.prepare($firma_nome).', idstatointervento = (SELECT idstatointervento FROM in_statiintervento WHERE codice = \'OK\') WHERE id='.prepare($id_record))) {
                     flash()->info(tr('Firma salvata correttamente!'));
@@ -488,7 +493,7 @@ switch (post('op')) {
         // Notifica rimozione dell' intervento al tecnico
         if (setting('Notifica al tecnico la rimozione dall\'attività')) {
             if (!empty($tecnico['email'])) {
-                $template = Template::get('Notifica rimozione intervento');
+                $template = Template::pool('Notifica rimozione intervento');
 
                 if (!empty($template)) {
                     $mail = Mail::build(auth()->getUser(), $template, $id_record);
@@ -530,52 +535,46 @@ switch (post('op')) {
 
     // Duplica intervento
     case 'copy':
-
-        $idstatointervento = post('idstatointervento');
+        $id_stato = post('id_stato');
         $data_richiesta = post('data_richiesta');
-        $copia_sessioni = post('sessioni');
-        $copia_righe = post('righe');
+        $copia_sessioni = post('copia_sessioni');
+        $copia_righe = post('copia_righe');
 
         $new = $intervento->replicate();
-        $new->idstatointervento = $idstatointervento;
+        $new->idstatointervento = $id_stato;
 
-        //calcolo il nuovo codice
+        // Calcolo del nuovo codice sulla base della data di richiesta
         $new->codice = Intervento::getNextCodice($data_richiesta);
+        $new->data_richiesta = $data_richiesta;
+        $new->data_scadenza = post('data_scadenza');
 
         $new->save();
 
         $id_record = $new->id;
 
-        $righe = $intervento->getRighe();
-        foreach ($righe as $riga) {
-            $new_riga = $riga->replicate();
-            $new_riga->setParent($new);
+        // Copio le righe
+        if (!empty($copia_righe)) {
+            $righe = $intervento->getRighe();
+            foreach ($righe as $riga) {
+                $new_riga = $riga->replicate();
+                $new_riga->setDocument($new);
 
-            //Copio le righe
-            if ($copia_righe == 1) {
-                $righe = $intervento->getRighe();
-                foreach ($righe as $riga) {
-                    $new_riga = $riga->replicate();
-                    $new_riga->setParent($new);
-
-                    $new_riga->qta_evasa = 0;
-                    $new_riga->save();
-                }
+                $new_riga->qta_evasa = 0;
+                $new_riga->save();
             }
         }
 
-        $i = 0;
-
-        //Copio le sessioni
-        if ($copia_sessioni == 1) {
+        // Copia delle sessioni
+        $numero_sessione = 0;
+        if (!empty($copia_sessioni)) {
             $sessioni = $intervento->sessioni;
             foreach ($sessioni as $sessione) {
-                //Se è la prima sessione che copio importo la data con quella della richiesta
-                if ($i == 0) {
+                // Se è la prima sessione che copio importo la data con quella della richiesta
+                if ($numero_sessione == 0) {
                     $orario_inizio = date('Y-m-d', strtotime($data_richiesta)).' '.date('H:i:s', strtotime($sessione->orario_inizio));
                 } else {
                     $diff = strtotime($sessione->orario_inizio) - strtotime($inizio_old);
-                    $orario_inizio = date('Y-m-d H:i:s', (strtotime($orario_inizio) + $diff));
+                    $orario_inizio = date('Y-m-d H:i:s', (strtotime($sessione->orario_inizio) + $diff));
                 }
 
                 $diff_fine = strtotime($sessione->orario_fine) - strtotime($sessione->orario_inizio);
@@ -588,7 +587,7 @@ switch (post('op')) {
                 $new_sessione->orario_fine = $orario_fine;
                 $new_sessione->save();
 
-                ++$i;
+                ++$numero_sessione;
                 $inizio_old = $sessione->orario_inizio;
             }
         }

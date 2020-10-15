@@ -69,9 +69,9 @@ foreach ($righe as $riga) {
             <td>';
 
     // Aggiunta dei riferimenti ai documenti
-    if ($riga->hasOriginal()) {
+    if ($riga->hasOriginalComponent()) {
         echo '
-                <small class="pull-right text-right text-muted">'.reference($riga->getOriginal()->parent, tr('Origine')).'</small>';
+                <small class="pull-right text-right text-muted">'.reference($riga->getOriginalComponent()->getDocument(), tr('Origine')).'</small>';
     }
 
     if ($riga->isArticolo()) {
@@ -137,6 +137,7 @@ foreach ($righe as $riga) {
         // Quantità e unità di misura
         echo '
             <td class="text-center">
+                <i class="'.($riga->confermato ? 'fa fa-check text-success' : 'fa fa-clock-o text-warning').'"></i> 
                 '.numberFormat($riga->qta_rimanente, 'qta').' / '.numberFormat($riga->qta, 'qta').' '.$riga->um.'
             </td>';
 

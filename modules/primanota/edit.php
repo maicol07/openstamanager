@@ -37,7 +37,7 @@ include_once __DIR__.'/../../core.php';
             $modulo = ($rs[0]['dir'] == 'entrata') ? 'Fatture di vendita' : 'Fatture di acquisto'; ?>
             <div class=" col-md-2">
                 <br>
-                <a href="<?php echo $rootdir; ?>/editor.php?id_module=<?php echo Modules::get($modulo)['id']; ?>&id_record=<?php echo $rs_doc[0]['iddocumento']; ?>" class="btn btn-info"><i class="fa fa-chevron-left"></i> <?php echo tr('Vai alla fattura'); ?></a>
+                <a href="<?php echo base_path(); ?>/editor.php?id_module=<?php echo Modules::get($modulo)['id']; ?>&id_record=<?php echo $rs_doc[0]['iddocumento']; ?>" class="btn btn-info"><i class="fa fa-chevron-left"></i> <?php echo tr('Vai alla fattura'); ?></a>
             </div>
         <?php
         } else {
@@ -52,7 +52,7 @@ include_once __DIR__.'/../../core.php';
             for ($i = 0; $i < sizeof($rs_doc); ++$i) {
                 $rs = $dbo->fetchArray('SELECT dir FROM co_tipidocumento INNER JOIN co_documenti ON co_tipidocumento.id=co_documenti.idtipodocumento WHERE co_documenti.id='.prepare($rs_doc[$i]['iddocumento']));
                 $modulo = ($rs[0]['dir'] == 'entrata') ? 'Fatture di vendita' : 'Fatture di acquisto'; ?>
-                        <li><a href="<?php echo $rootdir; ?>/editor.php?id_module=<?php echo Modules::get($modulo)['id']; ?>&id_record=<?php echo $rs_doc[$i]['iddocumento']; ?>" class="dropdown-item"><?php echo tr('Vai alla fattura n. '.$rs_doc[$i]['numero']); ?></a></li>
+                        <li><a href="<?php echo base_path(); ?>/editor.php?id_module=<?php echo Modules::get($modulo)['id']; ?>&id_record=<?php echo $rs_doc[$i]['iddocumento']; ?>" class="dropdown-item"><?php echo tr('Vai alla fattura n. '.$rs_doc[$i]['numero']); ?></a></li>
         <?php
             } ?>
                     </ul>
@@ -78,6 +78,14 @@ $movimenti = $mastrino->movimenti->toArray();
 include $structure->filepath('movimenti.php');
 
 ?>
+
+    <!-- Note -->
+    <div class="row">
+        <div class="col-md-12">
+            {[ "type": "textarea", "label": "<?php echo tr('Note'); ?>", "name": "note", "required": 0, "value": "$note$" ]}
+        </div>
+    </div>
+
 </form>
 
 {( "name": "filelist_and_upload", "id_module": "$id_module$", "id_record": "$id_record$" )}

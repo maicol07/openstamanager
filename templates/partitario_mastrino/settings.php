@@ -17,19 +17,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace Common;
-
-class RowReference extends Model
-{
-    protected $table = 'co_riferimenti_righe';
-
-    public function source()
-    {
-        return $this->morphTo();
-    }
-
-    public function target()
-    {
-        return $this->morphTo();
-    }
-}
+return [
+    'font-size' => '11pt',
+];

@@ -32,7 +32,7 @@ class ReceiptHook extends Manager
     public function needsExecution()
     {
         // Lettura cache
-        $todo_cache = Cache::get('Ricevute Elettroniche');
+        $todo_cache = Cache::pool('Ricevute Elettroniche');
 
         return !$todo_cache->isValid() || !empty($todo_cache->content);
     }
@@ -40,8 +40,8 @@ class ReceiptHook extends Manager
     public function execute()
     {
         // Lettura cache
-        $todo_cache = Cache::get('Ricevute Elettroniche');
-        $completed_cache = Cache::get('Ricevute Elettroniche importate');
+        $todo_cache = Cache::pool('Ricevute Elettroniche');
+        $completed_cache = Cache::pool('Ricevute Elettroniche importate');
 
         // Refresh cache
         if (!$todo_cache->isValid()) {
@@ -69,18 +69,11 @@ class ReceiptHook extends Manager
 
             // Importazione ricevuta
             $name = $element['name'];
-            Interaction::getReceiptList($name);
+            $fattura = Ricevuta::process($name);
 
-            try {
-                $receipt = new Ricevuta($name);
-                $receipt->save();
-
-                $receipt->delete();
-                Interaction::processReceipt($name);
-
+            if (!empty($fattura)) {
                 $completed[] = $element;
                 unset($todo[$i]);
-            } catch (UnexpectedValueException $e) {
             }
         }
 
@@ -92,8 +85,8 @@ class ReceiptHook extends Manager
     public function response()
     {
         // Lettura cache
-        $todo_cache = Cache::get('Ricevute Elettroniche');
-        $completed_cache = Cache::get('Ricevute Elettroniche importate');
+        $todo_cache = Cache::pool('Ricevute Elettroniche');
+        $completed_cache = Cache::pool('Ricevute Elettroniche importate');
 
         $completed_number = count($completed_cache->content);
         $total_number = $completed_number + count($todo_cache->content);

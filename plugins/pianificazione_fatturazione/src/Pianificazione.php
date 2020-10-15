@@ -45,7 +45,7 @@ class Pianificazione extends Document
      */
     public static function build(Contratto $contratto, $data_scadenza)
     {
-        $model = parent::build();
+        $model = new static();
 
         $model->contratto()->associate($contratto);
 
@@ -145,6 +145,12 @@ class Pianificazione extends Document
     {
         // TODO: Implement getReferenceDate() method.
     }
+
+    public function getReferenceRagioneSociale()
+    {
+        return $this->anagrafica->ragione_sociale;
+    }
+
 
     public function getReference()
     {

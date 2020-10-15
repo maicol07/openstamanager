@@ -17,30 +17,31 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace Common;
+include_once __DIR__.'/../../../core.php';
 
-use Illuminate\Database\Eloquent\Model as Original;
-
-abstract class Model extends Original
-{
-    // Retrocompatibilità MySQL
-    public function setUpdatedAtAttribute($value)
-    {
-        // to Disable updated_at
-    }
-
-    /**
-     * Crea una nuova istanza del modello.
-     *
-     * @return static
+switch ($resource) {
+    /*
+     * Opzioni utilizzate:
+     * - id_anagrafica
      */
-    public static function build()
-    {
-        return new static();
-    }
+    case 'banche':
+        $query = "SELECT id, CONCAT (nome, ' - ' , iban) AS descrizione FROM co_banche |where| ORDER BY nome";
 
-    public static function getTableName()
-    {
-        return with(new static())->getTable();
-    }
+        foreach ($elements as $element) {
+            $filter[] = 'id = '.prepare($element);
+        }
+
+        if (empty($filter)) {
+            $where[] = 'deleted_at IS NULL';
+        }
+
+        $where[] = 'id_anagrafica='.prepare($superselect['id_anagrafica']);
+
+        if (!empty($search)) {
+            $search_fields[] = 'nome LIKE '.prepare('%'.$search.'%');
+            $search_fields[] = 'filiale LIKE '.prepare('%'.$search.'%');
+            $search_fields[] = 'iban LIKE '.prepare('%'.$search.'%');
+        }
+
+        break;
 }

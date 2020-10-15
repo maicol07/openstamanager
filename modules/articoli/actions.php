@@ -55,6 +55,11 @@ switch (post('op')) {
         $articolo->setPrezzoVendita(post('prezzo_vendita'), post('idiva_vendita'));
         $articolo->save();
 
+        if( !empty(post('qta')) ){
+            $data_movimento = new Carbon();
+            $articolo->movimenta(post('qta'), tr('Carico manuale'), $data_movimento->format('Y-m-d'), true);
+        }
+
         $id_record = $articolo->id;
 
         if (isAjaxRequest()) {
@@ -108,6 +113,9 @@ switch (post('op')) {
         $articolo->volume = post('volume');
         $articolo->peso_lordo = post('peso_lordo');
 
+        $articolo->um_secondaria = post('um_secondaria');
+        $articolo->fattore_um_secondaria = post('fattore_um_secondaria');
+
         $articolo->setPrezzoVendita(post('prezzo_vendita'), post('idiva_vendita'));
 
         $componente = post('componente_filename');
@@ -131,7 +139,7 @@ switch (post('op')) {
         // Salvataggio info componente (campo `contenuto`)
         if (!empty($componente)) {
             $contenuto_precedente_esistente = !empty($articolo->contenuto);
-            $contenuto = file_get_contents(DOCROOT.'/files/impianti/'.$componente);
+            $contenuto = file_get_contents(base_dir().'/files/impianti/'.$componente);
             $contenuto_componente = Ini::read($contenuto);
 
             // Lettura dei campi esistenti per preservarne il valore

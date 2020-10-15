@@ -54,7 +54,7 @@ class Intervento extends Document
      */
     public static function build(Anagrafica $anagrafica, TipoSessione $tipo_sessione, Stato $stato, $data_richiesta)
     {
-        $model = parent::build();
+        $model = new static();
 
         $model->anagrafica()->associate($anagrafica);
         $model->stato()->associate($stato);
@@ -247,4 +247,10 @@ class Intervento extends Document
     {
         return $this->data_richiesta;
     }
+
+    public function getReferenceRagioneSociale()
+    {
+        return $this->anagrafica->ragione_sociale;
+    }
+
 }

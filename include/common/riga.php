@@ -33,7 +33,7 @@ echo '
 // Quantità
 echo '
         <div class="col-md-4">
-            {[ "type": "number", "label": "'.tr('Q.tà').'", "name": "qta", "required": 1, "value": "'.$result['qta'].'", "decimals": "qta"'.(isset($result['max_qta']) ? ', "icon-after": "<span class=\"tip\" title=\"'.tr("L'elemento è collegato a un documento: la quantità massima ammessa è relativa allo stato di evasione dell'elemento nel documento di origine (quantità dell'elemento / quantità massima ammessa)").'\">/ '.numberFormat($result['max_qta'], 'qta').' <i class=\"fa fa-question-circle-o\"></i></span>"' : '').', "min-value": "'.Translator::numberToLocale($result['qta_evasa']).'" ]}
+            {[ "type": "number", "label": "'.tr('Q.tà').'", "name": "qta", "required": 1, "value": "'.$result['qta'].'", "decimals": "qta"'.(isset($result['max_qta']) ? ', "icon-after": "<span class=\"tip\" title=\"'.tr("L'elemento è collegato a un documento: la quantità massima ammessa è relativa allo stato di evasione dell'elemento nel documento di origine (quantità dell'elemento / quantità massima ammessa)").'\">/ '.numberFormat($result['max_qta'], 'qta').' <i class=\"fa fa-question-circle-o\"></i></span>"' : '').', "min-value": "'.$result['qta_evasa'].'" ]}
         </div>';
 
 // Unità di misura
@@ -74,13 +74,13 @@ if ($options['dir'] == 'entrata') {
 
             margine = isNaN(margine) || !isFinite(margine) ? 0: margine; // Fix per magine NaN
 
-            div.html("<small>'.tr('Guadagno').': " + guadagno.toLocale() + " " + globals.currency + " &nbsp; '.tr('Margine').': " + margine.toLocale() + " %</small>");
+            div.html("<small>&nbsp;'.tr('Guadagno').': " + guadagno.toLocale() + " " + globals.currency + " &nbsp; '.tr('Margine').': " + margine.toLocale() + " %</small>");
             if (guadagno < 0) {
                 parent.addClass("has-error");
-                div.addClass("text-danger").removeClass("text-success");
+                div.addClass("label-danger").removeClass("label-success");
             } else {
                 parent.removeClass("has-error");
-                div.removeClass("text-danger").addClass("text-success");
+                div.removeClass("label-danger").addClass("label-success");
             }
         }
 
@@ -109,6 +109,17 @@ echo '
 // Data prevista evasione (per ordini)
 
 if (in_array($module['name'], ['Ordini cliente', 'Ordini fornitore'])) {
+    if($options['action'] == 'add'){
+        if($options['dir'] == 'entrata'){
+            $confermato = setting("Conferma automaticamente le quantità negli ordini cliente");
+        }
+        else{
+            $confermato = setting("Conferma automaticamente le quantità negli ordini fornitore");
+        }
+    }
+    else{
+        $confermato = $result['confermato'];
+    }
     echo '
 <div class="box box-warning collapsable collapsed-box">
     <div class="box-header with-border">
@@ -120,8 +131,19 @@ if (in_array($module['name'], ['Ordini cliente', 'Ordini fornitore'])) {
 
     <div class="box-body">
         <div class="row">
-            <div class="col-md-'.$width.'">
+            <div class="col-md-4">
                 {[ "type": "date", "label": "'.tr('Data prevista evasione').'", "name": "data_evasione", "value": "'.$result['data_evasione'].'" ]}
+            </div>
+            <div class="col-md-4">
+                {[ "type": "checkbox", "label": "'.tr('Cambia data a tutte le righe').'", "name": "data_evasione_all", "value": "" ]}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                {[ "type": "checkbox", "label": "'.tr('Articolo confermato').'", "name": "confermato", "value": "'.$confermato.'" ]}
+            </div>
+            <div class="col-md-4">
+                {[ "type": "checkbox", "label": "'.tr('Cambia stato a tutte le righe').'", "name": "confermato_all", "value": "" ]}
             </div>
         </div>
     </div>

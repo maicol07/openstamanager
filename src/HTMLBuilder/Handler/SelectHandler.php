@@ -30,7 +30,10 @@ class SelectHandler implements HandlerInterface
 {
     public function handle(&$values, &$extras)
     {
-        $source = $values['ajax-source'] ?: $values['select-source'];
+        $values['class'][] = 'openstamanager-input';
+        $values['class'][] = 'select-input';
+
+        $source = isset($values['ajax-source']) ? $values['ajax-source'] : (isset($values['select-source']) ? $values['select-source'] : null);
 
         // Individuazione della classe per la corretta gestione JavaScript
         $values['class'][] = !empty($source) ? 'superselectajax' : 'superselect';
@@ -62,7 +65,7 @@ class SelectHandler implements HandlerInterface
             unset($values['select-source']);
 
             // Informazioni aggiuntive per il select
-            $infos = $values['select-options'] ?: [];
+            $infos = isset($values['select-options']) ? $values['select-options'] : [];
             $values['data-select-options'] = json_encode($infos);
             unset($values['select-options']);
 
@@ -97,9 +100,9 @@ class SelectHandler implements HandlerInterface
 
         // Impostazione del placeholder
         $values['placeholder'] = !empty($values['placeholder']) ? $values['placeholder'] : tr("Seleziona un'opzione");
-        $values['data-placeholder'] = $values['placeholder'];
+        $values['data-placeholder'] = isset($values['placeholder']) ? $values['placeholder'] : null;
 
-        $values['data-maximum-selection-length'] = $values['maximum-selection-length'];
+        $values['data-maximum-selection-length'] = isset($values['maximum-selection-length']) ? $values['maximum-selection-length'] : null;
 
         unset($values['values']);
 
@@ -170,7 +173,7 @@ class SelectHandler implements HandlerInterface
             }
 
             $html .= '
-        <option value="'.prepareToField($element['id']).'" '.implode(' ', $attributes).($element['disabled'] ? 'disabled' : '').'>'.$element['text'].'</option>';
+        <option value="'.prepareToField($element['id']).'" '.implode(' ', $attributes).(!empty($element['disabled']) ? 'disabled' : '').'>'.$element['text'].'</option>';
         }
 
         return $html;
@@ -180,8 +183,8 @@ class SelectHandler implements HandlerInterface
      * Gestione dell'input di tipo "select" basato su un array associativo.
      * Esempio: {[ "type": "select", "name": "tipo", "values": [{"id":"M","text":"Maschio"},{"id":"F","text":"Femmina"},{"id":"U","text":"Unisex"}], "value": "U", "placeholder": "Non specificato" ]}.
      *
+     * @param array $array
      * @param array $values
-     * @param array $extras
      *
      * @return string
      */
@@ -210,15 +213,9 @@ class SelectHandler implements HandlerInterface
                 $attributes[] = 'style="background:'.$element['_bgcolor_'].'; color:'.color_inverse($element['_bgcolor_']).';"';
             }
 
-            $exclude = [
-                'optgroup',
-            ];
             // Leggo ulteriori campi oltre a id e descrizione per inserirli nell'option nella forma "data-nomecampo1", "data-nomecampo2", ecc
-            foreach ($element as $key => $value) {
-                if (!in_array($key, $exclude)) {
-                    $attributes[] = 'data-'.$key.'="'.prepareToField($value).'"';
-                }
-            }
+            unset($element['optgroup']);
+            $attributes[] = "data-select-attributes='".replace(json_encode($element), ["'" => "\'"])."'";
 
             $result .= '
         <option value="'.prepareToField($element['id']).'" '.implode(' ', $attributes).'>'.$element['text'].'</option>';
@@ -231,8 +228,10 @@ class SelectHandler implements HandlerInterface
      * Gestione dell'input di tipo "select" basato su una query specifica.
      * Esempio: {[ "type": "select", "label": "Select di test", "name": "select", "values": "query=SELECT id, name as text FROM table" ]}.
      *
-     * @param array $values
-     * @param array $extras
+     * @param string $query
+     * @param array  $values
+     *
+     * @throws \Exception
      *
      * @return string
      */

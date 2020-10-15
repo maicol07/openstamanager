@@ -38,9 +38,9 @@ echo '<!DOCTYPE html>
 
 		<link href="'.$paths['img'].'/favicon.png" rel="icon" type="image/x-icon" />';
 
-if (file_exists(DOCROOT.'/manifest.json')) {
+if (file_exists(base_dir().'/manifest.json')) {
     echo '
-        <link rel="manifest" href="'.ROOTDIR.'/manifest.json">';
+        <link rel="manifest" href="'.base_path().'/manifest.json">';
 }
 
 // CSS
@@ -166,7 +166,7 @@ if (Auth::check()) {
                 },
             };
 			globals = {
-                rootdir: "'.$rootdir.'",
+                rootdir: "'.base_path().'",
                 js: "'.$paths['js'].'",
                 css: "'.$paths['css'].'",
                 img: "'.$paths['img'].'",
@@ -209,7 +209,7 @@ if (Auth::check()) {
     echo '
         <script>
             globals = {
-                rootdir: "'.$rootdir.'",
+                rootdir: "'.base_path().'",
 
                 search: {},
                 translations: {
@@ -260,15 +260,6 @@ echo '
         </script>';
 
 if (Auth::check()) {
-    // Barra di debug
-    if (App::debug()) {
-        $debugbarRenderer = $debugbar->getJavascriptRenderer();
-        $debugbarRenderer->setIncludeVendors(false);
-        $debugbarRenderer->setBaseUrl($paths['assets'].'/php-debugbar');
-
-        echo $debugbarRenderer->renderHead();
-    }
-
     if (setting('Abilita esportazione Excel e PDF')) {
         echo '
         <script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
@@ -289,7 +280,8 @@ if (Auth::check()) {
     }
 }
 
-$hide_sidebar = Auth::check() && (setting('Nascondere la barra sinistra di default') or $_SESSION['settings']['sidebar-collapse']);
+$settings_collapse = session_get('settings.sidebar-collapse') ? 1 : 0;
+$hide_sidebar = Auth::check() && (setting('Nascondere la barra sinistra di default') || $settings_collapse);
 echo '
 
     </head>
@@ -298,7 +290,7 @@ echo '
 		<div class="'.(!Auth::check() ? '' : 'wrapper').'">';
 
 if (Auth::check()) {
-    $calendar = ($_SESSION['period_start'] != date('Y').'-01-01' || $_SESSION['period_end'] != date('Y').'-12-31') ? 'red' : 'white';
+    $calendar_color_label = ($_SESSION['period_start'] != date('Y').'-01-01' || $_SESSION['period_end'] != date('Y').'-12-31') ? 'danger' : 'default';
 
     echo '
             <!-- Loader principale -->
@@ -337,11 +329,11 @@ if (Auth::check()) {
                     <!-- Navbar Left Menu -->
                      <div class="navbar-left hidden-xs">
                         <ul class="nav navbar-nav hidden-xs">
-                            <li><a  href="#" id="daterange" style="color:'.$calendar.';" role="button" >
+                            <li><a href="#" id="daterange" role="button" >
                                 <i class="fa fa-calendar" style="color:inherit"></i> <i class="fa fa-caret-down" style="color:inherit"></i>
                             </a></li>
 
-                            <li><a style="color:'.$calendar.';background:inherit;cursor:default;">
+                            <li><a style="cursor:default;padding:0px;padding-right:5px;padding-left:5px;margin-top:15px;" class="label label-'.$calendar_color_label.'">
                                 '.Translator::dateToLocale($_SESSION['period_start']).' - '.Translator::dateToLocale($_SESSION['period_end']).'
                             </a></li>
                         </ul>
@@ -372,19 +364,19 @@ if (Auth::check()) {
                                 <i class="fa fa-print"></i>
                             </a></li>
 
-                            <li><a href="'.$rootdir.'/bug.php" class="tip nav-button" title="'.tr('Segnalazione bug').'">
+                            <li><a href="'.base_path().'/bug.php" class="tip nav-button" title="'.tr('Segnalazione bug').'">
                                 <i class="fa fa-bug"></i>
                             </a></li>
 
-                            <li><a href="'.$rootdir.'/log.php" class="tip nav-button" title="'.tr('Log accessi').'">
+                            <li><a href="'.base_path().'/log.php" class="tip nav-button" title="'.tr('Log accessi').'">
                                 <i class="fa fa-book"></i>
                             </a></li>
 
-                            <li><a href="'.$rootdir.'/info.php" class="tip nav-button" title="'.tr('Informazioni').'">
+                            <li><a href="'.base_path().'/info.php" class="tip nav-button" title="'.tr('Informazioni').'">
                                 <i class="fa fa-info"></i>
                             </a></li>
 
-                            <li><a href="'.$rootdir.'/index.php?op=logout" onclick="sessionStorage.clear()" class="bg-red tip" title="'.tr('Esci').'">
+                            <li><a href="'.base_path().'/index.php?op=logout" onclick="sessionStorage.clear()" class="bg-red tip" title="'.tr('Esci').'">
                                 <i class="fa fa-power-off"></i>
                             </a></li>
                         </ul>
@@ -399,13 +391,13 @@ if (Auth::check()) {
                     <!-- Sidebar user panel -->
                     <div class="user-panel text-center info" style="height: 60px">
                         <div class="info">
-                            <p><a href="'.$rootdir.'/modules/utenti/info.php">
+                            <p><a href="'.base_path().'/modules/utenti/info.php">
                                 '.$user['username'].'
                             </a></p>
                             <p id="datetime"></p>
                         </div>
 
-                        <a class="image" href="'.$rootdir.'/modules/utenti/info.php">';
+                        <a class="image" href="'.base_path().'/modules/utenti/info.php">';
 
     $user_photo = $user->photo;
     if ($user_photo) {
@@ -520,10 +512,16 @@ if (Auth::check()) {
                         <div class="col-md-12">';
 
     // Eventuale messaggio personalizzato per l'installazione corrente
-    include_once App::filepath('include/custom/extra', 'extra.php');
+    $extra_file = App::filepath('include/custom/extra', 'extra.php');
+    if ($extra_file) {
+        include_once $extra_file;
+    }
 } else {
     // Eventuale messaggio personalizzato per l'installazione corrente
-    include_once App::filepath('include/custom/extra', 'login.php');
+    $extra_file = App::filepath('include/custom/extra', 'login.php');
+    if ($extra_file) {
+        include_once $extra_file;
+    }
 
     if (!empty($messages['info']) || !empty($messages['warning']) || !empty($messages['error'])) {
         echo '

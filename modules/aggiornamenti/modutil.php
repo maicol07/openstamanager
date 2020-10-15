@@ -30,13 +30,14 @@ function customStructure()
         'modules',
         'templates',
         'plugins',
+        'include',
     ];
 
     // Controlli di personalizzazione fisica
     foreach ($dirs as $dir) {
-        $files = glob(DOCROOT.'/'.$dir.'/*/custom/*.{php,html}', GLOB_BRACE);
+        $files = glob(base_dir().'/'.$dir.'/*/custom/*.{php,html}', GLOB_BRACE);
         foreach ($files as $file) {
-            $file = str_replace(DOCROOT.'/', '', $file);
+            $file = str_replace(base_dir().'/', '', $file);
             $result = explode('/custom/', $file)[0];
 
             if (!in_array($result, $results)) {
@@ -44,9 +45,9 @@ function customStructure()
             }
         }
 
-        $files = glob(DOCROOT.'/'.$dir.'/*/custom/src/*.{php,html}', GLOB_BRACE);
+        $files = glob(base_dir().'/'.$dir.'/*/custom/src/*.{php,html}', GLOB_BRACE);
         foreach ($files as $file) {
-            $file = str_replace(DOCROOT.'/', '', $file);
+            $file = str_replace(base_dir().'/', '', $file);
             $result = explode('/custom/', $file)[0];
 
             if (!in_array($result, $results)) {
@@ -54,9 +55,9 @@ function customStructure()
             }
         }
 
-        $files = glob(DOCROOT.'/'.$dir.'/*/custom/src/Components/*.{php,html}', GLOB_BRACE);
+        $files = glob(base_dir().'/'.$dir.'/*/custom/src/Components/*.{php,html}', GLOB_BRACE);
         foreach ($files as $file) {
-            $file = str_replace(DOCROOT.'/', '', $file);
+            $file = str_replace(base_dir().'/', '', $file);
             $result = explode('/custom/', $file)[0];
 
             if (!in_array($result, $results)) {
@@ -64,9 +65,9 @@ function customStructure()
             }
         }
 
-        $files = glob(DOCROOT.'/'.$dir.'/*/custom/src/API/*.{php,html}', GLOB_BRACE);
+        $files = glob(base_dir().'/'.$dir.'/*/custom/src/API/*.{php,html}', GLOB_BRACE);
         foreach ($files as $file) {
-            $file = str_replace(DOCROOT.'/', '', $file);
+            $file = str_replace(base_dir().'/', '', $file);
             $result = explode('/custom/', $file)[0];
 
             if (!in_array($result, $results)) {
@@ -74,9 +75,9 @@ function customStructure()
             }
         }
 
-        $files = glob(DOCROOT.'/'.$dir.'/*/custom/ajax/*.{php,html}', GLOB_BRACE);
+        $files = glob(base_dir().'/'.$dir.'/*/custom/ajax/*.{php,html}', GLOB_BRACE);
         foreach ($files as $file) {
-            $file = str_replace(DOCROOT.'/', '', $file);
+            $file = str_replace(base_dir().'/', '', $file);
             $result = explode('/custom/', $file)[0];
 
             if (!in_array($result, $results)) {
@@ -84,9 +85,9 @@ function customStructure()
             }
         }
 
-        $files = glob(DOCROOT.'/'.$dir.'/*/custom/widgets/*.{php,html}', GLOB_BRACE);
+        $files = glob(base_dir().'/'.$dir.'/*/custom/widgets/*.{php,html}', GLOB_BRACE);
         foreach ($files as $file) {
-            $file = str_replace(DOCROOT.'/', '', $file);
+            $file = str_replace(base_dir().'/', '', $file);
             $result = explode('/custom/', $file)[0];
 
             if (!in_array($result, $results)) {
@@ -105,7 +106,7 @@ function customStructure()
  */
 function customTables()
 {
-    $tables = include DOCROOT.'/update/tables.php';
+    $tables = include base_dir().'/update/tables.php';
 
     $names = [];
     foreach ($tables as $table) {
@@ -135,7 +136,7 @@ function customDatabase()
     return $results;
 }
 
-function custom()
+function customComponents()
 {
     $database_check = customDatabase();
     $structure_check = customStructure();

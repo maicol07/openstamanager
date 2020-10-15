@@ -28,6 +28,8 @@ class DefaultHandler implements HandlerInterface
 {
     public function handle(&$values, &$extras)
     {
+        $values['class'][] = 'openstamanager-input';
+
         // Delega della gestione al metodo specifico per il tipo di input richiesto
         if (in_array($values['type'], get_class_methods($this))) {
             $result = $this->{$values['type']}($values, $extras);
@@ -127,7 +129,7 @@ class DefaultHandler implements HandlerInterface
             $result .= '
     <div id="'.$values['id'].'_viewport_progress"></div>
 
-    <script src="'.ROOTDIR.'/assets/dist/password-strength/password.min.js"></script>
+    <script src="'.base_path().'/assets/dist/password-strength/password.min.js"></script>
        <script>
         $(document).ready(function(){
             $("#'.$values['id'].'").pwstrength({
@@ -235,7 +237,7 @@ class DefaultHandler implements HandlerInterface
      */
     protected function number(&$values, &$extras)
     {
-        $values['class'][] = 'inputmask-decimal';
+        $values['class'][] = 'number-input';
 
         $values['value'] = !empty($values['value']) ? $values['value'] : 0;
 
@@ -245,20 +247,17 @@ class DefaultHandler implements HandlerInterface
             if (is_numeric($values['decimals'])) {
                 $decimals = $values['decimals'];
             } elseif (starts_with($values['decimals'], 'qta')) {
-                // Se non è previsto un valore minimo, lo imposta a 1
-                $values['min-value'] = isset($values['min-value']) ? $values['min-value'] : 0;
-
                 $decimals = setting('Cifre decimali per quantità');
                 $values['decimals'] = $decimals;
+
+                // Se non è previsto un valore minimo, lo imposta a 1
+                $values['min-value'] = isset($values['min-value']) ? $values['min-value'] : '0.'.str_repeat('0', $decimals - 1).'1';
             }
         }
 
-        // Controllo sulla correttezza sintattica del valore impostato
-        $values['value'] = (formatter()->isStandardNumber($values['value'])) ? \Translator::numberToLocale($values['value'], $decimals) : $values['value'];
-
+        // Delega al metodo "text", per la generazione del codice HTML
         $values['type'] = 'text';
 
-        // Delega al metodo "text", per la generazione del codice HTML
         return $this->text($values, $extras);
     }
 
