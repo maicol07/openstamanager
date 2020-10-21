@@ -1,3 +1,4 @@
+<?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
  * Copyright (C) DevCode s.n.c.
@@ -16,10 +17,23 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-String.prototype.toEnglish = function () {
-    return numeral(this.toString()).value();
-};
+use Models\Setting;
 
-Number.prototype.toLocale = function () {
-    return numeral(this).format();
-};
+include_once __DIR__.'/../../core.php';
+
+$sezione = filter('sezione');
+$impostazioni = Setting::where('sezione', $sezione)
+    ->get();
+
+foreach ($impostazioni as $impostazione) {
+    echo '
+    <div class="col-md-6">
+        '.Settings::input($impostazione['id']).'
+    </div>
+
+    <script>
+    input("setting['.$impostazione->id.']").change(function (){
+        salvaImpostazione('.$impostazione->id.', input(this).get());
+    });
+    </script>';
+}

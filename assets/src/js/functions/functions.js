@@ -109,12 +109,19 @@ function scrollToOffset(offset) {
  * Ritorna un array associativo con i parametri passati via GET
  */
 function getUrlVars() {
-    var search = window.location.search.substring(1);
-    if (!search) return {};
+    let params = {};
 
-    return JSON.parse('{"' + search.replace(/&/g, '","').replace(/=/g, '":"') + '"}', function (key, value) {
-        return key === "" ? value : decodeURIComponent(value)
-    });
+    let query = window.location.search.substring(1);
+    let parameterArray = query.split('&');
+    if (parameterArray && parameterArray.length) {
+        parameterArray.map(param => {
+            let keyValuePair = param.split('=')
+            let key = keyValuePair[0];
+            params[key] = keyValuePair[1] ? decodeURIComponent(keyValuePair[1]) : null;
+        })
+    }
+
+    return params;
 }
 
 /**
@@ -190,17 +197,6 @@ function setContrast(backgroundcolor) {
     } else {
         return "#000000";
     }
-}
-
-function confirmDelete(button, title, message) {
-    return swal({
-        title: title ? title : globals.translations.deleteTitle,
-        html: message ? message : globals.translations.deleteMessage,
-        type: "warning",
-        showCancelButton: true,
-        confirmButtonText: globals.translations.delete,
-        confirmButtonClass: "btn btn-lg btn-danger",
-    })
 }
 
 function message(element) {
@@ -364,31 +360,6 @@ function getCookie(cname) {
     return "";
 }
 
-function buttonLoading(button) {
-    var $this = $(button);
-
-    var result = [
-        $this.html(),
-        $this.attr("class")
-    ];
-
-    $this.html('<i class="fa fa-spinner fa-pulse fa-fw"></i> Attendere...');
-    $this.addClass("btn-warning");
-    $this.prop("disabled", true);
-
-    return result;
-}
-
-function buttonRestore(button, loadingResult) {
-    var $this = $(button);
-
-    $this.html(loadingResult[0]);
-
-    $this.attr("class", "");
-    $this.addClass(loadingResult[1]);
-    $this.prop("disabled", false);
-}
-
 function submitAjax(form, data, callback, errorCallback) {
     let valid = $(form).parsley().validate();
     if (!valid) {
@@ -462,23 +433,22 @@ function renderMessages() {
     $.ajax({
         url: globals.rootdir + '/ajax.php',
         type: 'get',
+        dataType: 'JSON',
         data: {
             op: 'flash',
         },
-        success: function (flash) {
-            messages = JSON.parse(flash);
-
-            info = messages.info ? messages.info : [];
+        success: function (messages) {
+            let info = messages.info ? messages.info : [];
             info.forEach(function (element) {
                 if (element) toastr["success"](element);
             });
 
-            warning = messages.warning ? messages.warning : [];
+            let warning = messages.warning ? messages.warning : [];
             warning.forEach(function (element) {
                 if (element) toastr["warning"](element);
             });
 
-            error = messages.error ? messages.error : [];
+            let error = messages.error ? messages.error : [];
             error.forEach(function (element) {
                 if (element) toastr["error"](element);
             });
@@ -505,7 +475,7 @@ function cleanup_inputs() {
         let $this = $(this);
 
         if ($this.data('select2')) {
-            $this.select2().select2("destroy")
+            input(this).destroy();
         }
     });
 }
@@ -564,6 +534,80 @@ function alertPush() {
 }
 
 /**
+ * Fuinzione per l'apertura del messaggi di rimozione elemento standard.
+ *
+ * @param button
+ * @param title
+ * @param message
+ * @returns {*}
+ */
+function confirmDelete(button, title, message) {
+    return swal({
+        title: title ? title : globals.translations.deleteTitle,
+        html: message ? message : globals.translations.deleteMessage,
+        type: "warning",
+        showCancelButton: true,
+        confirmButtonText: globals.translations.delete,
+        confirmButtonClass: "btn btn-lg btn-danger",
+    })
+}
+
+/**
+ * Funzione per la gestione delle animazioni di caricamento sui pulsanti cliccati e appositamente predisposti,
+ *
+ * @param button
+ * @returns {[*, *]}
+ */
+function buttonLoading(button) {
+    var $this = $(button);
+
+    var result = [
+        $this.html(),
+        $this.attr("class")
+    ];
+
+    $this.html('<i class="fa fa-spinner fa-pulse fa-fw"></i> Attendere...');
+    $this.addClass("btn-warning");
+    $this.prop("disabled", true);
+
+    return result;
+}
+
+/**
+ * Funzione per ripristinare un pulsante con animazioni allo stato precedente.
+ *
+ * @param button
+ * @param loadingResult
+ */
+function buttonRestore(button, loadingResult) {
+    var $this = $(button);
+
+    $this.html(loadingResult[0]);
+
+    $this.attr("class", "");
+    $this.addClass(loadingResult[1]);
+    $this.prop("disabled", false);
+}
+
+/**
+ * Funzione per serializzare i contenuti di un form in JSON.
+ *
+ * @param form
+ * @returns {object}
+ */
+function serializeForm(form) {
+    let obj = {};
+
+    let formData = new FormData(form);
+    for (let key of formData.keys()) {
+        obj[key] = formData.get(key);
+    }
+
+    return obj;
+}
+
+/**
+ * Funzione per salvare i contenuti di un form via AJAX, utilizzando una struttura più recente fondata sull'utilizzo di Promise.
  *
  * @param button
  * @param form
@@ -662,7 +706,12 @@ function hideTableColumn(table, column) {
 }
 
 /**
- * Loads a JavaScript file and returns a Promise for when it is loaded
+ * Funzione per caricare un file JavaScript ed eseguire delle operazioni al completamento.
+ *
+ * @param src
+ * @param async
+ * @param defer
+ * @returns {Promise<unknown>}
  */
 function loadScript(src, async = true, defer = true) {
     if (!globals.dynamicScripts) {
@@ -708,6 +757,13 @@ function loadScript(src, async = true, defer = true) {
     })
 }
 
+/**
+ * Funzione per aggiungere in un *endpoint* il contenuto di uno specifico *template*, effettuando delle sostituzioni di base e inizializzando i campi aggiunti.
+ * @param endpoint_selector
+ * @param template_selector
+ * @param replaces
+ * @returns {*|jQuery|HTMLElement}
+ */
 function aggiungiContenuto(endpoint_selector, template_selector, replaces = {}) {
     let template = $(template_selector);
     let endpoint = $(endpoint_selector);

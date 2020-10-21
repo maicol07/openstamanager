@@ -21,6 +21,7 @@ namespace Plugins\ReceiptFE;
 
 use Models\Upload;
 use Modules\Fatture\Fattura;
+use Modules\Fatture\Stato;
 use Plugins;
 use UnexpectedValueException;
 use Util\XML;
@@ -153,7 +154,8 @@ class Ricevuta
         $fattura = $this->getFattura();
 
         // Controllo sulla presenza della stessa ricevuta
-        $upload_esistente = $fattura->getModule()
+        $module = $fattura->getModule();
+        $upload_esistente = $module
             ->uploads($fattura->id)
             ->where('original', $filename)
             ->first();
@@ -223,6 +225,15 @@ class Ricevuta
 
         $upload = $this->saveAllegato($codice_nome);
 
+        // Correzione eventuale per lo stato della fattura in Bozza
+        $fattura = $this->getFattura();
+        if ($fattura->stato->descrizione == 'Bozza') {
+            $stato_emessa = Stato::where('descrizione', 'Emessa')->first();
+            $fattura->stato()->associate($stato_emessa);
+            $fattura->save();
+        }
+
+        // Controllo per il cambio di stato FE
         if ($cambia_stato) {
             // In caso di Notifica Esito il codice è definito dal nodo <Esito> della ricevuta
             if ($codice_stato == 'NE') {
