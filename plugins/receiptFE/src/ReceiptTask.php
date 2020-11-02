@@ -17,41 +17,25 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-use Models\Setting;
+namespace Plugins\ReceiptFE;
 
-include_once __DIR__.'/../../core.php';
+use Tasks\Manager;
 
-$sezione = filter('sezione');
-$impostazioni = Setting::where('sezione', $sezione)
-    ->get();
+class ReceiptTask extends Manager
+{
+    public function execute()
+    {
+        if (!Interaction::isEnabled()){
+            return;
+        }
 
-foreach ($impostazioni as $impostazione) {
-    echo '
-    <div class="col-md-6">
-        '.Settings::input($impostazione['id']).'
-    </div>
+        $list = Interaction::getReceiptList();
 
-    <script>';
+        // Esecuzione dell'importazione
+        foreach ($list as $element) {
+            $name = $element['name'];
 
-    if ($impostazione->tipo == 'time'){
-    echo '
-    input("setting['.$impostazione->id.']");
-    $(document).on("blur", "#setting'.$impostazione->id.'", function (e) {
-      salvaImpostazione('.$impostazione->id.', $("#setting'.$impostazione->id.'").val());
-    });
-    ';
-
+            Ricevuta::process($name);
+        }
     }
-    else{
-
-    echo '
-
-    input("setting['.$impostazione->id.']").change(function (){
-        salvaImpostazione('.$impostazione->id.', input(this).get());
-    });';
-
-    }
-
-    echo '
-    </script>';
 }

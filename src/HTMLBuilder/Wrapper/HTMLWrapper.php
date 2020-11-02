@@ -177,15 +177,15 @@ class HTMLWrapper implements WrapperInterface
     {
         $result = $string;
 
-        if (starts_with($string, 'add|')) {
+        if (string_starts_with($string, 'add|')) {
             $result = $this->add($values, $extras, $string);
             $values['icon-custom'] = 'no-padding';
-        } elseif (starts_with($string, 'choice|')) {
+        } elseif (string_starts_with($string, 'choice|')) {
             $result = $this->choice($values, $extras, $string);
             $values['icon-custom'] = 'no-padding';
         }
 
-        if (str_contains($string, '<button')) {
+        if (string_contains($string, '<button')) {
             $values['icon-custom'] = 'no-padding';
         }
 
@@ -277,7 +277,7 @@ class HTMLWrapper implements WrapperInterface
 
         $value = (empty($pieces[2]) || !in_array($pieces[2], array_column($choices, 'id'))) ? $choices[0]['id'] : $pieces[2];
 
-        $result = '{[ "type": "select", "name": "tipo_'.prepareToField($values['name']).'", "value": "'.prepareToField($value).'", "values": '.json_encode($choices).', "class": "no-search", "extra": "'.$extra.'" ]}';
+        $result = '{[ "type": "select", "name": "tipo_'.prepareToField($values['name']).'", "id": "tipo_'.prepareToField($values['name']).'_'.rand(0, 99).'", "value": "'.prepareToField($value).'", "values": '.json_encode($choices).', "class": "no-search", "extra": "'.$extra.'" ]}';
 
         $result = \HTMLBuilder\HTMLBuilder::replace($result);
 

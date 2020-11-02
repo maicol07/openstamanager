@@ -49,7 +49,7 @@ class Ricevuta
         $file = static::getImportDirectory().'/'.$name;
 
         // Estrazione implicita per il formato ZIP
-        if (ends_with($name, '.zip')) {
+        if (string_ends_with($name, '.zip')) {
             $original_file = $file;
 
             $extraction_dir = static::getImportDirectory().'/tmp';
@@ -157,7 +157,7 @@ class Ricevuta
         $module = $fattura->getModule();
         $upload_esistente = $module
             ->uploads($fattura->id)
-            ->where('original', $filename)
+            ->where('original_name', $filename)
             ->first();
         if (!empty($upload_esistente)) {
             return $upload_esistente;
