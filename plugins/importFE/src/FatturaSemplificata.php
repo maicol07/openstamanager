@@ -102,12 +102,15 @@ class FatturaSemplificata extends FatturaElettronica
 
         foreach ($righe as $key => $riga) {
             $articolo = ArticoloOriginale::find($articoli[$key]);
-
-            $imposta = floatval($riga['DatiIVA']['Imposta']);
             $importo = floatval($riga['Importo']);
 
-            $prezzo_non_ivato = $importo - $imposta;
-            $riga['Importo'] = !empty($prezzo_non_ivato) ? $prezzo_non_ivato : $importo;
+            $imposta_unitaria = floatval($riga['DatiIVA']['Imposta']);
+            $imposta_percentuale = floatval($riga['DatiIVA']['Aliquota']) / 100;
+            if (empty($imposta_percentuale)) {
+                $prezzo = $importo - $imposta_unitaria;
+            } else {
+                $prezzo = $importo / (1 + $imposta_percentuale);
+            }
 
             if (!empty($articolo)) {
                 $obj = Articolo::build($fattura, $articolo);
@@ -123,7 +126,6 @@ class FatturaSemplificata extends FatturaElettronica
 
             // Nel caso il prezzo sia negativo viene gestito attraverso l'inversione della quantità (come per le note di credito)
             // TODO: per migliorare la visualizzazione, sarebbe da lasciare negativo il prezzo e invertire gli sconti.
-            $prezzo = $riga['Importo'];
             $prezzo = $prezzo < 0 ? -$prezzo : $prezzo;
             $qta = 1;
             $qta = $riga['Importo'] < 0 ? -$qta : $qta;

@@ -17,12 +17,39 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-include_once __DIR__.'/../../core.php';
+namespace Modules\Impianti\Export;
 
-use Modules\Listini\Listino;
+use Exporter\CSVExporter;
+use Modules\Impianti\Impianto;
 
-if (isset($id_record)) {
-    $record = $dbo->fetchOne('SELECT * FROM mg_listini WHERE id='.prepare($id_record));
+/**
+ * Struttura per la gestione delle operazioni di esportazione (in CSV) degli impianti.
+ *
+ * @since 2.4.18
+ */
+class CSV extends CSVExporter
+{
+    public function getAvailableFields()
+    {
+        return [
+            [
+                'field' => 'id',
+                'label' => 'ID',
+                'primary_key' => true,
+            ],
+            [
+                'field' => 'matricola',
+                'label' => 'Matricola',
+            ],
+            [
+                'field' => 'nome',
+                'label' => 'Nome',
+            ],
+        ];
+    }
 
-    $listino = Listino::find($id_record);
+    public function getRecords()
+    {
+        return Impianto::all();
+    }
 }

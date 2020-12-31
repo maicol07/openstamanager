@@ -161,6 +161,8 @@ function aggiungi_intervento_in_fattura($id_intervento, $id_fattura, $descrizion
             '_NUM_' => $codice,
         ]));
     } else {
+        $decimals = setting('Cifre decimali per quantità');
+
         $ore_di_lavoro = $sessioni->groupBy(function ($item, $key) {
             return $item['prezzo_orario'].'|'.$item['sconto_unitario'].'|'.$item['tipo_sconto'];
         });
@@ -185,7 +187,8 @@ function aggiungi_intervento_in_fattura($id_intervento, $id_fattura, $descrizion
             $riga->prezzo_unitario = $sessione->prezzo_orario;
             $riga->setSconto($sessione->sconto_unitario, $sessione->tipo_sconto);
 
-            $riga->qta = $gruppo->sum('ore');
+            $qta_gruppo = $gruppo->sum('ore');
+            $riga->qta = round($qta_gruppo, $decimals);
 
             $riga->save();
         }
@@ -224,6 +227,11 @@ function aggiungi_intervento_in_fattura($id_intervento, $id_fattura, $descrizion
             return $item['prezzo_km_unitario'].'|'.$item['scontokm_unitario'].'|'.$item['tipo_scontokm'];
         });
         foreach ($viaggi as $gruppo) {
+            $qta_trasferta = $gruppo->sum('km');
+            if ($qta_trasferta == 0) {
+                continue;
+            }
+
             $viaggio = $gruppo->first();
             $riga = Riga::build($fattura);
 
@@ -244,7 +252,7 @@ function aggiungi_intervento_in_fattura($id_intervento, $id_fattura, $descrizion
             $riga->prezzo_unitario = $viaggio->prezzo_km_unitario;
             $riga->setSconto($viaggio->scontokm_unitario, $viaggio->tipo_scontokm);
 
-            $riga->qta = $gruppo->sum('km');
+            $riga->qta = $qta_trasferta;
 
             $riga->save();
         }

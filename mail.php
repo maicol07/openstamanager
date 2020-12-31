@@ -192,7 +192,8 @@ echo '
         if (last.val()) {
             cleanup_inputs();
 
-            $("#lista-destinatari").append($("#destinatari_input").html());
+            aggiungiContenuto( "#lista-destinatari", "#lista-destinatari > div.col-md-12:last", { "id": $("#lista-destinatari > div").length, "value": "" } );
+            $("#lista-destinatari > div.input-group:last").wrap( "<div class=\"col-md-12\"></div>" );
 
             $(".destinatari").each(function(){
                 $(this).autocomplete({source: emails});

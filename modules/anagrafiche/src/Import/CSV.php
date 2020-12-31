@@ -52,6 +52,14 @@ class CSV extends CSVImporter
                 ],
             ],
             [
+                'field' => 'nome',
+                'label' => 'Nome',
+            ],
+            [
+                'field' => 'cognome',
+                'label' => 'Cognome',
+            ],
+            [
                 'field' => 'codice_destinatario',
                 'label' => 'Codice destinatario',
                 'names' => [
@@ -224,6 +232,8 @@ class CSV extends CSVImporter
         // Fix per campi con contenuti derivati da query implicite
         if (!empty($record['id_nazione'])) {
             $record['id_nazione'] = $database->fetchOne('SELECT id FROM an_nazioni WHERE LOWER(nome) = LOWER('.prepare($record['id_nazione']).') OR LOWER(iso2) = LOWER('.prepare($record['id_nazione']).')')['id'];
+        } else {
+            unset($record['id_nazione']);
         }
 
         // Separazione dei campi relativi alla sede legale
@@ -283,8 +293,8 @@ class CSV extends CSVImporter
     public static function getExample()
     {
         return [
-            ['Codice', 'Ragione sociale', 'Tipologia', 'Partita IVA', 'Codice destinatario', 'Nazione', 'Indirizzo', 'CAP', 'Città', 'Provincia', 'Telefono', 'Fax', 'Cellulare', 'Email', 'PEC', 'IBAN', 'Note', 'Tipo'],
-            ['00001', 'Mia anagrafica', 'Azienda', '12345678910', '1234567', 'ITALIA', 'Via Giuseppe Mazzini, 123', '12345', 'Este', 'PD', '+39 0429 60 25 12', '+39 0429 456 781', '+39 321 12 34 567', 'email@anagrafica.it', 'pec@anagrafica.it', 'IT60 X054 2811 1010 0000 0123 456', 'Note dell\'anagrafica di esempio', 'Cliente,Fornitore'],
+            ['Codice', 'Ragione sociale', 'Nome', 'Cognome', 'Tipologia', 'Partita IVA', 'Codice destinatario', 'Nazione', 'Indirizzo', 'CAP', 'Città', 'Provincia', 'Telefono', 'Fax', 'Cellulare', 'Email', 'PEC', 'IBAN', 'Note', 'Tipo'],
+            ['00001', 'Mia anagrafica', '', '', 'Azienda', '12345678910', '1234567', 'ITALIA', 'Via Giuseppe Mazzini, 123', '12345', 'Este', 'PD', '+39 0429 60 25 12', '+39 0429 456 781', '+39 321 12 34 567', 'email@anagrafica.it', 'pec@anagrafica.it', 'IT60 X054 2811 1010 0000 0123 456', 'Note dell\'anagrafica di esempio', 'Cliente,Fornitore'],
         ];
     }
 }

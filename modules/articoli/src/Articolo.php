@@ -72,10 +72,10 @@ class Articolo extends Model
      */
     public function movimenta($qta, $descrizone = null, $data = null, $manuale = false, $array = [])
     {
-        $data = ($data ?: date("Y-m-d H:i:s"));
+        $data = ($data ?: date('Y-m-d H:i:s'));
         $id = $this->registra($qta, $descrizone, $data, $manuale, $array);
 
-        if ($this->servizio == 0) {
+        if (empty($this->servizio)) {
             $this->qta += $qta;
 
             $this->save();
@@ -193,6 +193,26 @@ class Articolo extends Model
     public function movimenti()
     {
         return $this->hasMany(Movimento::class, 'idarticolo');
+    }
+
+    /**
+     * Restituisce le giacenze per sede dell'articolo.
+     *
+     * @return array
+     */
+    public function getGiacenze()
+    {
+        return $this->movimenti()
+            ->select(
+                'idsede_azienda',
+                database()->raw('SUM(qta) AS qta')
+            )->groupBy(['idsede_azienda'])
+            ->get()
+            ->mapToGroups(function ($item, $key) {
+                return [$item->idsede_azienda => (float) $item->attributes['qta']];
+            })
+            ->flatten()
+            ->toArray();
     }
 
     /**

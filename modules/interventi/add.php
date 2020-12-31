@@ -210,7 +210,7 @@ echo '
 		<div class="box-body">
 			<div class="row">
                 <div class="col-md-4">
-                    {[ "type": "select", "label": "'.tr('Zona').'", "name": "idzona", "values": "query=SELECT id, CONCAT_WS(\' - \', nome, descrizione) AS descrizione FROM an_zone ORDER BY nome", "placeholder": "'.tr('Nessuna zona').'", "help":"'.tr('La zona viene definita automaticamente in base al cliente selezionato').'.", "readonly": "0", "value": "'.$id_zona.'" ]}
+                    {[ "type": "select", "label": "'.tr('Zona').'", "name": "idzona", "values": "query=SELECT id, CONCAT_WS(\' - \', nome, descrizione) AS descrizione FROM an_zone ORDER BY nome", "placeholder": "'.tr('Nessuna zona').'", "help": "'.tr('La zona viene definita automaticamente in base al cliente selezionato').'.", "readonly": "1", "value": "'.$id_zona.'" ]}
                 </div>
 
 				<div class="col-md-4">
@@ -258,12 +258,12 @@ if (empty($id_intervento)) {
                     <div class="row">
                         <div class="col-md-12">
                             <div class="btn-group">
-                                <button type="button" class="btn btn-xs btn-primary" onclick="selezionaTutto()">
+                                <button type="button" class="btn btn-xs btn-primary" onclick="assegnaTuttiTecnici()">
                                     '.tr('Tutti').'
                                 </button>
 
-                                <button type="button" class="btn btn-xs btn-danger" onclick="deselezionaTutto()">
-                                <i class="fa fa-times"></i> 
+                                <button type="button" class="btn btn-xs btn-danger" onclick="deassegnaTuttiTecnici()">
+                                <i class="fa fa-times"></i>
                                 </button>
                             </div>
                         </div>
@@ -272,38 +272,6 @@ if (empty($id_intervento)) {
 			</div>
         </div>
     </div>';
-
-    echo '
-    
-    <script>
-
-    function selezionaTutto(){
-
-        $.getJSON(globals.rootdir + "/ajax_select.php?op=tecnici",
-        function(response) {
-
-            input("tecnici_assegnati").getElement().selectReset();
-
-            $.each(response.results, function(key, result) {
-                id = result["id"];
-                descrizione = result["descrizione"];
-                $("#tecnici_assegnati").append("<option value=\""+id+"\">"+descrizione+"</option>");
-
-                $("#tecnici_assegnati option").prop("selected", true);
-            });
-
-            $("#tecnici_assegnati").trigger("change");
-
-        }, function(){
-
-        });        
-    }
-
-    function deselezionaTutto(){
-        input("tecnici_assegnati").getElement().selectReset();
-    }
-
-    </script>';
 }
 
 echo '
@@ -563,5 +531,25 @@ if (filter('orario_fine') !== null) {
             "inizio": input("orario_inizio").get(),
             "fine": input("orario_fine").get(),
         });
+    }
+
+    function assegnaTuttiTecnici() {
+        deassegnaTuttiTecnici();
+
+        $.getJSON(globals.rootdir + "/ajax_select.php?op=tecnici", function(response) {
+            let input_tecnici = input("tecnici_assegnati").getElement();
+
+            $.each(response.results, function(key, result) {
+                input_tecnici.append(`<option value="` + result["id"] + `">` + result["descrizione"] + `</option>`);
+
+                input_tecnici.find("option").prop("selected", true);
+            });
+
+            $("#tecnici_assegnati").trigger("change");
+        });
+    }
+
+    function deassegnaTuttiTecnici() {
+        input("tecnici_assegnati").getElement().selectReset();
     }
 </script>';

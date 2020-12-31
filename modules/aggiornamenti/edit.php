@@ -76,6 +76,21 @@ if (function_exists('customComponents')) {
     }
 }
 
+//Fix per funzione base_path non trovata in fase di aggiornamento da versione < 2.4.19
+if (!function_exists('base_path')) {
+    function base_path()
+    {
+        return ROOTDIR;
+    }
+}
+
+if (!function_exists('base_dir')) {
+    function base_dir()
+    {
+        return DOCROOT;
+    }
+}
+
 // Aggiornamenti
 if (setting('Attiva aggiornamenti')) {
     $alerts = [];

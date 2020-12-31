@@ -278,11 +278,10 @@ class FatturaElettronica
      */
     public function save($directory)
     {
-        $name = 'Fattura Elettronica';
-        $previous = $this->getFilename();
-        $data = $this->getUploadData();
+        $this->delete();
 
-        Uploads::delete($previous, $data);
+        $name = 'Fattura Elettronica';
+        $data = $this->getUploadData();
 
         // Generazione nome XML
         $filename = $this->getFilename(true);
@@ -306,6 +305,17 @@ class FatturaElettronica
         ], ['id' => $this->getDocumento()['id']]);
 
         return ($result === false) ? null : $filename;
+    }
+
+    /**
+     * Rimuove la fattura generata.
+     */
+    public function delete()
+    {
+        $previous = $this->getFilename();
+        $data = $this->getUploadData();
+
+        Uploads::delete($previous, $data);
     }
 
     /**
@@ -365,10 +375,13 @@ class FatturaElettronica
                 'xmlns:ds' => 'http://www.w3.org/2000/09/xmldsig#',
                 'xmlns:xsi' => 'http://www.w3.org/2001/XMLSchema-instance',
                 'xsi:schemaLocation' => 'http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2.1 http://www.fatturapa.gov.it/export/fatturazione/sdi/fatturapa/v1.2.1/Schema_del_file_xml_FatturaPA_versione_1.2.1.xsd',
-
-                // Attributo SistemaEmittente
-                'SistemaEmittente' => 'OSM', // Max 10 caratteri
             ];
+
+            // Attributo SistemaEmittente (max 10 caratteri)
+            if (empty(setting('Terzo intermediario'))) {
+                $attributes['SistemaEmittente'] = 'OSM';
+            }
+
             foreach ($attributes as $key => $value) {
                 $rootNode->setAttribute($key, $value);
             }
@@ -761,6 +774,11 @@ class FatturaElettronica
         // Email
         if (!empty($azienda['email'])) {
             $result['Contatti']['Email'] = $azienda['email'];
+        }
+
+        // Riferimento Amministrazione
+        if (!empty($azienda['riferimento_amministrazione'])) {
+            $result['RiferimentoAmministrazione'] = $azienda['riferimento_amministrazione'];
         }
 
         return $result;
@@ -1555,22 +1573,22 @@ class FatturaElettronica
             'CessionarioCommittente' => static::getCessionarioCommittente($fattura),
         ];
 
-        //1.5 Terzo Intermediario
+        // 1.5 Terzo Intermediario
         if (!empty(setting('Terzo intermediario'))) {
             $result['TerzoIntermediarioOSoggettoEmittente'] = static::getTerzoIntermediarioOSoggettoEmittente($fattura);
 
-            //1.6 Soggetto terzo
+            // 1.6 Soggetto terzo
             $result['SoggettoEmittente'] = 'TZ';
         }
 
-        //1.5 o Soggetto Emittente (Autofattura) - da parte del fornitore (mia Azienda) per conto del cliente esonerato
-        //In caso di acquisto di prodotti da un agricolo in regime agevolato (art. 34, comma 6, del d.P.R. n. 633/72) da parte di un operatore IVA obbligato alla FE, quest'ultimo emetterà una FE usando la tipologia "TD01" per conto dell'agricoltore venditore
+        // 1.5 o Soggetto Emittente (Autofattura) - da parte del fornitore (mia Azienda) per conto del cliente esonerato
+        // In caso di acquisto di prodotti da un agricolo in regime agevolato (art. 34, comma 6, del d.P.R. n. 633/72) da parte di un operatore IVA obbligato alla FE, quest'ultimo emetterà una FE usando la tipologia "TD01" per conto dell'agricoltore venditore
         if ($fattura->getDocumento()['is_fattura_conto_terzi']) {
             $result['TerzoIntermediarioOSoggettoEmittente'] = [
                 'DatiAnagrafici' => static::getDatiAnagrafici(static::getAzienda()),
             ];
 
-            //1.6 Cessionario/Committente
+            // 1.6 Cessionario/Committente
             $result['SoggettoEmittente'] = 'CC';
         }
 

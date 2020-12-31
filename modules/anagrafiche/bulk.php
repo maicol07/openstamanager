@@ -20,6 +20,7 @@
 use Geocoder\Provider\GoogleMaps;
 use Ivory\HttpAdapter\CurlHttpAdapter;
 use Modules\Anagrafiche\Anagrafica;
+use Modules\Anagrafiche\Export\CSV;
 
 include_once __DIR__.'/../../core.php';
 $google = setting('Google Maps API key');
@@ -63,17 +64,40 @@ switch (post('op')) {
         }
 
         break;
+
+    case 'export-csv':
+        $file = temp_file();
+        $exporter = new CSV($file);
+
+        // Esportazione dei record selezionati
+        $anagrafiche = Anagrafica::whereIn('idanagrafica', $id_records)->get();
+        $exporter->setRecords($anagrafiche);
+
+        $count = $exporter->exportRecords();
+
+        download($file, 'anagrafiche.csv');
+        break;
 }
 
 $operations = [];
 
 if (App::debug()) {
     $operations['delete-bulk'] = [
-        'text' => '<span><i class="fa fa-trash"></i> '.tr('Elimina selezionati').'</span>',
+        'text' => '<span><i class="fa fa-trash"></i> '.tr('Elimina selezionati').'</span> <span class="label label-danger" >beta</span>',
         'data' => [
             'msg' => tr('Vuoi davvero eliminare le anagrafiche selezionate?'),
             'button' => tr('Procedi'),
             'class' => 'btn btn-lg btn-danger',
+        ],
+    ];
+
+    $operations['export-csv'] = [
+        'text' => '<span><i class="fa fa-download"></i> '.tr('Esporta selezionati').'</span> <span class="label label-danger" >beta</span>',
+        'data' => [
+            'msg' => tr('Vuoi davvero esportare un CSV con tutte le anagrafiche?'),
+            'button' => tr('Procedi'),
+            'class' => 'btn btn-lg btn-danger',
+            'blank' => true,
         ],
     ];
 }

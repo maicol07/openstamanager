@@ -29,10 +29,10 @@ include_once __DIR__.'/../../core.php';
 
     <div class="row">
         <div class="col-md-offset-4 col-md-4">
-            {["type": "text", "label": "<?php echo tr('Ricerca con lettore');?>", "name": "barcode", "icon-before": "<i class=\"fa fa-barcode\"></i>" ]}
+            {["type": "text", "label": "<?php echo tr('Ricerca con lettore'); ?>", "name": "barcode", "icon-before": "<i class=\"fa fa-barcode\"></i>" ]}
         </div>
     </div>
-    
+
     <div class="row">
         <div class="col-md-4">
             {["type": "select", "label": "<?php echo tr('Articolo'); ?>", "name": "idarticolo", "ajax-source": "articoli", "value": "", "required": 1, "select-options": {"permetti_movimento_a_zero": 1, "idanagrafica": <?php echo setting('Azienda predefinita'); ?>, "idsede_partenza": 0, "idsede_destinazione": 0} ]}
@@ -72,10 +72,10 @@ include_once __DIR__.'/../../core.php';
     <div class="row" id="buttons">
         <div class="col-md-12 text-right">
             <button type="submit" class="btn btn-default">
-                <i class="fa fa-plus"></i> <?php echo tr('Aggiungi e chiudi'); ?>
+                <i class="fa fa-exchange"></i> <?php echo tr('Movimenta e chiudi'); ?>
             </button>
             <button type="button" class="btn btn-primary" onclick="salva(this);" id="aggiungi">
-                <i class="fa fa-plus"></i> <?php echo tr('Aggiungi'); ?>
+                <i class="fa fa-exchange"></i> <?php echo tr('Movimenta'); ?>
             </button>
         </div>
     </div>
@@ -94,7 +94,7 @@ echo '
 <script>
     // Lettura codici da lettore barcode
     $(document).unbind("keyup");
-    $(document).ready(function(){
+    $("#modals > div").on( "shown.bs.modal", function(){
         $("#barcode").focus();
     });
     $(document).on("keyup", function (event) {
@@ -159,16 +159,13 @@ echo '
 
     function ricercaBarcode(barcode) {
         // Ricerca via ajax del barcode negli articoli
-        $.get(
-            globals.rootdir + "/ajax_select.php?op=articoli&search=" + barcode,
+        $.get(globals.rootdir + "/ajax_select.php?op=articoli&search=" + barcode,
             function(data){
                 data = JSON.parse(data);
 
                 // Articolo trovato
                 if(data.results.length === 1) {
-                    $("#barcode").val("");
-
-                    var record = data.results[0];
+                    let record = data.results[0];
                     $("#idarticolo").selectSetNew(record.id, record.text, record);
 
                     salva($("#aggiungi"));
@@ -176,6 +173,7 @@ echo '
 
                 // Articolo non trovato
                 else {
+                    $("#messages").remove();
                     $("#articolo-missing").removeClass("hidden");
                 }
             }
@@ -184,20 +182,14 @@ echo '
 
     async function salva(button) {
         $("#messages").html("");
-        var qta_input = input("qta");
-        var tipo_movimento = $("#tipo_movimento").val();
+        let qta_input = input("qta");
+        let tipo_movimento = $("#tipo_movimento").val();
 
         let valid = await salvaForm(button, "#add-form");
 
         if (valid) {
             let articolo = $("#idarticolo").selectData();
-            if( articolo.descrizione==undefined ){
-                articolo.descrizione = $( $("#idarticolo").selectData()["element"] ).data("descrizione");
-                articolo.codice = $( $("#idarticolo").selectData()["element"] ).data("codice");
-                articolo.um = $( $("#idarticolo").selectData()["element"] ).data("um");
-                articolo.prezzo_acquisto = $( $("#idarticolo").selectData()["element"] ).data("prezzo_acquisto");
-                articolo.prezzo_vendita = $( $("#idarticolo").selectData()["element"] ).data("prezzo_vendita");
-            }
+
             let prezzo_acquisto = parseFloat(articolo.prezzo_acquisto);
             let prezzo_vendita = parseFloat(articolo.prezzo_vendita);
 
@@ -220,14 +212,15 @@ echo '
                 text = "Spostamento";
                 qta_rimanente = parseFloat(articolo.qta);
             }
-   
+
             if (articolo.descrizione) {
                 let testo = $("#info-articolo").html();
-   
+
                 testo = testo.replace("|alert-type|", alert_type)
                     .replace("|icon|", icon)
                     .replace("|descrizione|", articolo.descrizione)
                     .replace("|codice|", articolo.codice)
+                    .replace("|misura|", articolo.um)
                     .replace("|misura|", articolo.um)
                     .replace("|descrizione-movimento|", text)
                     .replace("|movimento|", qta_movimento.toLocale())
@@ -240,6 +233,12 @@ echo '
 
             qta_input.set(1);
             $("#causale").trigger("change");
+
+            if( input("barcode").get() !== "" ){
+                $("#idarticolo").selectReset();
+                input("barcode").set("");
+                $("#barcode").focus();
+            }
         }
     }
 </script>';

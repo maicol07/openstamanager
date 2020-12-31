@@ -22,6 +22,7 @@ namespace Models;
 use Common\SimpleModelTrait;
 use Illuminate\Database\Eloquent\Model;
 use Intervention\Image\ImageManagerStatic;
+use Util\FileSystem;
 
 class Upload extends Model
 {
@@ -70,13 +71,13 @@ class Upload extends Model
         // Creazione file fisico
         directory($directory);
         if (
-            (is_uploaded_file($source['tmp_name']) && !move_uploaded_file($source['tmp_name'], $directory.'/'.$filename)) ||
+            (is_array($source) && is_uploaded_file($source['tmp_name']) && !move_uploaded_file($source['tmp_name'], $directory.'/'.$filename)) ||
             (is_string($source) && !copy($source, $directory.'/'.$filename))
         ) {
             return null;
         }
 
-        $model->size = \Util\FileSystem::fileSize($directory.'/'.$filename);
+        $model->size = FileSystem::fileSize($directory.'/'.$filename);
         $model->user()->associate(auth()->getUser());
 
         $model->save();

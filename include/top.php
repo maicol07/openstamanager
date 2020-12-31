@@ -17,6 +17,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use Util\FileSystem;
+
 include_once __DIR__.'/../core.php';
 
 $paths = App::getPaths();
@@ -569,4 +571,21 @@ if (!Auth::check() && (!empty($messages['info']) || !empty($messages['warning'])
     echo '
                 </div>
             </div>';
+}
+
+// Messaggio informativo per l'esaurimento dello spazio totale disponibile nel server
+$free_space = disk_free_space('.');
+$space_limit = 1; // GB
+if ($free_space < ($space_limit * 1024 ^ 3)) {
+    echo '
+    <div class="callout callout-warning">
+        <h4>
+            <i class="fa fa-warning"></i> '.tr('Spazio in esaurimento').'
+        </h4>
+         <p>'.tr('Lo spazio a disposizione del gestionale è in esaurimento: sono al momento disponibili _TOT_', [
+            '_TOT_' => FileSystem::formatBytes($free_space),
+        ]).'.</p>
+         <p>'.tr('Questo può risultare un serio problema per la continuità di funzionamento del software, poichè le operazioni più espansive riguardanti lo spazio di archiviazione possono provocare malfunzionamento imprevedibili').'. '.tr('Operazioni di backup, caricamento di allegati o anche il semplice utilizzo del gestionale possono rendere i dati inaffidabili, provocando pertanto una perdita irreversibile delle informazioni salvate').'.</p>
+        <p>'.tr("Contatta gli amministratori di sistema oppure l'assistenza tecnica per risolvere al più presto il problema").'.</p>
+    </div>';
 }

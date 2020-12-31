@@ -334,9 +334,13 @@ if (!function_exists('download')) {
             header('Content-Type: application/octet-stream');
             header('Content-Transfer-Encoding: binary');
 
-            header('Content-Length: '.filesize($file));
-
             $open = fopen($file, 'rb');
+
+            fseek($open, 0, SEEK_END);
+            $size = ftell($open);
+            header('Content-Length: '.$size);
+
+            fseek($open, 0);
             while (!feof($open)) {
                 echo fread($open, 1024 * 8);
                 ob_flush();
@@ -526,5 +530,40 @@ if (!function_exists('readSQLFile')) {
         } while (next($sqlRows) !== false);
 
         return $queryLine;
+    }
+}
+
+if (!function_exists('temp_file')) {
+    /**
+     * Crea un file temporaneo e lo imposta per la rimozione alla fine dell'esecuzione.
+     *
+     * @param $name
+     * @param $content
+     *
+     * @return string
+     */
+    function temp_file($name = null, $content = null)
+    {
+        if (empty($name)) {
+            $name = secure_random_string();
+        }
+
+        // $base_directory = trim(sys_get_temp_dir(), DIRECTORY_SEPARATOR);
+        $base_directory = implode(DIRECTORY_SEPARATOR, [
+            trim(base_dir(), DIRECTORY_SEPARATOR),
+            'files',
+            'temp',
+        ]);
+        $file = trim($base_directory, DIRECTORY_SEPARATOR).
+            DIRECTORY_SEPARATOR.
+            ltrim($name, DIRECTORY_SEPARATOR);
+
+        file_put_contents($file, $content);
+
+        register_shutdown_function(function () use ($file) {
+            unlink($file);
+        });
+
+        return $file;
     }
 }

@@ -49,6 +49,24 @@ if (!$is_cliente) {
 }
 
 $nazione_anagrafica = $anagrafica->sedeLegale->nazione;
+
+
+// Avvisi problemi scheda anagrafica
+$problemi_anagrafica = [];
+if ($is_cliente && empty($record['idconto_cliente'])){
+    array_push($problemi_anagrafica, ' Piano dei conti mancante per il cliente');
+}
+
+if ($is_fornitore && empty($record['idconto_fornitore'])){
+    array_push($problemi_anagrafica, ' Piano dei conti mancante per il fornitore');
+}
+
+if (sizeof($problemi_anagrafica) > 0) {
+    echo '<div class="alert alert-warning"><i class="fa fa-warning"></i> '.tr("Controllare: _CAMPI_" , [
+    '_CAMPI_' => implode(', ', $problemi_anagrafica)
+    ]).'</div>';
+}
+
 ?>
 
 <form action="" method="post" id="edit-form"  autocomplete="<?php echo setting('Autocompletamento form'); ?>" >
@@ -579,7 +597,6 @@ if ($is_cliente or $is_fornitore or $is_tecnico) {
 
 			<div class="panel-body">
 				<div class="row">
-
                     <div class="col-md-3">
 						{[ "type": "text", "label": "<?php echo tr('Numero d\'iscrizione registro imprese'); ?>", "name": "codiceri", "value": "$codiceri$", "help": "<?php echo tr('Il numero registro imprese è il numero di iscrizione attribuito dal Registro Imprese della Camera di Commercio.'); ?>" ]}
                     </div>
@@ -588,6 +605,10 @@ if ($is_cliente or $is_fornitore or $is_tecnico) {
 						{[ "type": "text", "label": "<?php echo tr('Codice R.E.A.').' <small>('.tr('provincia-C.C.I.A.A.').')</small>'; ?>", "name": "codicerea", "value": "$codicerea$", "class": "rea-mask", "help": "<?php echo tr('Formato: _PATTERN_', [
                             '_PATTERN_' => 'RM-123456',
                         ]); ?>" ]}
+                    </div>
+
+                    <div class="col-md-3">
+                        {[ "type": "text", "label": "<?php echo tr('Riferimento Amministrazione'); ?>", "name": "riferimento_amministrazione", "value": "$riferimento_amministrazione$", "maxlength": "20" ]}
                     </div>
 
                     <!-- campi già specificati in Codice R.E.A., da eliminare nelle prossime release -->
