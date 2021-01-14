@@ -299,10 +299,16 @@ if (!empty($righe)) {
             <tbody>';
 
     foreach ($righe as $key => $riga) {
-        $query = "SELECT id, IF(codice IS NULL, descrizione, CONCAT(codice, ' - ', descrizione)) AS descrizione FROM co_iva WHERE percentuale = ".prepare($riga['AliquotaIVA']);
+        $query = "SELECT id, IF(codice IS NULL, descrizione, CONCAT(codice, ' - ', descrizione)) AS descrizione FROM co_iva WHERE deleted_at IS NULL AND percentuale = ".prepare($riga['AliquotaIVA']);
+        $start_query = $query;
 
         if (!empty($riga['Natura'])) {
             $query .= ' AND codice_natura_fe = '.prepare($riga['Natura']);
+
+            // Fallback per natura iva mancante
+            if( empty($dbo->fetchArray($query)) ){
+                $query = $start_query;
+            }
         }
 
         $query .= ' ORDER BY descrizione ASC';
