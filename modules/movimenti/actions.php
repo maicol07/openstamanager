@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,20 +45,17 @@ switch (post('op')) {
 
             // Registrazione del movimento con variazione della quantità
             $articolo->movimenta($qta, $descrizione, $data, 1, [
-                'idsede_controparte' => $id_sede_controparte,
-                'idsede_azienda' => $id_sede_azienda,
+                'idsede' => $id_sede_azienda,
             ]);
         } elseif ($tipo_movimento == 'spostamento') {
             // Registrazione del movimento verso la sede di destinazione
             $articolo->registra($qta, $descrizione, $data, 1, [
-                'idsede_controparte' => 0,
-                'idsede_azienda' => $idsede_destinazione,
+                'idsede' => $idsede_destinazione,
             ]);
 
             // Registrazione del movimento dalla sede di origine
             $articolo->registra(-$qta, $descrizione, $data, 1, [
-                'idsede_controparte' => 0,
-                'idsede_azienda' => $idsede_partenza,
+                'idsede' => $idsede_partenza,
             ]);
         }
 

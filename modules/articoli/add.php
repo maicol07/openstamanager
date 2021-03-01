@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ include_once __DIR__.'/../../core.php';
 <script>
 $(document).ready(function () {
     var sub = $('#add-form').find('#subcategoria_add');
-    var original = sub.parent().find(".input-group-addon button").data("href");
+    var original = sub.parent().find(".input-group-addon button").attr("onclick");
 
     $('#add-form').find('#categoria').change(function() {
         updateSelectOption("id_categoria", $(this).val());
@@ -111,7 +111,7 @@ $(document).ready(function () {
 
         if($(this).val()){
             sub.parent().find(".input-group-addon button").removeClass("hide");
-            sub.parent().find(".input-group-addon button").data("href", original + "&id_original="+$(this).val());
+            sub.parent().find(".input-group-addon button").attr("onclick", original.replace('&ajax=yes', "&ajax=yes&id_original=" + $(this).val()));
         }
         else {
             sub.parent().find(".input-group-addon button").addClass("hide");

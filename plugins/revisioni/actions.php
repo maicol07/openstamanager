@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@ $operazione = filter('op');
 
 switch ($operazione) {
     case 'edit_revision':
-
         $master_revision = post('master_revision');
         $id_record = post('idrevisione');
         //Tolgo il flag default_revision da tutte le revisioni e dal record_principale
@@ -34,7 +33,6 @@ switch ($operazione) {
         break;
 
     case 'delete_revision':
-
         $idrevisione = post('idrevisione');
         $dbo->query('DELETE FROM co_preventivi WHERE id='.prepare($idrevisione));
 

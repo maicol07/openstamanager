@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,9 +195,16 @@ switch (filter('op')) {
 
         $informazioni = $info->content;
 
+        // Formattazione dei contenuti
+        $history = (array) $informazioni['history'];
+        foreach ($history as $key => $value) {
+            $history[$key]['size'] = Filesystem::formatBytes($value['size']);
+        }
+
         echo json_encode([
             'invoice_number' => $informazioni['invoice_number'],
             'size' => Filesystem::formatBytes($informazioni['size']),
+            'history' => $history,
         ]);
         break;
 }

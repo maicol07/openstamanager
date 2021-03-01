@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +17,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use Modules\Importazione\Import;
+
 include_once __DIR__.'/../../core.php';
 
-$modulo_import = Modules::get('Import');
-$moduli_disponibili = [
-    'Anagrafiche' => \Modules\Anagrafiche\Import\CSV::class,
-    'Articoli' => \Modules\Articoli\Import\CSV::class,
-];
-
 if (!empty($id_record)) {
-    $record = $modulo_import->uploads($id_record)->last();
+    $import = Import::find($id_record);
+
+    $record = $import->uploads()->last();
 }

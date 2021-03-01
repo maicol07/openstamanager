@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,8 +35,6 @@ use Plugins\DettagliArticolo\DettaglioPrezzo;
  */
 class CSV extends CSVImporter
 {
-    protected $id_articoli_processati;
-
     public function getAvailableFields()
     {
         return [
@@ -167,11 +165,51 @@ class CSV extends CSVImporter
         ];
     }
 
+    /**
+     * Procedura di inizializzazione per l'importazione.
+     * Effettua una rimozione di tutti i dettagli prezzi per le coppie Articolo - Anagrafica presenti nel CSV.
+     *
+     * @return mixed|void
+     */
+    public function init()
+    {
+        $database = database();
+        $primary_key = $this->getPrimaryKey();
+
+        // Count the numbers of rows in a CSV
+        $number = $this->csv->each(function ($row) {
+            return true;
+        });
+
+        $rows = $this->getRows(0, $number);
+        $first_record = $this->getRecord($rows[1]);
+        if (!isset($first_record['anagrafica_listino']) || empty($this->getPrimaryKey())) {
+            return;
+        }
+
+        foreach ($rows as $row) {
+            // Interpretazione secondo la selezione
+            $record = $this->getRecord($row);
+            if (empty($record['anagrafica_listino'])) {
+                continue;
+            }
+
+            $articolo = Articolo::where($primary_key, $record[$primary_key])
+                ->first();
+            $anagrafica = Anagrafica::where('ragione_sociale', $record['anagrafica_listino'])
+                ->first();
+            if (empty($articolo) || empty($anagrafica)) {
+                continue;
+            }
+
+            $database->query('DELETE FROM mg_prezzi_articoli WHERE id_articolo = '.prepare($articolo->id).' AND id_anagrafica = '.prepare($anagrafica->id));
+        }
+    }
+
     public function import($record)
     {
         $database = database();
         $primary_key = $this->getPrimaryKey();
-        $anagrafica_azienda = Anagrafica::find(setting('Azienda predefinita'));
 
         // Fix per campi con contenuti derivati da query implicite
         if (!empty($record['id_fornitore'])) {
@@ -179,73 +217,110 @@ class CSV extends CSVImporter
         }
 
         // Gestione categoria e sottocategoria
+        $categoria = null;
+        $sotto_categoria = null;
         if (!empty($record['id_categoria'])) {
             // Categoria
-            $categoria = Categoria::where('nome', $record['id_categoria'])->first();
+            $categoria = Categoria::where('nome', strtolower($record['id_categoria']))->first();
+
             if (empty($categoria)) {
                 $categoria = Categoria::build($record['id_categoria']);
             }
 
             // Sotto-categoria
-            $sottocategoria = null;
             if (!empty($record['id_sottocategoria'])) {
-                $sottocategoria = Categoria::where('nome', $record['id_sottocategoria'])
+                $sotto_categoria = Categoria::where('nome', $record['id_sottocategoria'])
                     ->where('parent', $categoria->id)
                     ->first();
 
                 if (empty($sottocategoria)) {
-                    $sottocategoria = Categoria::build($record['id_categoria']);
-                    $sottocategoria->parent()->associate($categoria);
-                    $sottocategoria->save();
+                    $sotto_categoria = Categoria::build($record['id_categoria']);
+                    $sotto_categoria->parent()->associate($categoria);
+                    $sotto_categoria->save();
                 }
             }
         }
-        unset($record['id_categoria']);
-        unset($record['id_sottocategoria']);
 
         // Individuazione dell'IVA di vendita tramite il relativo Codice
         $aliquota = null;
         if (!empty($record['codice_iva_vendita'])) {
             $aliquota = Aliquota::where('codice', $record['codice_iva_vendita'])->first();
         }
-        unset($record['codice_iva_vendita']);
 
         // Individuazione articolo e generazione
-        $articolo = Articolo::where($primary_key, $record[$primary_key])->first();
+        $articolo = null;
+        // Ricerca sulla base della chiave primaria se presente
+        if (!empty($primary_key)) {
+            $articolo = Articolo::where($primary_key, $record[$primary_key])->first();
+        }
         if (empty($articolo)) {
-            $articolo = Articolo::build($record['codice'], $record['descrizione'], $categoria, $sottocategoria);
+            $articolo = Articolo::build($record['codice'], $record['descrizione'], $categoria, $sotto_categoria);
         }
 
         $articolo->idiva_vendita = $aliquota->id;
         $articolo->attivo = 1;
 
         // Prezzo di vendita
-        $articolo->setPrezzoVendita($record['prezzo_vendita'], ($aliquota->id ? $aliquota->id : setting('Iva predefinita')));
-        unset($record['prezzo_vendita']);
+        $articolo->setPrezzoVendita($record['prezzo_vendita'], $aliquota->id ? $aliquota->id : setting('Iva predefinita'));
 
         // Esportazione della quantità indicata
         $qta_registrata = (float) ($record['qta']);
         $nome_sede = $record['nome_sede'];
-        unset($record['qta']);
-        unset($record['nome_sede']);
 
+        // Salvataggio delle informazioni generali
+        $articolo->fill([
+            'codice' => $record['codice'],
+            'descrizione' => $record['descrizione'],
+            'prezzo_acquisto' => $record['prezzo_acquisto'],
+            'peso_lordo' => $record['peso_lordo'],
+            'volume' => $record['volume'],
+            'barcode' => $record['barcode'],
+            'id_fornitore' => $record['id_fornitore'],
+            'ubicazione' => $record['ubicazione'],
+            'note' => $record['note'],
+        ]);
+        $articolo->save();
+
+        // Aggiornamento dettaglio prezzi
         $dettagli['anagrafica_listino'] = $record['anagrafica_listino'];
         $dettagli['qta_minima'] = $record['qta_minima'];
         $dettagli['qta_massima'] = $record['qta_massima'];
         $dettagli['prezzo_listino'] = $record['prezzo_listino'];
         $dettagli['sconto_listino'] = $record['sconto_listino'];
         $dettagli['dir'] = $record['dir'];
-        unset($record['anagrafica_listino']);
-        unset($record['qta_minima']);
-        unset($record['qta_massima']);
-        unset($record['prezzo_listino']);
-        unset($record['sconto_listino']);
-        unset($record['dir']);
+        $this->aggiornaDettaglioPrezzi($articolo, $dettagli);
 
-        // Salvataggio delle informazioni generali
-        $articolo->fill($record);
-        $articolo->save();
+        // Movimentazione della quantità registrata
+        $giacenze = $articolo->getGiacenze();
+        $anagrafica_azienda = Anagrafica::find(setting('Azienda predefinita'));
+        $id_sede = 0;
+        if (!empty($nome_sede)) {
+            $sede = Sede::where('nomesede', $nome_sede)
+                ->where('idanagrafica', $anagrafica_azienda->id)
+                ->first();
+            $id_sede = $sede->id;
+        }
 
+        $qta_movimento = $qta_registrata - $giacenze[$id_sede][0];
+
+        $articolo->movimenta($qta_movimento, tr('Movimento da importazione'), new Carbon(), false, [
+            'idsede' => $id_sede,
+        ]);
+    }
+
+    public static function getExample()
+    {
+        return [
+            ['Codice', 'Barcode', 'Descrizione', 'Fornitore predefinito', 'Quantità', 'Unità di misura', 'Prezzo acquisto', 'Prezzo vendita', 'Peso lordo (KG)', 'Volume (M3)', 'Categoria', 'Sottocategoria', 'Ubicazione', 'Note', 'Anagrafica listino', 'Qta minima', 'Qta massima', 'Prezzo listino', 'Sconto listino', 'Cliente/Fornitore listino'],
+            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Rossi', '', '', '10', '5', 'Fornitore'],
+            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Rossi', '1', '10', '9', '', 'Fornitore'],
+            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Rossi', '11', '20', '8', '5', 'Fornitore'],
+            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Verdi', '1', '10', '20', '10', 'Cliente'],
+        ];
+    }
+
+    protected function aggiornaDettaglioPrezzi(Articolo $articolo, $dettagli)
+    {
         // Listini
         $anagrafica = Anagrafica::where('ragione_sociale', $dettagli['anagrafica_listino'])->first();
 
@@ -259,11 +334,6 @@ class CSV extends CSVImporter
         }
 
         if (!empty($anagrafica) && !empty($dettagli['dir'])) {
-            if (!in_array($articolo->id, $this->$id_articoli_processati)) {
-                $database->query('DELETE FROM mg_prezzi_articoli WHERE id_articolo='.prepare($articolo->id));
-            }
-            $this->$id_articoli_processati[] = $articolo->id;
-
             $dettaglio_predefinito = DettaglioPrezzo::build($articolo, $anagrafica, $dettagli['dir']);
             $dettaglio_predefinito->sconto_percentuale = $dettagli['sconto_listino'];
             $dettaglio_predefinito->setPrezzoUnitario($dettagli['prezzo_listino']);
@@ -275,33 +345,5 @@ class CSV extends CSVImporter
 
             $dettaglio_predefinito->save();
         }
-
-        // Movimentazione della quantità registrata
-        $giacenze = $articolo->getGiacenze();
-        $id_sede = 0;
-        if (!empty($nome_sede)) {
-            $sede = Sede::where('nomesede', $nome_sede)
-                ->where('idanagrafica', $anagrafica_azienda->id)
-                ->first();
-            $id_sede = $sede->id;
-        }
-
-        $qta_movimento = $qta_registrata - $giacenze[$id_sede];
-
-        $articolo->movimenta($qta_movimento, tr('Movimento da importazione'), new Carbon(), false, [
-            'idsede_azienda' => $id_sede,
-            'idsede_controparte' => 0,
-        ]);
-    }
-
-    public static function getExample()
-    {
-        return [
-            ['Codice', 'Barcode', 'Descrizione', 'Fornitore predefinito', 'Quantità', 'Unità di misura', 'Prezzo acquisto', 'Prezzo vendita', 'Peso lordo (KG)', 'Volume (M3)', 'Categoria', 'Sottocategoria', 'Ubicazione', 'Note', 'Anagrafica listino', 'Qta minima', 'Qta massima', 'Prezzo listino', 'Sconto listino', 'Cliente/Fornitore listino'],
-            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Rossi', '', '', '10', '5', 'Fornitore'],
-            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Rossi', '1', '10', '9', '', 'Fornitore'],
-            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Rossi', '11', '20', '8', '5', 'Fornitore'],
-            ['00004', '719376861871', 'Articolo', 'Mario Rossi', '10', 'Kg', '5.25', '12.72', '10.2', '500', 'Categoria4', 'Sottocategoria2', 'Scaffale 1', 'Articolo di prova', 'Mario Verdi', '1', '10', '20', '10', 'Cliente'],
-        ];
     }
 }

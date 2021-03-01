@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,23 +25,20 @@ $righe = $documento->getRighe();
 $columns = 6;
 
 //Immagine solo per documenti di vendita
-if ($documento->direzione == 'entrata'){
+if ($documento->direzione == 'entrata') {
     $has_image = $righe->search(function ($item) {
         return !empty($item->articolo->immagine);
     }) !== false;
 
     if ($has_image) {
-        $columns++;
+        ++$columns;
         $char_number = $options['pricing'] ? 26 : 63;
     }
 }
 
-
-
-if ($documento->direzione == 'uscita'){
-    $columns++;
+if ($documento->direzione == 'uscita') {
+    ++$columns;
     $char_number = $options['pricing'] ? 26 : 63;
-   
 } else {
     $char_number = $options['pricing'] ? 45 : 82;
 }
@@ -58,7 +55,7 @@ echo "
         <tr>
             <th class='text-center' style='width:5%'>".tr('#', [], ['upper' => true]).'</th>';
 
-            if ($documento->direzione == 'uscita'){
+            if ($documento->direzione == 'uscita') {
                 echo "
             <th class='text-center' style='width:10%'>".tr('Codice', [], ['upper' => true]).'</th>';
             }
@@ -98,16 +95,12 @@ foreach ($righe as $riga) {
                 '.$num.'
             </td>';
 
-
-    if ($documento->direzione == 'uscita'){
-
-        echo'
+    if ($documento->direzione == 'uscita') {
+        echo '
             <td class="text-center" style="vertical-align: middle">
                 '.$riga->articolo->codice.'
             </td>';
-
     }
-
 
     if ($has_image) {
         if ($riga->isArticolo() && !empty($riga->articolo->image)) {

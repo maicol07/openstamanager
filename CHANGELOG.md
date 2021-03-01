@@ -32,6 +32,41 @@ Il formato utilizzato è basato sulle linee guida di [Keep a Changelog](http://k
 - [2.2 (2016-11-10)](#22-2016-11-10)
 - [2.1 (2015-04-02)](#21-2015-04-02)
 
+## 2.4.22
+
+### Aggiunto (Added)
+ - Introduzione di nuove **Aliquote IVA** con specifiche più dettagliate
+ - Nuovo campo condizioni generali di fornitura in **Preventivi**
+ - Introduzione stampe del *Bilancio* e della *Fattura elettronica* per **Fatture di vendita e di acquisto**
+ - Nuove azioni di massa sui record per
+    - Creare **Preventivi** da **Articoli**
+    - Cambiare lo stato a più **Ordini** e **DDT**
+    - Allineare la quantità degli **Articoli**
+    - Esportare le stampe delle Fatture Elettroniche
+ - Aggiunta possibilità di importare **DDT di acquisto** in **DDT di vendita**
+ - Aggiunta la possibilità di creare una **Nota di credito** da un **DDT di acquisto**
+ - Nuova funzionalità di notifica automatica al *Cliente/Tecnico* quando viene cambiato lo stato dell'**Attività**
+ - Nuovo flag per escludere la generazione della **Scadenza** di una Ritenuta d'Acconto se viene versata dal *Fornitore*
+ - Introduzione del sistema di controllo sull'integrità delle logiche interne del gestionale
+ - Nuovo sistema di registrazione delle procedure di importazione
+ - Nuovo hook *Notifiche su Ricevute FE* per indicare graficamente eventuali **Fatture di vendita** che necessitano controlli manuali sullo stato
+ - Nuovo *Sconto finale* per le **Fatture di vendita**: influenza il valore *Netto a pagare* della fattura in relazione alle singole scadenze, senza modificare il comportamento per i movimenti contabili
+
+### Modificato (Changed)
+ - Modifica della gestione degli importi per le Note di credito e debito: i campi di riepilogo (*qta*, *qta_evasa*, *subtotale*, *iva*, *ritenutaacconto*, *rivalsainps*) sono ora positivi.
+ - Impostazione CAP automatico a 99999 nella FE per clienti esteri
+ - Aggiornamento di CKEditor al fine di permettere l'utilizzo dell'intero insieme di plugin per funzionalità di editing più avanzate
+ - Correzione del tipo di Fattura predefinito in caso di importazione da DDT (*Fattura differita*)
+ - Correzioni varie sul sistema di sincronizzazione via API per l'applicazione mobile
+
+### Fixed
+ - Correzione movimenti di magazzino con sedi diverse
+ - Correzione JS su input di tipo select con stesso ID
+ - Correzione dimensione del campo *Tempo standard* in **Tipi di attività**
+ - Correzione dei redirect al modulo **Impostazioni**
+ - Fix del calcolo sullo spazio disponibili in GB
+ - Fix procedura di pagamento automatico delle **Scadenze** sulla base dei movimenti in **Prima Nota**
+
 ## 2.4.21 (2021-01-14)
 
 ### Aggiunto (Added)
@@ -69,7 +104,7 @@ Il formato utilizzato è basato sulle linee guida di [Keep a Changelog](http://k
  - Aggiunta grafico delle ore lavorate dai tecnici mensilmente
  - Aggiunta nuova **azione massiva per fatturazione ordini cliente**
  - Aggiunta nuovo modulo per la creazione dei tipi di documento
- 
+
 ### Modificato (Changed)
  - Miglioramento messaggi di errore per servizi di **fatturazione elettronica**
  - Miglioramento funzionalità **listini**
@@ -90,7 +125,7 @@ Il formato utilizzato è basato sulle linee guida di [Keep a Changelog](http://k
 ### Aggiunto (Added)
  - Aggiunta gestione conto anticipi cliente e fornitore tramite **Prima nota**
  - Aggiunta colonna della sede nel modulo **Movimenti**
- 
+
 ### Modificato (Changed)
  - Spostati i conti transitori (iva, ecc) su stato patrimoniale
 
@@ -103,7 +138,7 @@ Il formato utilizzato è basato sulle linee guida di [Keep a Changelog](http://k
  - Esclusione fatture pro-forma dal calcolo fatturato sul modulo **Statistiche**
  - Gestito il conto articolo in fase di fatturazione attività se specificato nella scheda articolo
 
- 
+
 ## 2.4.18 (2020-10-30)
 
 ### Aggiunto (Added)

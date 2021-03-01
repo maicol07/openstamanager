@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -142,7 +142,7 @@ switch (post('op')) {
         foreach ($id_records as $id) {
             $intervento = Intervento::find($id);
 
-            if ( !$intervento->stato->is_completato || ($intervento->stato->is_completato==$stato->is_completato) ) {                
+            if (!$intervento->stato->is_completato || ($intervento->stato->is_completato == $stato->is_completato)) {
                 $intervento->stato()->associate($stato);
                 $intervento->save();
 
@@ -252,7 +252,7 @@ return [
     'cambia_stato' => [
         'text' => '<span><i class="fa fa-refresh"></i> '.tr('Cambia stato'),
         'data' => [
-            'title' => tr('Vuoi davvero cambinare le stato per questi interventi?'),
+            'title' => tr('Vuoi davvero cambiare lo stato per questi interventi?'),
             'msg' => tr('Seleziona lo stato in cui spostare tutti gli interventi non completati').'.<br>
             <br>{[ "type": "select", "label": "'.tr('Stato').'", "name": "id_stato", "required": 1, "values": "query=SELECT idstatointervento AS id, descrizione, colore AS _bgcolor_ FROM in_statiintervento WHERE deleted_at IS NULL" ]}',
             'button' => tr('Procedi'),

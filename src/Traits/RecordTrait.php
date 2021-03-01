@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,12 +39,13 @@ trait RecordTrait
     /**
      * @param string $name
      */
-    public function customField($name) {
+    public function customField($name)
+    {
         $field = database()->table('zz_fields')
             ->leftJoin('zz_field_record', 'zz_fields.id', '=', 'zz_field_record.id_field')
-                ->where('zz_fields.name','=', $name)
-                ->where('zz_fields.id_module','=', $this->getModule()->id)
-                ->where('zz_field_record.id_record','=', $this->id)
+                ->where('zz_fields.name', '=', $name)
+                ->where('zz_fields.id_module', '=', $this->getModule()->id)
+                ->where('zz_field_record.id_record', '=', $this->id)
             ->first();
 
         return $field->value;

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -131,7 +131,8 @@ switch (post('op')) {
         $old_qta = $record['qta'];
         $movimento = $qta - $old_qta;
 
-        if (post('qta_manuale') == 1) {
+        $qta_manuale = post('qta_manuale');
+        if (!empty($qta_manuale)) {
             $descrizione_movimento = post('descrizione_movimento');
             $data_movimento = post('data_movimento');
 

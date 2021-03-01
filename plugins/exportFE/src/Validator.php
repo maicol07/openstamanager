@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -610,7 +610,12 @@ class Validator
                 if (in_array($key, ['PrezzoUnitario'])) {
                     $output = number_format($output, 6, '.', '');
                 } elseif (in_array($key, ['Quantita'])) {
-                    $output = number_format($output, setting('Cifre decimali per quantità'), '.', '');
+                    //Se i decimali per la quantità sono < 2 li imposto a 2 che è il minimo per lo standard della fatturazione elettronica
+                    if (setting('Cifre decimali per quantità') == 1) {
+                        $output = number_format($output, 2, '.', '');
+                    } else {
+                        $output = number_format($output, setting('Cifre decimali per quantità'), '.', '');
+                    }
                 } else {
                     $output = number_format($output, 2, '.', '');
                 }

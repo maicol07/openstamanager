@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -165,14 +165,12 @@ class Ricevuta
 
         // Registrazione del file XML come allegato
         $upload = Upload::build($this->file, [
-            'category' => tr('Fattura Elettronica'),
             'id_module' => $module->id,
             'id_record' => $fattura->id,
-            'name' => tr('Ricevuta _TYPE_', [
-                '_TYPE_' => $codice,
-            ]),
             'original' => $filename,
-        ]);
+        ], tr('Ricevuta _TYPE_', [
+            '_TYPE_' => $codice,
+        ]), tr('Fattura Elettronica'));
 
         return $upload;
     }
@@ -189,7 +187,7 @@ class Ricevuta
 
         // Modifica lo stato solo se la fattura non è già stata consegnata (per evitare problemi da doppi invii)
         // In realtà per le PA potrebbe esserci lo stato NE (che può contenere un esito positivo EC01 o negativo EC02) successivo alla RC, quindi aggiungo eccezione nel caso il nuovo codice della ricevuta sia NE.
-        if ($fattura->codice_stato_fe == 'RC' && ($codice != 'EC01' || $codice != 'EC02')) {
+        if ($fattura->codice_stato_fe == 'RC' && $codice != 'EC01' && $codice != 'EC02') {
             return;
         }
 

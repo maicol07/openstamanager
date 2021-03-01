@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +43,10 @@ echo '
 
 <div class="panel panel-primary">
     <div class="panel-heading">
-        <h3 class="panel-title">'.tr('Prezzo medio acquisto').'</h3>
+        <h3 class="panel-title">
+            <span class="tip" title="'.tr('La statistica considera le fatture di acquisto nel periodo temporale definito').'"><i class="fa fa-question-circle"></i></span>
+            '.tr('Prezzo medio acquisto').'
+        </h3>
     </div>
 
     <div class="panel-body">
@@ -69,7 +72,10 @@ echo '
 
 <div class="panel panel-primary">
     <div class="panel-heading">
-        <h3 class="panel-title">'.tr('Prezzo medio vendita').'</h3>
+        <h3 class="panel-title">
+            <span class="tip" title="'.tr('La statistica considera le fatture di vendita nel periodo temporale definito').'"><i class="fa fa-question-circle"></i></span>
+            '.tr('Prezzo medio vendita').'
+        </h3>
     </div>
 
     <div class="panel-body">
@@ -104,7 +110,7 @@ if ($statistiche != null) {
     <script src="'.$statistiche->fileurl('js/stats/table.js').'"></script>';
 }
 
-echo'
+echo '
 
 <script src="'.$structure->fileurl('js/prezzo.js').'"></script>
 

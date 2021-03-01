@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ if (!$riferimenti->isEmpty()) {
         echo '
         <tr data-id="'.$riga->id.'" data-type="'.$riga_class.'">
             <td>
-                <button type="button" class="btn btn-xs btn-danger pull-right" onclick="rimuoviRiferimento(this, \''.addslashes($source_type).'\',\''.$source_id.'\')">
+                <button type="button" class="btn btn-xs btn-danger pull-right" onclick="rimuoviRiferimento(this, \''.addslashes($source_type).'\', \''.$source_id.'\', \''.$riferimento->id.'\')">
                     <i class="fa fa-trash"></i>
                 </button>
 

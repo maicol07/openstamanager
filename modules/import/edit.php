@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use Modules\Importazione\Import;
+
 include_once __DIR__.'/../../core.php';
 
 // Gestione del redirect in caso di caricamento del file
@@ -27,8 +29,8 @@ if (filter('op')) {
 if (empty($id_record)) {
     require base_dir().'/add.php';
 } else {
-    $modulo_selezionato = Modules::get($id_record);
-    $import_selezionato = $moduli_disponibili[$modulo_selezionato->name];
+    $import = Import::find($id_record);
+    $import_selezionato = $import->class;
 
     // Inizializzazione del lettore CSV
     $csv = new $import_selezionato($record->filepath);
@@ -38,12 +40,12 @@ if (empty($id_record)) {
     $campi_disponibili = [];
     foreach ($fields as $key => $value) {
         $campi_disponibili[] = [
-            'id' => $key,
+            'id' => $key + 1,
             'text' => $value['label'],
         ];
 
         if ($value['primary_key']) {
-            $primary_key = $value['field'];
+            $primary_key = $key + 1;
         }
     }
 
@@ -56,6 +58,7 @@ if (empty($id_record)) {
         <div class="col-md-8">
             {[ "type": "checkbox", "label": "'.tr('Importa prima riga').'", "name": "include_first_row", "extra":"", "value": "1"  ]}
         </div>
+
         <div class="col-md-4">
             {[ "type": "select", "label": "'.tr('Chiave primaria').'", "name": "primary_key", "values": '.json_encode($campi_disponibili).', "value": "'.$primary_key.'" ]}
         </div>
@@ -98,7 +101,7 @@ if (empty($id_record)) {
             $nome = trim(string_lowercase($prima_riga[$column]));
             if (in_array($nome, $nomi_disponibili[$key])) {
                 $escludi_prima_riga = 1;
-                $selezionato = $key;
+                $selezionato = $key + 1;
                 break;
             }
         }
@@ -158,9 +161,27 @@ $(document).ready(function() {';
 });
 
 function importPage(page) {
+    // Ricerca della chiave primaria tra i campi selezionati
+    let primary_key = input("primary_key").get();
+    if (primary_key) {
+        let primary_key_found = false;
+        $("[name^=fields]").each(function() {
+            primary_key_found = primary_key_found || (input(this).get() == primary_key);
+        });
+
+        if (!primary_key_found) {
+            swal({
+                title: "'.tr('Chiave primaria selezionata non presente tra i campi').'",
+                type: "error",
+            });
+
+            return;
+        }
+    }
+
     $("#main_loading").show();
 
-    data = {
+    let data = {
         id_module: "'.$id_module.'",
         id_plugin: "'.$id_plugin.'",
         id_record: "'.$id_record.'",

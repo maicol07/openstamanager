@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,42 +33,53 @@ if ($dir == 'entrata') {
     $conto = 'acquisti';
 }
 
-// Informazioni sulla dichiarazione d'intento
+// Informazioni sulla dichiarazione d'intento, visibili solo finchè la fattura è in bozza
 if ($dir == 'entrata' && !empty($fattura->dichiarazione) && $fattura->stato->descrizione == 'Bozza') {
     $diff = $fattura->dichiarazione->massimale - $fattura->dichiarazione->totale;
 
     $id_iva = setting("Iva per lettere d'intento");
     $iva = Aliquota::find($id_iva);
 
-    if ($diff > 0) {
-        echo '
-<div class="alert alert-info">
-    <i class="fa fa-warning"></i> '.tr("La fattura è collegata a una dichiarazione d'intento con diponibilità di _MONEY_: per collegare una riga alla dichiarazione è sufficiente inserire come IVA _IVA_", [
-            '_MONEY_' => moneyFormat(abs($diff)),
-            '_IVA_' => '"'.$iva->descrizione.'"',
-        ]).'.</b>
-</div>';
-    } elseif ($diff == 0) {
-        echo '
-<div class="alert alert-warning">
-    <i class="fa fa-warning"></i> '.tr("La dichiarazione d'intento ha raggiunto il massimale previsto di _MONEY_: le nuove righe della fattura devono presentare IVA diversa da _IVA_", [
-            '_MONEY_' => moneyFormat(abs($fattura->dichiarazione->massimale)),
-            '_IVA_' => '"'.$iva->descrizione.'"',
-        ]).'.</b>
-</div>';
+    if (!empty($iva)) {
+        if ($diff > 0) {
+            echo '
+        <div class="alert alert-info">
+            <i class="fa fa-warning"></i> '.tr("La fattura è collegata a una dichiarazione d'intento con diponibilità di _MONEY_: per collegare una riga alla dichiarazione è sufficiente inserire come IVA _IVA_", [
+                    '_MONEY_' => moneyFormat(abs($diff)),
+                    '_IVA_' => '"'.$iva->descrizione.'"',
+                ]).'.</b>
+        </div>';
+        } elseif ($diff == 0) {
+            echo '
+        <div class="alert alert-warning">
+            <i class="fa fa-warning"></i> '.tr("La dichiarazione d'intento ha raggiunto il massimale previsto di _MONEY_: le nuove righe della fattura devono presentare IVA diversa da _IVA_", [
+                    '_MONEY_' => moneyFormat(abs($fattura->dichiarazione->massimale)),
+                    '_IVA_' => '"'.$iva->descrizione.'"',
+                ]).'.</b>
+        </div>';
+        } else {
+            echo '
+        <div class="alert alert-danger">
+            <i class="fa fa-warning"></i> '.tr("La dichiarazione d'intento ha superato il massimale previsto di _MONEY_: per rimuovere righe della fattura dalla dichiarazione è sufficiente modificare l'IVA in qualcosa di diverso da _IVA_", [
+                '_MONEY_' => moneyFormat(abs($diff)),
+                    '_IVA_' => '"'.$iva->descrizione.'"',
+            ]).'.</b>
+        </div>';
+        }
     } else {
+        //TODO link ad impostazioni con nuova ricerca rapida
         echo '
-<div class="alert alert-danger">
-    <i class="fa fa-warning"></i> '.tr("La dichiarazione d'intento ha superato il massimale previsto di _MONEY_: per rimuovere righe della fattura dalla dichiarazione è sufficiente modificare l'IVA in qualcosa di diverso da _IVA_", [
-        '_MONEY_' => moneyFormat(abs($diff)),
-            '_IVA_' => '"'.$iva->descrizione.'"',
-    ]).'.</b>
-</div>';
+        <div class="alert alert-warning">
+        <i class="fa fa-warning"></i> '.tr("Attenzione nessuna aliq. IVA definita per la dichiarazione d'intento. _SETTING_", [
+            '_SETTING_' => Modules::link('Impostazioni', null, tr('Selezionala dalle impostazioni'), true, null, true, null, "&search=Iva per lettere d'intento"),
+        ]).'
+        </div>';
     }
 }
 
+// Verifica aggiuntive sulla sequenzialità dei numeri
 if ($dir == 'entrata') {
-    $numero_previsto = verifica_numero($fattura);
+    $numero_previsto = verifica_numero_fattura($fattura);
     if (!empty($numero_previsto)) {
         echo '
 <div class="alert alert-warning">
@@ -203,7 +214,7 @@ elseif ($record['stato'] == 'Bozza') {
 			</div>
 
 			<div class="row">
-				<div class="col-md-6">
+				<div class="col-md-4">
 				    '.Modules::link('Anagrafiche', $record['idanagrafica'], null, null, 'class="pull-right"');
 
                     if ($dir == 'entrata') {
@@ -219,12 +230,21 @@ elseif ($record['stato'] == 'Bozza') {
                     echo '
                 </div>';
 
-                    if ($dir == 'entrata') {
-                        echo '
-				<div class="col-md-6">
+                if ($dir == 'entrata') {
+                    echo '
+				<div class="col-md-4">
 					{[ "type": "select", "label": "'.tr('Agente di riferimento').'", "name": "idagente", "ajax-source": "agenti", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "value": "$idagente_fattura$" ]}
 				</div>';
+                }
+
+                echo '
+                <div class="col-md-4">';
+                    if (!empty($record['idreferente'])) {
+                        echo Plugins::link('Referenti', $record['idanagrafica'], null, null, 'class="pull-right"');
                     }
+                    echo '
+                    {[ "type": "select", "label": "'.tr('Referente').'", "name": "idreferente", "value": "$idreferente$", "ajax-source": "referenti", "select-options": {"idanagrafica": '.$record['idanagrafica'].'} ]}
+                </div>';
 
                 // Conteggio numero articoli fatture
                 $articolo = $dbo->fetchArray('SELECT mg_articoli.id FROM ((mg_articoli INNER JOIN co_righe_documenti ON mg_articoli.id=co_righe_documenti.idarticolo) INNER JOIN co_documenti ON co_documenti.id=co_righe_documenti.iddocumento) WHERE co_documenti.id='.prepare($id_record));
@@ -258,7 +278,7 @@ elseif ($record['stato'] == 'Bozza') {
 				<div class="col-md-3">
 					<!-- Nella realtà la fattura accompagnatoria non può esistere per la fatturazione elettronica, in quanto la risposta dal SDI potrebbe non essere immediata e le merci in viaggio. Dunque si può emettere una documento di viaggio valido per le merci ed eventualmente una fattura pro-forma per l'incasso della stessa, emettendo infine la fattura elettronica differita. -->
 
-					{[ "type": "select", "label": "<?php echo tr('Tipo fattura'); ?>", "name": "idtipodocumento", "required": 1, "values": "query=SELECT id, CONCAT_WS(\" - \",codice_tipo_documento_fe, descrizione) AS descrizione FROM co_tipidocumento WHERE dir='<?php echo $dir; ?>' AND (reversed = 0 OR id = <?php echo $record['idtipodocumento']; ?>)", "value": "$idtipodocumento$", "readonly": <?php echo intval($record['stato'] != 'Bozza' && $record['stato'] != 'Annullata'); ?>, "help": "<?php echo ($database->fetchOne('SELECT tipo FROM an_anagrafiche WHERE idanagrafica = '.prepare($record['idanagrafica']))['tipo'] == 'Ente pubblico') ? 'FPA12 - fattura verso PA (Ente pubblico)' : 'FPR12 - fattura verso soggetti privati (Azienda o Privato)'; ?>" ]}
+					{[ "type": "select", "label": "<?php echo tr('Tipo documento'); ?>", "name": "idtipodocumento", "required": 1, "values": "query=SELECT id, CONCAT_WS(\" - \",codice_tipo_documento_fe, descrizione) AS descrizione FROM co_tipidocumento WHERE dir='<?php echo $dir; ?>' AND (reversed = 0 OR id = <?php echo $record['idtipodocumento']; ?>)", "value": "$idtipodocumento$", "readonly": <?php echo intval($record['stato'] != 'Bozza' && $record['stato'] != 'Annullata'); ?>, "help": "<?php echo ($database->fetchOne('SELECT tipo FROM an_anagrafiche WHERE idanagrafica = '.prepare($record['idanagrafica']))['tipo'] == 'Ente pubblico') ? 'FPA12 - fattura verso PA (Ente pubblico)' : 'FPR12 - fattura verso soggetti privati (Azienda o Privato)'; ?>" ]}
 				</div>
 
 				<div class="col-md-3">
@@ -307,7 +327,7 @@ elseif ($record['stato'] == 'Bozza') {
                         <strike>';
                         }
 
-                        echo(empty($scadenza->da_pagare) ? '<i class="fa fa-exclamation-triangle"></i>' : '').moneyFormat($scadenza->da_pagare);
+                        echo (empty($scadenza->da_pagare) ? '<i class="fa fa-exclamation-triangle"></i>' : '').moneyFormat($scadenza->da_pagare);
 
                         if ($pagamento_iniziato) {
                             echo '
@@ -350,14 +370,27 @@ elseif ($record['stato'] == 'Bozza') {
                 </div>
 
                 <?php
-                if ($dir == 'entrata') {
+                if ($dir == 'uscita') {
                     echo '
                     <div class="col-md-3">
+                        {[ "type": "checkbox", "label": "'.tr('Ritenuta pagata dal fornitore').'", "name": "is_ritenuta_pagata", "value": "$is_ritenuta_pagata$" ]}
+                    </div>';
+                }
+                if ($dir == 'entrata') {
+                    echo '
+                    <div class="col-md-3">';
+
+                    if (!empty($record['id_dichiarazione_intento'])) {
+                        echo Plugins::link("Dichiarazioni d'Intento", $record['idanagrafica'], null, null, 'class="pull-right"');
+                    }
+
+                    echo '
                         {[ "type": "select", "label": "'.tr("Dichiarazione d'intento").'", "name": "id_dichiarazione_intento", "ajax-source": "dichiarazioni_intento", "select-options": {"idanagrafica": '.$record['idanagrafica'].', "data": "'.$record['data'].'"},"value": "$id_dichiarazione_intento$" ]}
                     </div>';
                 }
-            echo ' 
+            echo '
             </div>';
+
         if ($dir == 'entrata') {
             echo '
             <div class="row">
@@ -373,8 +406,13 @@ elseif ($record['stato'] == 'Bozza') {
 
                 <div class="col-md-3 bollo">
                     {[ "type": "number", "label": "'.tr('Importo marca da bollo').'", "name": "bollo", "value": "$bollo$"]}
-                </div>              
+                </div>
+
+                <div class="col-md-3">
+                    {[ "type": "number", "label": "'.tr('Sconto finale').'", "name": "sconto_finale", "value": "'.($fattura->sconto_finale_percentuale ?: $fattura->sconto_finale).'", "icon-after": "choice|untprc|'.(empty($fattura->sconto_finale) ? 'PRC' : 'UNT').'", "help": "'.tr('Sconto finale in fattura, utilizzabile per applicare sconti sul Netto a pagare del documento e le relative scadenze').'. '.tr('Per utilizzarlo in relazione a una riga della Fattura Elettronica, inserire il testo di descrizione in \'\'Attributi avanzati\'\' -> \'\'Altri Dati Gestionali\'\' -> \'\'Riferimento Testo\'\' della specifica riga').'. '.tr('Nota: lo sconto finale in fattura non influenza i movimenti contabili').'." ]}
+                </div>
             </div>';
+
             $bollo = new Bollo($fattura);
         }
 ?>
@@ -882,9 +920,9 @@ if ($dir == 'entrata') {
         let has_bollo ='.($bollo->getBollo() > 0 ? 'true' : 'false').';
         if(bollo_automatico.get()==0){
             $(".bollo").show();
-            input("bollo").enable();        
+            input("bollo").enable();
         } else if(!has_bollo) {
-            $(".bollo").hide();                              
+            $(".bollo").hide();
         } else {
             $(".bollo").show();
             input("bollo").disable();

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,13 +19,12 @@
 
 include_once __DIR__.'/../../core.php';
 
-use Modules\Ordini\Ordine;
 use Modules\Fatture\Fattura;
 use Modules\Fatture\Stato;
 use Modules\Fatture\Tipo;
+use Modules\Ordini\Ordine;
 
 $module_fatture = 'Fatture di vendita';
-
 
 // Segmenti
 $id_fatture = Modules::get($module_fatture)['id'];
@@ -112,9 +111,32 @@ switch (post('op')) {
             flash()->warning(tr('Nessun ordine fatturato!'));
         }
     break;
+
+    case 'cambia_stato':
+        $id_stato = post('id_stato');
+
+        $n_ordini = 0;
+
+        foreach ($id_records as $id) {
+            $ordine = Ordine::find($id);
+            $ordine->idstatoordine = $id_stato;
+            $ordine->save();
+
+            ++$n_ordini;
+        }
+
+        if ($n_ordini > 0) {
+            flash()->info(tr('Stato cambiato a _NUM_ ordini!', [
+                '_NUM_' => $n_ordini,
+            ]));
+        } else {
+            flash()->warning(tr('Nessun ordine modificato!'));
+        }
+
+    break;
 }
 if ($module['name'] == 'Ordini cliente') {
-$operations['crea_fattura'] = [
+    $operations['crea_fattura'] = [
         'text' => '<span><i class="fa fa-file-code-o"></i> '.tr('Fattura _TYPE_', ['_TYPE_' => strtolower($module['name'])]),
         'data' => [
             'title' => tr('Fatturare i _TYPE_ selezionati?', ['_TYPE_' => strtolower($module['name'])]),
@@ -125,9 +147,18 @@ $operations['crea_fattura'] = [
             'blank' => false,
         ],
     ];
-} 
-if($operations){
-    return $operations;
-} else {
-    return;
 }
+
+$operations['cambia_stato'] = [
+    'text' => '<span><i class="fa fa-refresh"></i> '.tr('Cambia stato'),
+    'data' => [
+        'title' => tr('Vuoi davvero cambiare lo stato per questi ordini?'),
+        'msg' => tr('Seleziona lo stato in cui spostare tutti gli ordini').'.<br>
+        <br>{[ "type": "select", "label": "'.tr('Stato').'", "name": "id_stato", "required": 1, "values": "query=SELECT id, descrizione FROM or_statiordine" ]}',
+        'button' => tr('Procedi'),
+        'class' => 'btn btn-lg btn-warning',
+        'blank' => false,
+    ],
+];
+
+    return $operations;

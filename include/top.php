@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -576,7 +576,7 @@ if (!Auth::check() && (!empty($messages['info']) || !empty($messages['warning'])
 // Messaggio informativo per l'esaurimento dello spazio totale disponibile nel server
 $free_space = disk_free_space('.');
 $space_limit = 1; // GB
-if ($free_space < ($space_limit * 1024 ^ 3)) {
+if ($free_space < ($space_limit * (1024 ** 3))) {
     echo '
     <div class="callout callout-warning">
         <h4>

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,6 +61,7 @@ switch (post('op')) {
             $preventivo->idporto = post('idporto');
             $preventivo->tempi_consegna = post('tempi_consegna');
             $preventivo->numero = post('numero');
+            $preventivo->condizioni_fornitura = post('condizioni_fornitura');
 
             // Informazioni sulle date del documento
             $preventivo->data_bozza = post('data_bozza');
@@ -73,6 +74,7 @@ switch (post('op')) {
             $preventivo->data_conclusione = post('data_conclusione');
 
             $preventivo->esclusioni = post('esclusioni');
+            $preventivo->garanzia = post('garanzia');
             $preventivo->descrizione = post('descrizione');
             $preventivo->id_documento_fe = post('id_documento_fe');
             $preventivo->num_item = post('num_item');
@@ -344,7 +346,7 @@ switch (post('op')) {
         $order = explode(',', post('order', true));
 
         foreach ($order as $i => $id_riga) {
-            $dbo->query('UPDATE `co_righe_preventivi` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
+            $dbo->query('UPDATE `co_righe_preventivi` SET `order` = '.prepare($i + 1).' WHERE id='.prepare($id_riga));
         }
 
         break;

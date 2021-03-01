@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ if (isset($id_record)) {
        IF((in_interventi.idsede_destinazione = 0), (SELECT idzona FROM an_anagrafiche WHERE idanagrafica = in_interventi.idanagrafica), (SELECT idzona FROM an_sedi WHERE id = in_interventi.idsede_destinazione)) AS idzona,
        (SELECT colore FROM in_statiintervento WHERE idstatointervento=in_interventi.idstatointervento) AS colore,
        in_interventi.id_preventivo as idpreventivo,
-       in_interventi.id_contratto as idcontratto
+       in_interventi.id_contratto as idcontratto,
+       in_interventi.id_ordine as idordine
     FROM in_interventi WHERE id='.prepare($id_record));
 }

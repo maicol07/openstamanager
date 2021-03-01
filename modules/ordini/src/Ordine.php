@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ use Common\Components\Component;
 use Common\Document;
 use Modules\Anagrafiche\Anagrafica;
 use Modules\DDT\DDT;
+use Modules\Interventi\Intervento;
 use Traits\RecordTrait;
 use Traits\ReferenceTrait;
 use Util\Generator;
@@ -146,6 +147,11 @@ class Ordine extends Document
     public function descrizioni()
     {
         return $this->hasMany(Components\Descrizione::class, 'idordine');
+    }
+
+    public function interventi()
+    {
+        return $this->hasMany(Intervento::class, 'id_ordine');
     }
 
     /**

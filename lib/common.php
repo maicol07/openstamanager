@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,7 +104,25 @@ function calcola_sconto($data)
  */
 function orderValue($table, $field, $id)
 {
-    return database()->fetchOne('SELECT IFNULL(MAX(`order`) + 1, 0) AS value FROM '.$table.' WHERE '.$field.' = '.prepare($id))['value'];
+    return database()->fetchOne('SELECT IFNULL(MAX(`order`) + 1, 1) AS value FROM '.$table.' WHERE '.$field.' = '.prepare($id))['value'];
+}
+
+/**
+ * Ricalcola il riordinamento righe di una tabella.
+ *
+ * @param $table
+ *
+ * @return mixed
+ */
+function reorderRows($table, $field, $id)
+{
+    $righe = database()->select($table, 'id', [$field => $id]);
+    $i = 1;
+
+    foreach ($righe as $riga) {
+        database()->query('UPDATE '.$table.' SET `order`='.$i.' WHERE id='.prepare($riga['id']));
+        ++$i;
+    }
 }
 
 /**

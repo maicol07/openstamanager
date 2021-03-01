@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -118,7 +118,7 @@ $movimenti = collect($movimenti);
 
 // Elenco per documenti
 $scadenze = $movimenti
-    ->where('iddocumento', '<>', '')
+    ->where('iddocumento', '<>', '0')
     ->groupBy('iddocumento');
 foreach ($scadenze as $id_documento => $righe) {
     $documento = Fattura::find($id_documento);
@@ -132,7 +132,7 @@ foreach ($scadenze as $id_documento => $righe) {
 
 // Elenco per scadenze
 $scadenze = $movimenti
-    ->where('iddocumento', '=', '')
+    ->where('iddocumento', '=', '0')
     ->where('id_scadenza', '<>', '')
     ->groupBy('id_scadenza');
 foreach ($scadenze as $id_scadenza => $righe) {
@@ -145,7 +145,7 @@ foreach ($scadenze as $id_scadenza => $righe) {
 
 // Elenco generale
 $movimenti_generali = $movimenti
-    ->where('iddocumento', '=', '')
+    ->where('iddocumento', '=', '0')
     ->where('id_scadenza', '=', '');
 if ($movimenti_generali->isEmpty()) {
     $movimenti_generali->push([]);

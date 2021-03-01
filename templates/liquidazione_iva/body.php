@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ if ($periodo == 'Trimestrale' && $totale_iva > 0) {
     $totale_iva_maggiorata = $totale_iva + $maggiorazione;
 }
 
-echo'
+echo '
 <h5 class="text-center">VENDITE</h5>
 <table class="table table-condensed table-striped table-bordered">
 <thead>
@@ -60,11 +60,12 @@ echo'
         <th class="text-right" width="20%">Imponibile</th>
         <th class="text-right" width="20%">Imposta</th>
     </tr>
+</thead> 
+<tbody>
     <tr>
         <th class="text-center" colspan="5">IVA ESIGIBILE DEL PERIODO</th>
-    </tr>
-</thead> 
-<tbody>';
+    </tr>';
+
 foreach ($iva_vendite_esigibile as $record) {
     echo '
     <tr>
@@ -75,7 +76,7 @@ foreach ($iva_vendite_esigibile as $record) {
         <td class=text-right>'.moneyFormat($record['iva']).'</td>
     </tr>';
 }
-echo'
+echo '
 <tr>
         <td colspan="2"></td>
         <td>TOTALI</td>
@@ -88,7 +89,7 @@ echo'
 </tr>';
 
 foreach ($iva_vendite_nonesigibile as $record) {
-    echo'
+    echo '
     <tr>
         <td>'.round($record['aliquota']).'%</td>
         <td>'.$record['cod_iva'].'</td>
@@ -97,7 +98,7 @@ foreach ($iva_vendite_nonesigibile as $record) {
         <td class=text-right>'.moneyFormat($record['iva']).'</td>
     </tr>';
 }
-echo'
+echo '
 <tr>
     <td colspan="2"></td>
     <td>TOTALI</td>
@@ -109,7 +110,7 @@ echo'
     <th class="text-center" colspan="5">RIEPILOGO GENERALE IVA VENDITE</th>
 </tr>';
 foreach ($iva_vendite as $record) {
-    echo'
+    echo '
     <tr>
         <td>'.round($record['aliquota']).'%</td>
         <td>'.$record['cod_iva'].'</td>
@@ -118,7 +119,7 @@ foreach ($iva_vendite as $record) {
         <td class=text-right>'.moneyFormat($record['iva']).'</td>
     </tr>';
 }
-echo'
+echo '
 <tr>
     <th colspan="2"></th>
     <th>TOTALE</th>
@@ -139,11 +140,11 @@ echo'
         <th class="text-right" width="20%">Imponibile</th>
         <th class="text-right" width="20%">Imposta</th>
     </tr>
+</thead> 
+<tbody>
     <tr>
         <th class="text-center" colspan="5">IVA DETRAIBILE DEL PERIODO</th>
-    </tr>
-</thead> 
-<tbody>';
+    </tr>';
 
 foreach ($iva_acquisti_detraibile as $record) {
     echo '
@@ -155,7 +156,7 @@ foreach ($iva_acquisti_detraibile as $record) {
         <td class=text-right>'.moneyFormat($record['iva']).'</td>
     </tr>';
 }
-echo'
+echo '
 <tr>
     <td colspan="2"></td>
     <td>TOTALI</td>
@@ -169,7 +170,7 @@ echo'
 </tr>';
 
 foreach ($iva_acquisti_nondetraibile as $record) {
-    echo'
+    echo '
     <tr>
         <td>'.round($record['aliquota']).'%</td>
         <td>'.$record['cod_iva'].'</td>
@@ -178,7 +179,7 @@ foreach ($iva_acquisti_nondetraibile as $record) {
         <td class=text-right>'.moneyFormat($record['iva']).'</td>
     </tr>';
 }
-echo'
+echo '
 <tr>
     <td colspan="2"></td>
     <td>TOTALI</td>
@@ -191,7 +192,7 @@ echo'
     <th class="text-center" colspan="5">RIEPILOGO GENERALE IVA ACQUISTI</th>
 </tr>';
 foreach ($iva_acquisti as $record) {
-    echo'
+    echo '
     <tr>
         <td>'.round($record['aliquota']).'%</td>
         <td>'.$record['cod_iva'].'</td>
@@ -201,7 +202,7 @@ foreach ($iva_acquisti as $record) {
     </tr>';
 }
 
-echo'
+echo '
 <tr>
     <th colspan="2"></th>
     <th>TOTALE</th>
@@ -225,19 +226,19 @@ echo'
 <tbody>
     <tr>';
         if ($totale_iva_anno_precedente >= 0) {
-            echo' <td>DEBITO ANNO PRECEDENTE</td>';
+            echo ' <td>DEBITO ANNO PRECEDENTE</td>';
         } else {
-            echo' <td>CREDITO ANNO PRECEDENTE</td>';
+            echo ' <td>CREDITO ANNO PRECEDENTE</td>';
         }
-        echo'<td class=text-right>'.moneyFormat(abs($totale_iva_anno_precedente)).'</td>
+        echo '<td class=text-right>'.moneyFormat(abs($totale_iva_anno_precedente)).'</td>
     </tr>
     <tr>';
         if ($totale_iva_periodo_precedente >= 0) {
-            echo' <td>DEBITO PERIODO PRECEDENTE</td>';
+            echo ' <td>DEBITO PERIODO PRECEDENTE</td>';
         } else {
-            echo' <td>CREDITO PERIODO PRECEDENTE</td>';
+            echo ' <td>CREDITO PERIODO PRECEDENTE</td>';
         }
-        echo' <td class=text-right>'.moneyFormat(abs($totale_iva_periodo_precedente)).'</td>
+        echo ' <td class=text-right>'.moneyFormat(abs($totale_iva_periodo_precedente)).'</td>
     </tr>    
     <tr>
         <td>TOTALE IVA SU VENDITE ESIGIBILE</td>
@@ -277,11 +278,11 @@ echo'
     </tr>
     <tr>';
         if ($totale_iva >= 0) {
-            echo' <td>IVA A DEBITO</td>';
+            echo ' <td>IVA A DEBITO</td>';
         } else {
-            echo' <td>IVA A CREDITO</td>';
+            echo ' <td>IVA A CREDITO</td>';
         }
-        echo' <td class=text-right>'.moneyFormat(abs($totale_iva)).'</td>
+        echo ' <td class=text-right>'.moneyFormat(abs($totale_iva)).'</td>
     </tr>
     <tr>
         <td>CREDITO SPECIALE DI IMPOSTA</td>

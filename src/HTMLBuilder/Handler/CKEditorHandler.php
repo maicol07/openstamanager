@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,19 +33,7 @@ class CKEditorHandler implements HandlerInterface
 
         // Generazione del codice HTML
         return '
-    <textarea |attr|>|value|</textarea>';
-        /*
-    <script src="'.base_path().'/assets/dist/js/ckeditor/ckeditor.js"></script>
-    <script>
-        CKEDITOR.addCss(".cke_editable img { max-width: 100% !important; height: auto !important; }");
-
-        CKEDITOR.replace("'.prepareToField($values['id']).'", {
-            toolbar: globals.ckeditorToolbar,
-            language: globals.locale,
-            scayt_autoStartup: true,
-            scayt_sLang: globals.full_locale,
-            disableNativeSpellChecker: false,
-        });
-    </script>*/
+    <textarea |attr|>|value|</textarea>
+    <script src="'.base_path().'/assets/dist/js/ckeditor/ckeditor.js"></script>';
     }
 }

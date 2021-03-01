@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,7 +66,6 @@ switch (filter('op')) {
         break;
 
     case 'delete':
-
         $righe = $dbo->fetchNum('SELECT id FROM co_righe_documenti WHERE um='.prepare($record['valore']).'
              UNION SELECT id FROM dt_righe_ddt WHERE um='.prepare($record['valore']).'
              UNION SELECT id FROM or_righe_ordini WHERE um='.prepare($record['valore']).'

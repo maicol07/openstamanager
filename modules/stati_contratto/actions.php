@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@ switch (post('op')) {
         break;
 
     case 'add':
-
         $descrizione = post('descrizione');
         $icona = post('icona');
         $is_completato = post('is_completato') ?: null;
@@ -54,7 +53,6 @@ switch (post('op')) {
         break;
 
     case 'delete':
-
         //scelgo se settare come eliminato o cancellare direttamente la riga se non è stato utilizzato nei contratti
         if (count($dbo->fetchArray('SELECT id FROM co_contratti WHERE idstato='.prepare($id_record))) > 0) {
             $query = 'UPDATE co_staticontratti SET deleted_at = NOW() WHERE can_delete = 1 AND id='.prepare($id_record);

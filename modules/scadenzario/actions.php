@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,32 @@ switch (post('op')) {
 
             $pagato = floatval($pagato);
             $da_pagare = floatval($da_pagare);
+
+            if (!empty($iddocumento)) {
+                $id_tipo = $dbo->selectOne('co_documenti', 'idtipodocumento', ['id' => $iddocumento])['idtipodocumento'];
+                $tipo_documento = $dbo->selectOne('co_tipidocumento', '*', ['id' => $id_tipo]);
+
+                if ($tipo_documento['dir'] == 'uscita') {
+                    if ($pagato > 0) {
+                        $pagato = -$pagato;
+                    }
+                    if ($da_pagare > 0) {
+                        $da_pagare = -$da_pagare;
+                    }
+                } else {
+                    if ($pagato < 0) {
+                        $pagato = -$pagato;
+                    }
+                    if ($da_pagare < 0) {
+                        $da_pagare = -$da_pagare;
+                    }
+                }
+
+                if (!empty($tipo_documento['reversed'])) {
+                    $pagato = -$pagato;
+                    $da_pagare = -$da_pagare;
+                }
+            }
 
             $totale_pagato = sum($totale_pagato, $pagato);
 

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ class Preventivi extends AppResource implements RetrieveInterface
 
     public function getModifiedRecords($last_sync_at)
     {
-        $query = "SELECT DISTINCT(co_preventivi.id) AS id FROM co_preventivi
+        $query = "SELECT DISTINCT(co_preventivi.id) AS id, co_preventivi.updated_at FROM co_preventivi
             INNER JOIN co_statipreventivi ON co_statipreventivi.id = co_preventivi.idstato
             INNER JOIN an_anagrafiche ON an_anagrafiche.idanagrafica = co_preventivi.idanagrafica
             INNER JOIN an_tipianagrafiche_anagrafiche ON an_tipianagrafiche_anagrafiche.idanagrafica = an_anagrafiche.idanagrafica
@@ -58,7 +58,7 @@ class Preventivi extends AppResource implements RetrieveInterface
 
         $records = database()->fetchArray($query);
 
-        return array_column($records, 'id');
+        return $this->mapModifiedRecords($records);
     }
 
     public function retrieveRecord($id)

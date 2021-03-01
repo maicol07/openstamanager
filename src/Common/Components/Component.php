@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -118,9 +118,11 @@ abstract class Component extends Model
         $previous = $this->qta;
         $diff = $value - $previous;
 
+        // Controlli su eventuale massimo per la quantità
         if ($this->hasOriginalComponent()) {
             $original = $this->getOriginalComponent();
 
+            // Controllo per evitare di superare la quantità totale del componente di origine
             if ($original->qta_rimanente < $diff) {
                 $diff = $original->qta_rimanente;
                 $value = $previous + $diff;
@@ -129,6 +131,7 @@ abstract class Component extends Model
 
         $this->attributes['qta'] = $value;
 
+        // Aggiornamento della quantità evasa di origine
         if ($this->hasOriginalComponent()) {
             $original = $this->getOriginalComponent();
 
@@ -178,6 +181,11 @@ abstract class Component extends Model
         // Trigger per l'evasione delle quantità
         if ($this->hasOriginalComponent()) {
             $original->getDocument()->triggerEvasione($this);
+        }
+
+        // Ordine delle righe successivamente alla rimozione
+        if (empty($this->disableOrder)) {
+            reorderRows($this->table, $this->getDocumentID(), $this->getDocument()['id']);
         }
 
         return $result;
@@ -342,6 +350,17 @@ abstract class Component extends Model
         }
 
         return $result;
+    }
+
+    public function replicate(array $except = null)
+    {
+        $new = parent::replicate($except);
+
+        $new->qta_evasa = 0;
+        $new->original_type = null;
+        $new->original_id = null;
+
+        return $new;
     }
 
     /**

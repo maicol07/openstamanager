@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ use Modules\Fatture\Components\Riga;
 use Modules\Fatture\Fattura;
 use Modules\Interventi\Components\Sessione;
 use Modules\Interventi\Intervento;
+use Util\Generator;
 use Util\Ini;
 
 /**
@@ -286,4 +287,52 @@ function aggiungi_intervento_in_fattura($id_intervento, $id_fattura, $descrizion
 
     // Metto l'intervento in stato "Fatturato"
     $dbo->query("UPDATE in_interventi SET idstatointervento=(SELECT idstatointervento FROM in_statiintervento WHERE codice='FAT') WHERE id=".prepare($id_intervento));
+}
+
+/**
+ * Verifica che il numero_esterno della fattura indicata sia correttamente impostato, a partire dai valori delle fatture ai giorni precedenti.
+ * Restituisce il numero_esterno mancante in caso di numero errato.
+ *
+ * @return bool|string
+ */
+function verifica_numero_intervento(Intervento $intervento)
+{
+    if (empty($intervento->codice)) {
+        return null;
+    }
+
+    $data = $intervento->data_richiesta;
+    $documenti = Intervento::where('data_richiesta', '=', $data)
+        ->get();
+
+    // Recupero maschera per questo segmento
+    $maschera = setting('Formato codice attività');
+
+    if ((strpos($maschera, 'YYYY') !== false) or (strpos($maschera, 'yy') !== false)) {
+        $ultimo = Generator::getPreviousFrom($maschera, 'in_interventi', 'codice', [
+            'DATE(data_richiesta) < '.prepare(date('Y-m-d', strtotime($data))),
+            'YEAR(data_richiesta) = '.prepare(date('Y', strtotime($data))),
+        ], $data);
+    } else {
+        $ultimo = Generator::getPreviousFrom($maschera, 'in_interventi', 'codice', [
+            'DATE(data_richiesta) < '.prepare(date('Y-m-d', strtotime($data))),
+        ]);
+    }
+
+    do {
+        $numero = Generator::generate($maschera, $ultimo, 1, Generator::dateToPattern($data), $data);
+
+        $filtered = $documenti->reject(function ($item, $key) use ($numero) {
+            return $item->codice == $numero;
+        });
+
+        if ($documenti->count() == $filtered->count()) {
+            return $numero;
+        }
+
+        $documenti = $filtered;
+        $ultimo = $numero;
+    } while ($numero != $intervento->codice);
+
+    return null;
 }

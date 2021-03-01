@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
  */
 
 $r = $dbo->fetchOne('SELECT co_documenti.*,
-	an_anagrafiche.email,
+    IF( (an_referenti.email IS NOT NULL AND an_referenti.email!=""), an_referenti.email, an_anagrafiche.email) AS email,
     an_anagrafiche.idconto_cliente,
     an_anagrafiche.idconto_fornitore,
 	an_anagrafiche.pec,
@@ -28,6 +28,7 @@ $r = $dbo->fetchOne('SELECT co_documenti.*,
 FROM co_documenti
     INNER JOIN an_anagrafiche ON co_documenti.idanagrafica=an_anagrafiche.idanagrafica
     INNER JOIN co_tipidocumento ON co_tipidocumento.id=co_documenti.idtipodocumento
+    LEFT OUTER JOIN an_referenti ON an_referenti.id=co_documenti.idreferente
 WHERE co_documenti.id='.prepare($id_record));
 
 if (!empty(setting('Logo stampe'))) {

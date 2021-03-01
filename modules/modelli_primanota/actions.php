@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,8 +27,16 @@ switch (post('op')) {
 
         for ($i = 0; $i < sizeof(post('idconto')); ++$i) {
             $idconto = post('idconto')[$i];
+            $dare = post('dare')[$i];
+            $avere = post('avere')[$i];
+
             if (!empty($idconto)) {
-                $query = 'INSERT INTO co_movimenti_modelli(idmastrino, nome, descrizione, idconto) VALUES('.prepare($idmastrino).', '.prepare($nome).', '.prepare($descrizione).', '.prepare($idconto).')';
+                if (!empty($dare)) {
+                    $totale = $dare;
+                } else {
+                    $totale = -$avere;
+                }
+                $query = 'INSERT INTO co_movimenti_modelli(idmastrino, nome, descrizione, idconto, totale) VALUES('.prepare($idmastrino).', '.prepare($nome).', '.prepare($descrizione).', '.prepare($idconto).', '.prepare($totale).')';
                 if ($dbo->query($query)) {
                     $id_record = $idmastrino;
                 }
@@ -47,8 +55,16 @@ switch (post('op')) {
 
         for ($i = 0; $i < sizeof(post('idconto')); ++$i) {
             $idconto = post('idconto')[$i];
+            $dare = post('dare')[$i];
+            $avere = post('avere')[$i];
+
             if (!empty($idconto)) {
-                $query = 'INSERT INTO co_movimenti_modelli(idmastrino, nome, descrizione, idconto) VALUES('.prepare($idmastrino).', '.prepare($nome).', '.prepare($descrizione).', '.prepare($idconto).')';
+                if (!empty($dare)) {
+                    $totale = $dare;
+                } else {
+                    $totale = -$avere;
+                }
+                $query = 'INSERT INTO co_movimenti_modelli(idmastrino, nome, descrizione, idconto, totale) VALUES('.prepare($idmastrino).', '.prepare($nome).', '.prepare($descrizione).', '.prepare($idconto).', '.prepare($totale).')';
                 if ($dbo->query($query)) {
                     $id_record = $idmastrino;
                 }

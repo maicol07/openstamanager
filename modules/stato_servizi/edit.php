@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,8 +49,7 @@ if (Services::isEnabled()) {
     // Informazioni su Services
     $servizi = Cache::pool('Informazioni su Services')->content;
 
-    if (!empty($servizi)){
-
+    if (!empty($servizi)) {
         // Elaborazione dei servizi in scadenza
         $limite_scadenze = (new Carbon())->addDays(60);
         $servizi_in_scadenza = [];
@@ -102,10 +101,23 @@ if (Services::isEnabled()) {
                 <hr><br>
 
                 <h4>'.tr('Statistiche su Fatture Elettroniche').'</h4>
-                <ul>
-                    <li>'.tr('Fatture transitate').': <span id="fe_numero"></span></li>
-                    <li>'.tr('Spazio occupato').': <span id="fe_spazio"></span></li>
-                </ul>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>'.tr('Anno').'</th>
+                            <th>'.tr('Fatture transitate').'</th>
+                            <th>'.tr('Spazio occupato').'</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="elenco-fe">
+                        <tr class="info">
+                            <td>'.tr('Totale').'</td>
+                            <td id="fe_numero"></td>
+                            <td id="fe_spazio"></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -114,7 +126,7 @@ if (Services::isEnabled()) {
             $.ajax({
                 url: globals.rootdir + "/actions.php",
                 type: "GET",
-                dataType: "json",
+                dataType: "JSON",
                 data: {
                     id_module: globals.id_module,
                     op: "informazioni-fe",
@@ -122,16 +134,25 @@ if (Services::isEnabled()) {
                 success: function (response) {
                     $("#fe_numero").html(response.invoice_number);
                     $("#fe_spazio").html(response.size);
+
+                    if (response.history.length) {
+                        for (let i = 0; i < 5; i++) {
+                            const data = response.history[i];
+
+                            $("#elenco-fe").append(`<tr>
+                                <td>` + data["year"] + `</td>
+                                <td>` + data["number"] + `</td>
+                                <td>` + data["size"] + `</td>
+                            </tr>`);
+                        }
+                    }
                 }
             });
         });
         </script>';
-
-    }else{
-
+    } else {
         echo '
         <div class="col-md-12 col-lg-6"><div class="alert alert-warning alert-dismissible" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true"><span aria-hidden="true">×</span><span class="sr-only">'.tr('Chiudi').'</span></button><span><i class="fa fa-warning"></i> '.tr('Nessun servizio abilitato o "OSMCloud Services API Token" non valido').'.</span></div></div>';
-
     }
 }
 

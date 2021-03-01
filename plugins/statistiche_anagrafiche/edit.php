@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ if ($statistiche != null) {
     <script src="'.$statistiche->fileurl('js/stats/widget.js').'"></script>';
 }
 
-echo'
+echo '
 <script>
 var local_url = "'.str_replace('edit.php', '', $structure->fileurl('edit.php')).'";
 

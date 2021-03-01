@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,7 +134,6 @@ switch ($op) {
 
     // Duplica impianto
     case 'copy':
-
         $dbo->query('CREATE TEMPORARY TABLE tmp SELECT * FROM my_impianti WHERE id= '.prepare($id_record));
         $dbo->query('ALTER TABLE tmp DROP id');
         $dbo->query('INSERT INTO my_impianti SELECT NULL,tmp. * FROM tmp');

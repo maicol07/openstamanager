@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ include_once __DIR__.'/../../core.php';
 use Carbon\Carbon;
 use Modules\Fatture\Fattura;
 use Plugins\ReceiptFE\Interaction;
+use Util\XML;
 
 echo '
 <p>'.tr('Le ricevute delle Fatture Elettroniche permettono di individuare se una determinata fattura tramessa è stata accettata dal Sistema Di Interscambio').'.</p>';
@@ -31,53 +32,75 @@ if (Interaction::isEnabled()) {
 <p>'.tr('Tramite il pulsante _BTN_ è possibile procedere al recupero delle ricevute, aggiornando automaticamente lo stato delle relative fatture e allegandole ad esse', [
     '_BTN_' => '<i class="fa fa-refresh"></i> <b>'.tr('Ricerca ricevute').'</b>',
 ]).'.</p>';
+}
 
-    $fatture_generate_errore = Fattura::vendita()
-        ->whereIn('codice_stato_fe', ['NS', 'ERR'])
-        ->where('data_stato_fe', '>=', $_SESSION['period_start'])
-        ->orderBy('data_stato_fe')
-        ->get();
+// Messaggio informativo su fatture con stato di errore
+$fatture_generate_errore = Fattura::vendita()
+    ->whereIn('codice_stato_fe', ['NS', 'ERR', 'EC02'])
+    ->where('data_stato_fe', '>=', $_SESSION['period_start'])
+    ->orderBy('data_stato_fe')
+    ->get();
 
-    if (!empty($fatture_generate_errore->count())) {
-        echo '
-        <div class="alert alert-warning alert-dismissible" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true"><span aria-hidden="true">×</span><span class="sr-only">'.tr('Chiudi').'</span></button>
-        <p><i class="fa fa-warning"></i> '.tr('Attenzione: le seguenti fatture hanno ricevuto uno scarto o presentano errori in fase di trasmissione').'.</p>
-        <ul>';
+if (!empty($fatture_generate_errore->count())) {
+    echo '
+        <div class="alert alert-warning alert-dismissible" role="alert">
+            <button class="close" type="button" data-dismiss="alert" aria-hidden="true"><span aria-hidden="true">×</span><span class="sr-only">'.tr('Chiudi').'</span></button>
+            <p><i class="fa fa-warning"></i> '.tr('Attenzione: le seguenti fatture hanno ricevuto uno scarto o presentano errori in fase di trasmissione').'.</p>
+            <ul>';
 
-        foreach ($fatture_generate_errore as $fattura_generata) {
-            echo '<li>'.reference($fattura_generata, $fattura_generata->getReference()).' ['.$fattura_generata['codice_stato_fe'].'] ['.timestampFormat($fattura_generata['data_stato_fe']).']</li>';
+    foreach ($fatture_generate_errore as $fattura_generata) {
+        $descrizione = $fattura_generata['codice_stato_fe'];
+
+        $ricevuta_principale = $fattura_generata->getRicevutaPrincipale();
+        if (!empty($ricevuta_principale)) {
+            $contenuto_ricevuta = XML::readFile($ricevuta_principale->filepath);
+
+            // Informazioni aggiuntive per EC02
+            if (!empty($contenuto_ricevuta['EsitoCommittente'])) {
+                $descrizione .= ': '.htmlentities($contenuto_ricevuta['EsitoCommittente']['Descrizione']);
+            }
+
+            // Informazioni aggiuntive per NS
+            $lista_errori = $contenuto_ricevuta['ListaErrori'];
+            if ($lista_errori) {
+                $lista_errori = $lista_errori[0] ? $lista_errori : [$lista_errori];
+
+                $errore = $lista_errori[0]['Errore'];
+                $descrizione .= ': '.$errore['Codice'].' - '.htmlentities($errore['Descrizione']);
+            }
         }
 
-        echo '
-        </ul>
-        </div>';
+        echo '<li>'.reference($fattura_generata, $fattura_generata->getReference()).' ['.$descrizione.'] ['.timestampFormat($fattura_generata['data_stato_fe']).']</li>';
     }
 
-    // Controllo se ci sono fatture in elaborazione da più di 7 giorni per le quali non ho ancora una ricevuta
-    $data_limite = (new Carbon())->subDays(7);
-    $fatture_generate = Fattura::vendita()
-        ->where('codice_stato_fe', 'WAIT')
-        ->where('data_stato_fe', '>=', $_SESSION['period_start'])
-        ->where('data_stato_fe', '<', $data_limite)
-        ->orderBy('data_stato_fe')
-        ->get();
+    echo '
+            </ul>
+        </div>';
+}
 
-    if (!empty($fatture_generate->count())) {
-        echo '
+// Controllo se ci sono fatture in elaborazione da più di 7 giorni per le quali non ho ancora una ricevuta
+$data_limite = (new Carbon())->subDays(7);
+$fatture_generate = Fattura::vendita()
+    ->where('codice_stato_fe', 'WAIT')
+    ->where('data_stato_fe', '>=', $_SESSION['period_start'])
+    ->where('data_stato_fe', '<', $data_limite)
+    ->orderBy('data_stato_fe')
+    ->get();
+
+if (!empty($fatture_generate->count())) {
+    echo '
     <div class="alert alert-info info-dismissible" role="alert"><button class="close" type="button" data-dismiss="alert" aria-hidden="true"><span aria-hidden="true">×</span><span class="sr-only">'.tr('Chiudi').'</span></button>
         <p><i class="fa fa-info"></i> '.tr('Informazione: le seguenti fatture sono in attesa di una ricevuta da più di 7 giorni').'.</p>
         <ul>';
 
-        foreach ($fatture_generate as $fattura_generata) {
-            echo '<li>'.reference($fattura_generata, $fattura_generata->getReference()).' ['.timestampFormat($fattura_generata['data_stato_fe']).']</li>';
-        }
+    foreach ($fatture_generate as $fattura_generata) {
+        echo '<li>'.reference($fattura_generata, $fattura_generata->getReference()).' ['.timestampFormat($fattura_generata['data_stato_fe']).']</li>';
+    }
 
-        echo '
+    echo '
         </ul>
     </div>';
-    }
 }
-
 echo '
 <div class="box box-success">
     <div class="box-header with-border">

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,13 +67,14 @@ foreach ($righe as $riga) {
 
             $num_item = $documento_originale['num_item'];
             $codice_cig = $documento_originale['codice_cig'];
+            $codice_commessa = $documento_originale['codice_commessa'];
             $codice_cup = $documento_originale['codice_cup'];
             $id_documento_fe = $documento_originale['id_documento_fe'];
         }
 
         $descrizione_conto = $dbo->fetchOne('SELECT descrizione FROM co_pianodeiconti3 WHERE id = '.prepare($riga->id_conto))['descrizione'];
 
-        $extra_riga = replace('_DESCRIZIONE_CONTO__ID_DOCUMENTO__NUMERO_RIGA__CODICE_CIG__CODICE_CUP__RITENUTA_ACCONTO__RITENUTA_CONTRIBUTI__RIVALSA_', [
+        $extra_riga = replace('_DESCRIZIONE_CONTO__ID_DOCUMENTO__NUMERO_RIGA__CODICE_COMMESSA__CODICE_CIG__CODICE_CUP__RITENUTA_ACCONTO__RITENUTA_CONTRIBUTI__RIVALSA_', [
             '_RIVALSA_' => $riga->rivalsa_inps ? '<br>Rivalsa: '.moneyFormat(abs($riga->rivalsa_inps)) : null,
             '_RITENUTA_ACCONTO_' => $riga->ritenuta_acconto ? '<br>Ritenuta acconto: '.moneyFormat(abs($riga->ritenuta_acconto)) : null,
             '_RITENUTA_CONTRIBUTI_' => $riga->ritenuta_contributi ? '<br>Ritenuta contributi: '.moneyFormat(abs($riga->ritenuta_contributi)) : null,
@@ -81,6 +82,7 @@ foreach ($righe as $riga) {
             '.tr('Conto mancante').'</span>',
             '_ID_DOCUMENTO_' => $id_documento_fe ? ' - DOC: '.$id_documento_fe : null,
             '_NUMERO_RIGA_' => $num_item ? ', NRI: '.$num_item : null,
+            '_CODICE_COMMESSA_' => $codice_commessa ? ', COM: '.$codice_commessa : null,
             '_CODICE_CIG_' => $codice_cig ? ', CIG: '.$codice_cig : null,
             '_CODICE_CUP_' => $codice_cup ? ', CUP: '.$codice_cup : null,
         ]);
@@ -145,7 +147,7 @@ foreach ($righe as $riga) {
         // Quantità e unità di misura
         echo '
             <td class="text-center">
-                '.numberFormat($fattura->isNota() ? -$riga->qta : $riga->qta, 'qta').' '.$riga->um.'
+                '.numberFormat($riga->qta, 'qta').' '.$riga->um.'
             </td>';
 
         // Prezzi unitari
@@ -173,14 +175,14 @@ foreach ($righe as $riga) {
         // Iva
         echo '
             <td class="text-right">
-                '.moneyFormat($riga->iva_unitaria).'
+                '.moneyFormat($riga->iva_unitaria_scontata).'
                 <br><small class="'.(($riga->aliquota->deleted_at) ? 'text-red' : '').' text-muted">'.$riga->aliquota->descrizione.(($riga->aliquota->esente) ? ' ('.$riga->aliquota->codice_natura_fe.')' : null).'</small>
             </td>';
 
         // Importo
         echo '
             <td class="text-right">
-                '.moneyFormat($fattura->isNota() ? -$riga->importo : $riga->importo).'
+                '.moneyFormat($riga->importo).'
             </td>';
     }
 
@@ -232,21 +234,11 @@ $sconto = $fattura->sconto;
 $totale_imponibile = $fattura->totale_imponibile;
 $iva = $fattura->iva;
 $totale = $fattura->totale;
+$sconto_finale = $fattura->getScontoFinale();
 $netto_a_pagare = $fattura->netto;
 $rivalsa_inps = $fattura->rivalsa_inps;
 $ritenuta_acconto = $fattura->ritenuta_acconto;
 $ritenuta_contributi = $fattura->totale_ritenuta_contributi;
-
-// Inversione dei valori per le Note
-$imponibile = $fattura->isNota() ? -$imponibile : $imponibile;
-$sconto = $fattura->isNota() ? -$sconto : $sconto;
-$totale_imponibile = $fattura->isNota() ? -$totale_imponibile : $totale_imponibile;
-$iva = $fattura->isNota() ? -$iva : $iva;
-$totale = $fattura->isNota() ? -$totale : $totale;
-$netto_a_pagare = $fattura->isNota() ? -$netto_a_pagare : $netto_a_pagare;
-$rivalsa_inps = $fattura->isNota() ? -$rivalsa_inps : $rivalsa_inps;
-$ritenuta_acconto = $fattura->isNota() ? -$ritenuta_acconto : $ritenuta_acconto;
-$ritenuta_contributi = $fattura->isNota() ? -$ritenuta_contributi : $ritenuta_contributi;
 
 // IMPONIBILE
 echo '
@@ -365,6 +357,20 @@ if (!empty($ritenuta_contributi)) {
             </td>
             <td class="text-right">
                 '.moneyFormat($ritenuta_contributi, 2).'
+            </td>
+            <td></td>
+        </tr>';
+}
+
+// SCONTO FINALE
+if (!empty($sconto_finale)) {
+    echo '
+        <tr>
+            <td colspan="5" class="text-right">
+                <b>'.tr('Sconto finale', [], ['upper' => true]).':</b>
+            </td>
+            <td class="text-right">
+                '.moneyFormat($sconto_finale, 2).'
             </td>
             <td></td>
         </tr>';

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,6 +51,9 @@ class Fattura extends Document
         'bollo' => 'float',
         'peso' => 'float',
         'volume' => 'float',
+
+        'sconto_finale' => 'float',
+        'sconto_finale_percentuale' => 'float',
     ];
 
     protected $with = [
@@ -168,7 +171,7 @@ class Fattura extends Document
                 $id_banca_azienda = $azienda->{'idbanca_'.$conto};
             }
         }
-        
+
         $model->id_banca_azienda = $id_banca_azienda;
 
         // Gestione dello Split Payment sulla base dell'anagrafica Controparte
@@ -281,13 +284,52 @@ class Fattura extends Document
     // Calcoli
 
     /**
+     * Imposta lo sconto finale sulla Fattura.
+     * Nota: lo sconto finale è limitato alla Fattura, e non può derivare da ulteriori documenti.
+     *
+     * @param $sconto
+     * @param $tipo
+     */
+    public function setScontoFinale($sconto, $tipo)
+    {
+        if ($tipo == 'PRC') {
+            $this->sconto_finale_percentuale = $sconto;
+            $this->sconto_finale = 0;
+        } else {
+            $this->sconto_finale = $sconto;
+            $this->sconto_finale_percentuale = 0;
+        }
+    }
+
+    /**
+     * Restituisce lo sconto finale sulla Fattura.
+     * Nota: lo sconto finale è limitato alla Fattura, e non può derivare da ulteriori documenti.
+     */
+    public function getScontoFinale()
+    {
+        $netto = $this->calcola('netto');
+
+        if (!empty($this->sconto_finale_percentuale)) {
+            $sconto = $netto * ($this->sconto_finale_percentuale / 100);
+        } else {
+            $sconto = $this->sconto_finale;
+        }
+
+        return $sconto;
+    }
+
+    /**
      * Calcola il netto a pagare della fattura.
+     * Nota: lo sconto finale è limitato alla Fattura, e non può derivare da ulteriori documenti.
      *
      * @return float
      */
     public function getNettoAttribute()
     {
-        return $this->calcola('netto');
+        $netto = $this->calcola('netto');
+        $sconto_finale = $this->getScontoFinale();
+
+        return $netto - $sconto_finale;
     }
 
     /**
@@ -606,6 +648,29 @@ class Fattura extends Document
         $this->movimentiContabili()->delete();
 
         return $result;
+    }
+
+    public function replicate(array $except = null)
+    {
+        $new = parent::replicate($except);
+
+        // In fase di duplicazione di una fattura non deve essere calcolato il numero progressivo ma questo deve
+        // essere generato in fase di emissione della stessa.
+        $new->numero_esterno = '';
+
+        // Rimozione informazioni di Fattura Elettronica
+        $new->hook_send = false;
+        $new->codice_stato_fe = null;
+        $new->progressivo_invio = null;
+        $new->data_stato_fe = null;
+        $new->descrizione_ricevuta_fe = null;
+        $new->id_ricevuta_principale = null;
+
+        // Spostamento dello stato
+        $stato = Stato::where('descrizione', 'Bozza')->first();
+        $new->stato()->associate($stato);
+
+        return $new;
     }
 
     /**

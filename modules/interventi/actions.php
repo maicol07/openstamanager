@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ switch (post('op')) {
         }
 
         // Salvataggio modifiche intervento
+        $intervento->codice = post('codice');
         $intervento->data_richiesta = post('data_richiesta');
         $intervento->data_scadenza = post('data_scadenza') ?: null;
         $intervento->richiesta = post('richiesta');
@@ -59,6 +60,7 @@ switch (post('op')) {
         $intervento->idsede_destinazione = post('idsede_destinazione');
         $intervento->id_preventivo = post('idpreventivo');
         $intervento->id_contratto = $idcontratto;
+        $intervento->id_ordine = post('idordine');
 
         $intervento->id_documento_fe = post('id_documento_fe');
         $intervento->num_item = post('num_item');
@@ -76,12 +78,38 @@ switch (post('op')) {
 
         // Notifica chiusura intervento
         $stato = $dbo->selectOne('in_statiintervento', '*', ['idstatointervento' => post('idstatointervento')]);
-        if (!empty($stato['notifica']) && !empty($stato['destinatari']) && $stato['idstatointervento'] != $record['idstatointervento']) {
+        if (!empty($stato['notifica']) && $stato['idstatointervento'] != $record['idstatointervento']) {
             $template = Template::find($stato['id_email']);
 
-            $mail = Mail::build(auth()->getUser(), $template, $id_record);
-            $mail->addReceiver($stato['destinatari']);
-            $mail->save();
+            if (!empty($stato['destinatari'])) {
+                $mail = Mail::build(auth()->getUser(), $template, $id_record);
+                $mail->addReceiver($stato['destinatari']);
+                $mail->save();
+            }
+
+            if (!empty($stato['notifica_cliente'])) {
+                $mail_cliente = $dbo->selectOne('an_anagrafiche', '*', ['idanagrafica' => post('idanagrafica')]);
+                if (!empty($mail_cliente['email'])) {
+                    $mail = Mail::build(auth()->getUser(), $template, $id_record);
+                    $mail->addReceiver($mail_cliente['email']);
+                    $mail->save();
+                }
+            }
+
+            if (!empty($stato['notifica_tecnici'])) {
+                $tecnici_intervento = $dbo->select('in_interventi_tecnici', 'idtecnico', ['idintervento' => $id_record]);
+                $tecnici_assegnati = $dbo->select('in_interventi_tecnici_assegnati', 'id_tecnico AS idtecnico', ['id_intervento' => $id_record]);
+                $tecnici = array_unique(array_merge($tecnici_intervento, $tecnici_assegnati), SORT_REGULAR);
+
+                foreach ($tecnici as $tecnico) {
+                    $mail_tecnico = $dbo->selectOne('an_anagrafiche', '*', ['idanagrafica' => $tecnico]);
+                    if (!empty($mail_tecnico['email'])) {
+                        $mail = Mail::build(auth()->getUser(), $template, $id_record);
+                        $mail->addReceiver($mail_tecnico['email']);
+                        $mail->save();
+                    }
+                }
+            }
         }
         aggiorna_sedi_movimenti('interventi', $id_record);
         flash()->info(tr('Attività modificata correttamente!'));
@@ -114,7 +142,6 @@ switch (post('op')) {
             $idtipointervento = post('idtipointervento');
             $idsede_partenza = post('idsede_partenza');
             $idsede_destinazione = post('idsede_destinazione');
-            $richiesta = post('richiesta');
 
             if (post('idclientefinale')) {
                 $intervento->idclientefinale = post('idclientefinale');
@@ -126,7 +153,8 @@ switch (post('op')) {
 
             $intervento->id_preventivo = post('idpreventivo');
             $intervento->id_contratto = post('idcontratto');
-            $intervento->richiesta = $richiesta;
+            $intervento->id_ordine = post('idordine');
+            $intervento->richiesta = post('richiesta_add');
             $intervento->idsede_destinazione = $idsede_destinazione;
             $intervento->data_scadenza = $data_scadenza;
 
@@ -440,12 +468,15 @@ switch (post('op')) {
 
                 if (!$img->save(base_dir().'/files/interventi/'.$firma_file)) {
                     flash()->error(tr('Impossibile creare il file!'));
-                } elseif ($dbo->query('UPDATE in_interventi SET firma_file='.prepare($firma_file).', firma_data=NOW(), firma_nome = '.prepare($firma_nome).', idstatointervento = (SELECT idstatointervento FROM in_statiintervento WHERE codice = \'OK\') WHERE id='.prepare($id_record))) {
+                } elseif ($dbo->query('UPDATE in_interventi SET firma_file='.prepare($firma_file).', firma_data=NOW(), firma_nome = '.prepare($firma_nome).' WHERE id='.prepare($id_record))) {
                     flash()->info(tr('Firma salvata correttamente!'));
                     flash()->info(tr('Attività completata!'));
 
                     $id_stato = setting("Stato dell'attività dopo la firma");
                     $stato = $dbo->selectOne('in_statiintervento', '*', ['idstatointervento' => $id_stato]);
+                    $intervento = Intervento::find($id_record);
+                    $intervento->idstatointervento = $stato['idstatointervento'];
+                    $intervento->save();
                     // Notifica chiusura intervento
                     if (!empty($stato['notifica']) && !empty($stato['destinatari'])) {
                         $template = Template::find($stato['id_email']);

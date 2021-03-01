@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ switch (filter('op')) {
                 $dbo->update('dt_causalet', [
                     'descrizione' => $descrizione,
                     'is_importabile' => filter('is_importabile'),
+                    'reversed' => filter('reversed'),
                     'predefined' => $predefined,
                 ], ['id' => $id_record]);
 
@@ -78,7 +79,6 @@ switch (filter('op')) {
         break;
 
     case 'delete':
-
         $documenti = $dbo->fetchNum('SELECT id FROM dt_ddt WHERE idcausalet='.prepare($id_record).'
                      UNION SELECT id FROM co_documenti WHERE idcausalet='.prepare($id_record));
 

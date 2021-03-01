@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,11 +57,20 @@ class Scadenze
             $this->registraScadenzeTradizionali($is_pagato);
         }
 
-        $direzione = $this->fattura->tipo->dir;
+        // Registrazione scadenza per Ritenuta d'Acconto
+        // Inversione di segno per le note
         $ritenuta_acconto = $this->fattura->ritenuta_acconto;
+        $ritenuta_acconto = $this->fattura->isNota() ? -$ritenuta_acconto : $ritenuta_acconto;
+
+        if (!empty($this->fattura->sconto_finale_percentuale)) {
+            $ritenuta_acconto = $ritenuta_acconto * (1 - $this->fattura->sconto_finale_percentuale / 100);
+        }
+
+        $direzione = $this->fattura->tipo->dir;
+        $is_ritenuta_pagata = $this->fattura->is_ritenuta_pagata;
 
         // Se c'è una ritenuta d'acconto, la aggiungo allo scadenzario al 15 del mese dopo l'ultima scadenza di pagamento
-        if ($direzione == 'uscita' && $ritenuta_acconto > 0) {
+        if ($direzione == 'uscita' && $ritenuta_acconto > 0 && empty($is_ritenuta_pagata)) {
             $ultima_scadenza = $this->fattura->scadenze->last();
             $scadenza = $ultima_scadenza->scadenza->copy()->startOfMonth()->addMonth();
             $scadenza->setDate($scadenza->year, $scadenza->month, 15);
@@ -112,15 +121,22 @@ class Scadenze
     {
         $xml = XML::read($this->fattura->getXML());
 
-        $pagamenti = $xml['FatturaElettronicaBody']['DatiPagamento'];
-        $pagamenti = isset($pagamenti[0]) ? $pagamenti : [$pagamenti];
+        $fattura_body = $xml['FatturaElettronicaBody'];
+
+        // Gestione per fattura elettroniche senza pagamento definito
+        $pagamenti = [];
+        if (isset($fattura_body['DatiPagamento'])) {
+            $pagamenti = $fattura_body['DatiPagamento'];
+            $pagamenti = isset($pagamenti[0]) ? $pagamenti : [$pagamenti];
+        }
+
         foreach ($pagamenti as $pagamento) {
             $rate = $pagamento['DettaglioPagamento'];
             $rate = isset($rate[0]) ? $rate : [$rate];
 
             foreach ($rate as $rata) {
                 $scadenza = !empty($rata['DataScadenzaPagamento']) ? FatturaElettronicaImport::parseDate($rata['DataScadenzaPagamento']) : $this->fattura->data;
-                $importo = ($this->fattura->isNota()) ? $rata['ImportoPagamento'] : -$rata['ImportoPagamento'];
+                $importo = $this->fattura->isNota() ? $rata['ImportoPagamento'] : -$rata['ImportoPagamento'];
 
                 self::registraScadenza($this->fattura, $importo, $scadenza, $is_pagato);
             }
@@ -136,7 +152,12 @@ class Scadenze
      */
     protected function registraScadenzeTradizionali($is_pagato = false)
     {
-        $rate = $this->fattura->pagamento->calcola($this->fattura->netto, $this->fattura->data);
+        // Inversione di segno per le note
+        $netto = $this->fattura->netto;
+        $netto = $this->fattura->isNota() ? -$netto : $netto;
+
+        // Calcolo delle rate
+        $rate = $this->fattura->pagamento->calcola($netto, $this->fattura->data);
         $direzione = $this->fattura->tipo->dir;
 
         foreach ($rate as $rata) {

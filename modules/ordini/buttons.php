@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,25 +36,20 @@ echo '
             </a>
         </li>';
 
-
-    if ($dir == 'entrata'){
-
+    if ($dir == 'entrata') {
         echo '
         <li>
             <a data-href="'.$structure->fileurl('crea_documento.php').'?id_module='.$id_module.'&id_record='.$id_record.'&documento=ordine_fornitore" data-toggle="modal" data-title="'.tr('Crea ordine fornitore').'">
                 <i class="fa fa-file-o"></i> '.tr('Ordine fornitore').'
             </a>
         </li>';
-
-    }else{
-
+    } else {
         /*echo '
         <li>
             <a data-href="'.$structure->fileurl('crea_documento.php').'?id_module='.$id_module.'&id_record='.$id_record.'&documento=ordine_cliente" data-toggle="modal" data-title="'.tr('Crea ordine cliente').'">
                 <i class="fa fa-file-o"></i> '.tr('Ordine cliente').'
             </a>
         </li>';*/
-
     }
 
     echo '  

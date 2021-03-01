@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,6 +82,7 @@ switch (post('op')) {
         // Query di aggiornamento
         $dbo->update('or_ordini', [
             'idanagrafica' => post('idanagrafica'),
+            'idreferente' => post('idreferente'),
             'data' => post('data'),
             'numero' => post('numero'),
             'numero_esterno' => post('numero_esterno'),
@@ -103,7 +104,8 @@ switch (post('op')) {
             'numero_cliente' => post('numero_cliente'),
             'data_cliente' => post('data_cliente'),
 
-            'id_documento_fe' => post('id_documento_fe'),
+            'id_documento_fe' => post('numero_cliente'),
+            'codice_commessa' => post('codice_commessa'),
             'codice_cup' => post('codice_cup'),
             'codice_cig' => post('codice_cig'),
             'num_item' => post('num_item'),
@@ -334,7 +336,7 @@ switch (post('op')) {
         $order = explode(',', post('order', true));
 
         foreach ($order as $i => $id_riga) {
-            $dbo->query('UPDATE `or_righe_ordini` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
+            $dbo->query('UPDATE `or_righe_ordini` SET `order` = '.prepare($i + 1).' WHERE id='.prepare($id_riga));
         }
 
         break;
@@ -365,6 +367,7 @@ switch (post('op')) {
             $ordine->idsede = $id_sede;
 
             $ordine->id_documento_fe = $documento->id_documento_fe;
+            $ordine->numero_cliente = $documento->id_documento_fe;
             $ordine->codice_cup = $documento->codice_cup;
             $ordine->codice_cig = $documento->codice_cig;
             $ordine->num_item = $documento->num_item;

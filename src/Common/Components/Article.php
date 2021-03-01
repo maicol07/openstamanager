@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -120,11 +120,26 @@ abstract class Article extends Accounting
             return;
         }
 
+        // Inversione di movimento nei seriali in caso di nota di credito
+        $dir = $this->getDirection();
+
+        $document = $this->getDocument();
+
+        if ($document instanceof \Modules\Fatture\Fattura) {
+            if ($document->isNota()) {
+                if ($this->getDirection() == 'uscita') {
+                    $dir = 'entrata';
+                } else {
+                    $dir = 'uscita';
+                }
+            }
+        }
+
         $serials = array_clean($serials);
 
         database()->sync('mg_prodotti', [
             'id_riga_'.$this->serialRowID => $this->id,
-            'dir' => $this->getDirection(),
+            'dir' => $dir,
             'id_articolo' => $this->idarticolo,
         ], [
             'serial' => $serials,
@@ -277,18 +292,15 @@ abstract class Article extends Accounting
         $qta_movimento = $documento->direzione == 'uscita' ? $qta : -$qta;
         $movimento = Movimento::descrizioneMovimento($qta_movimento, $documento->direzione).' - '.$documento->getReference();
 
-        $partenza = $documento->direzione == 'uscita' ? $documento->idsede_destinazione : $documento->idsede_partenza;
-        $arrivo = $documento->direzione == 'uscita' ? $documento->idsede_partenza : $documento->idsede_destinazione;
+        $id_sede = $documento->direzione == 'uscita' ? $documento->idsede_destinazione : $documento->idsede_partenza;
 
         // Fix per valori di sede a NULL
-        $partenza = $partenza ?: 0;
-        $arrivo = $arrivo ?: 0;
+        $id_sede = $id_sede ?: 0;
 
         $this->articolo->movimenta($qta_movimento, $movimento, $data, false, [
             'reference_type' => get_class($documento),
             'reference_id' => $documento->id,
-            'idsede_azienda' => $partenza,
-            'idsede_controparte' => $arrivo,
+            'idsede' => $id_sede,
         ]);
     }
 

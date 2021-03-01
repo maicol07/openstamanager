@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ class Impianti extends AppResource
 
     public function getModifiedRecords($last_sync_at)
     {
-        $statement = Impianto::select('id')
+        $statement = Impianto::select('id', 'updated_at')
             ->whereHas('anagrafica.tipi', function (Builder $query) {
                 $query->where('descrizione', '=', 'Cliente');
             });
@@ -42,10 +42,9 @@ class Impianti extends AppResource
             $statement = $statement->where('updated_at', '>', $last_sync_at);
         }
 
-        $results = $statement->get()
-            ->pluck('id');
+        $records = $statement->get();
 
-        return $results;
+        return $this->mapModifiedRecords($records);
     }
 
     public function retrieveRecord($id)

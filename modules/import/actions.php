@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,31 +17,37 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+use Modules\Importazione\Import;
+
 include_once __DIR__.'/../../core.php';
 
 switch (filter('op')) {
     case 'add':
-        $modulo_selezionato = Modules::get(filter('module'));
-        $id_record = $modulo_selezionato->id;
+        $id_import = filter('id_import');
+        $import = Import::find($id_import);
+
+        $id_record = $import->id;
 
         $upload = Uploads::upload($_FILES['file'], [
-            'id_module' => $modulo_import->id,
+            'id_module' => $import->getModule()->id,
             'id_record' => $id_record,
         ]);
         break;
 
     case 'example':
-        $module = filter('module');
-        $modulo_selezionato = Modules::get(filter('module'));
-        $import_selezionato = $moduli_disponibili[$module];
+        $id_import = filter('id_import');
 
-        if (!empty($import_selezionato)) {
+        $import = Import::find($id_import);
+        $import_manager = $import->class;
+
+        $modulo_collegato = $import->moduloCollegato;
+        if (!empty($import_manager)) {
             // Generazione percorso
-            $file = $modulo_selezionato->upload_directory.'/example-'.strtolower($modulo_selezionato->title).'.csv';
+            $file = $modulo_collegato->upload_directory.'/example-'.strtolower($modulo_collegato->title).'.csv';
             $filepath = base_dir().'/'.$file;
 
             // Generazione del file
-            $import_selezionato::createExample($filepath);
+            $import_manager::createExample($filepath);
 
             echo base_path().'/'.$file;
         }
@@ -50,8 +56,8 @@ switch (filter('op')) {
 
     case 'import':
         // Individuazione del modulo
-        $modulo_selezionato = Modules::get($id_record);
-        $import_selezionato = $moduli_disponibili[$modulo_selezionato->name];
+        $import = Import::find($id_record);
+        $import_manager = $import->class;
 
         // Dati indicati
         $include_first_row = post('include_first_row');
@@ -61,9 +67,9 @@ switch (filter('op')) {
         $limit = 500;
 
         // Inizializzazione del lettore CSV
-        $csv = new $import_selezionato($record->filepath);
+        $csv = new $import_manager($record->filepath);
         foreach ($fields as $key => $value) {
-            $csv->setColumnAssociation($key, $value);
+            $csv->setColumnAssociation($key, $value - 1);
         }
 
         // Generazione offset sulla base della pagina
@@ -76,10 +82,10 @@ switch (filter('op')) {
 
         // Gestione automatica dei valori convertiti
         $primary_key = post('primary_key');
-        $csv->setPrimaryKey($primary_key);
+        $csv->setPrimaryKey($primary_key - 1);
 
         // Operazioni di inizializzazione per l'importazione
-        if (!isset($page) || $page == 0) {
+        if (!isset($page) || empty($page)) {
             $csv->init();
         }
 

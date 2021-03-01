@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -214,7 +214,7 @@ echo '
         });
     }
 
-    function rimuoviRiferimento(btn, source_type, source_id) {
+    function rimuoviRiferimento(btn, source_type, source_id, idriferimento) {
         $("#main_loading").show();
 
         let row = $(btn).closest("tr");
@@ -233,6 +233,7 @@ echo '
                 source_id: source_id,
                 target_type: target_type,
                 target_id: target_id,
+                idriferimento: idriferimento,
             },
             success: function(data) {
                 $("#main_loading").fadeOut();

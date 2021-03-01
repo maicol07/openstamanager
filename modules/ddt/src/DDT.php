@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -131,6 +131,14 @@ class DDT extends Document
         $causale = $database->fetchOne('SELECT * FROM `dt_causalet` WHERE `id` = '.prepare($this->idcausalet));
 
         return $causale['is_importabile'] && !in_array($this->stato->descrizione, $stati_non_importabili);
+    }
+
+    public function getReversedAttribute()
+    {
+        $database = database();
+        $causale = $database->fetchOne('SELECT * FROM `dt_causalet` WHERE `id` = '.prepare($this->idcausalet));
+
+        return $causale['reversed'];
     }
 
     /**

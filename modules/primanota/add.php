@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,7 +52,6 @@ if (!empty($id_records)) {
 }
 
 // ID predefiniti
-$dir = 'uscita'; // Le scadenze normali hanno solo direzione in uscita
 $singola_scadenza = get('single') != null;
 $is_insoluto = get('is_insoluto') != null;
 
@@ -72,7 +71,7 @@ foreach ($id_scadenze as $id_scadenza) {
         $id_documenti[] = $scadenza['iddocumento'];
         continue;
     }
-
+    $dir = $scadenza['rata'] > 0 ? 'entrata' : 'uscita';
     $scadenza['rata'] = abs($scadenza['rata']);
 
     $descrizione_conto = ($dir == 'entrata') ? 'Riepilogativo clienti' : 'Riepilogativo fornitori';
@@ -109,7 +108,7 @@ foreach ($id_scadenze as $id_scadenza) {
 }
 
 // Fatture
-$numeri = [];
+$numeri_fatture = [];
 $counter = 0;
 $is_ultimo_importo_avere = false;
 
@@ -132,7 +131,7 @@ foreach ($id_documenti as $id_documento) {
         $id_anagrafica_movimenti = null;
     }
 
-    $numeri[] = !empty($fattura['numero_esterno']) ? $fattura['numero_esterno'] : $fattura['numero'];
+    $numeri_fatture[] = !empty($fattura['numero_esterno']) ? $fattura['numero_esterno'] : $fattura['numero'];
 
     $is_nota_credito = $tipo->reversed;
     $is_importo_avere = ($dir == 'entrata' && !$is_nota_credito && !$is_insoluto) || ($dir == 'uscita' && ($is_nota_credito || $is_insoluto));
@@ -204,12 +203,12 @@ if ($numero_documenti + $numero_scadenze > 1) {
         $descrizione = $is_ultimo_importo_avere ? tr('Inc. fatture _NAME_ num. _LIST_') : tr('Pag. fatture _NAME_ num. _LIST_');
         $descrizione = replace($descrizione, [
             '_NAME_' => $anagrafica_movimenti->ragione_sociale,
-            '_LIST_' => implode(', ', $numeri),
+            '_LIST_' => implode(', ', $numeri_fatture),
         ]);
     } else {
         $descrizione = $is_ultimo_importo_avere ? tr('Inc. fatture num. _LIST_') : tr('Pag. fatture _NAME_ num. _LIST_');
         $descrizione = replace($descrizione, [
-            '_LIST_' => implode(', ', $numeri),
+            '_LIST_' => implode(', ', $numeri_fatture),
         ]);
     }
 } elseif ($numero_documenti == 1) {
@@ -391,7 +390,7 @@ if ($permetti_modelli) {
 
         $.get(globals.rootdir + "/ajax_complete.php?op=get_conti&idmastrino=" + id_mastrino, function(data) {
             let conti = data.split(",");
-            let table = $("table.scadenze").first();
+            let table = $("#modals table.scadenze").first();
             let button = table.parent().find("button").first();
 
             // Creazione delle eventuali righe aggiuntive
@@ -409,6 +408,7 @@ if ($permetti_modelli) {
 
                 let id_conto = parseInt(dati_conto[0]);
                 let descrizione_conto = dati_conto[1];
+                let totale = dati_conto[2];
 
                 // Sostituzione del conto dell\'Anagrafica
                 if (id_conto === -1 && globals.prima_nota.id_documento !== ""){
@@ -420,6 +420,15 @@ if ($permetti_modelli) {
                 let select = $(righe[i + 1]).find("select");
                 input(select).getElement()
                     .selectSetNew(id_conto, descrizione_conto);
+
+                if(totale>0){
+                    input_field = $(righe[i + 1]).find("input[id*=dare]");
+                } else{
+                    input_field = $(righe[i + 1]).find("input[id*=avere]");
+                    totale = -totale;
+                }
+                input(input_field).getElement()
+                        .val(totale).trigger("change");
             }
         });
 

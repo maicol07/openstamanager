@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ echo '
 		<div class="panel-heading">
 			<h3 class="panel-title">
 			    '.tr('Dettagli scadenza').'
-                <button type="button" class="btn btn-xs btn-info pull-right '.(empty($documento) ? 'disabled' : '').'" id="add-scadenza" '.(empty($documento) ? 'disabled' : '').'>
+                <button type="button" class="btn btn-xs btn-info pull-right tip '.(empty($documento) ? 'disabled' : '').'" id="add-scadenza" '.(empty($documento) ? 'disabled' : '').' title="'.tr('È possibile aggiungere scadenze solo se è presente il collegamento a un documento, in caso contrario è consigliato creare più scadenze con la stessa descrizione').'">
                     <i class="fa fa-plus"></i> '.tr('Aggiungi scadenza').'
                 </button>
             </h3>
@@ -175,7 +175,7 @@ if ($totale_da_pagare != 0) {
 }
 ?>
 
-					<div class="alert alert-error hide" id="totale"><?php echo tr('Il totale da pagare deve essere pari a _MONEY_', [
+					<div class="alert alert-warning hide" id="totale"><?php echo tr('Il totale da pagare non corrisponde con il totale della fattura che è pari a _MONEY_', [
                         '_MONEY_' => '<b>'.moneyFormat($totale_da_pagare).'</b>',
                     ]); ?>.<br><?php echo tr('Differenza di _TOT_ _CURRENCY_', [
                             '_TOT_' => '<span id="diff"></span>',
@@ -205,11 +205,11 @@ if (!empty($documento)) {
 
 <?php
 if (empty($documento)) {
-                            echo '
+    echo '
 <a class="btn btn-danger ask" data-backto="record-list">
     <i class="fa fa-trash"></i> '.tr('Elimina').'
 </a>';
-                        }
+}
 
 echo '
 <table class="hide">
@@ -283,10 +283,8 @@ if (!empty($documento)) {
         let diff = Math.abs(totale_da_pagare) - Math.abs(totale_utente);
 
         if (diff == 0) {
-            $("#save").removeClass("hide");
             $("#totale").addClass("hide");
         } else {
-            $("#save").addClass("hide");
             $("#totale").removeClass("hide");
         }
 

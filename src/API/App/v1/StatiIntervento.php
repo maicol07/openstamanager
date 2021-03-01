@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ class StatiIntervento extends AppResource
 
     public function getModifiedRecords($last_sync_at)
     {
-        $query = 'SELECT in_statiintervento.idstatointervento AS id FROM in_statiintervento';
+        $query = 'SELECT in_statiintervento.idstatointervento AS id, in_statiintervento.updated_at FROM in_statiintervento';
 
         // Filtro per data
         if ($last_sync_at) {
@@ -39,7 +39,7 @@ class StatiIntervento extends AppResource
 
         $records = database()->fetchArray($query);
 
-        return array_column($records, 'id');
+        return $this->mapModifiedRecords($records);
     }
 
     public function retrieveRecord($id)

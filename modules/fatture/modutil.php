@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -498,7 +498,7 @@ function add_articolo_infattura($iddocumento, $idarticolo, $descrizione, $idiva,
  *
  * @return bool|string
  */
-function verifica_numero(Fattura $fattura)
+function verifica_numero_fattura(Fattura $fattura)
 {
     if (empty($fattura->numero_esterno)) {
         return null;
@@ -507,8 +507,8 @@ function verifica_numero(Fattura $fattura)
     $id_segment = $fattura->id_segment;
     $data = $fattura->data;
 
-    $documenti = Fattura::where('id_segment', $id_segment)
-        ->where('data', $data)
+    $documenti = Fattura::where('id_segment', '=', $id_segment)
+        ->where('data', '=', $data)
         ->get();
 
     // Recupero maschera per questo segmento
@@ -519,7 +519,7 @@ function verifica_numero(Fattura $fattura)
         'YEAR(data) = '.prepare(date('Y', strtotime($data))),
         'id_segment = '.prepare($id_segment),
     ], $data);
-    
+
     do {
         $numero = Generator::generate($maschera, $ultimo, 1, Generator::dateToPattern($data));
 

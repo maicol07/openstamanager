@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ switch (post('op')) {
         $idpagamento = post('idpagamento');
         $numero_esterno = post('numero_esterno');
         $id_anagrafica = post('idanagrafica');
-        
+
         if ($dir == 'uscita') {
             $idrivalsainps = post('id_rivalsa_inps');
             $idritenutaacconto = post('id_ritenuta_acconto');
@@ -73,7 +73,7 @@ switch (post('op')) {
             $idritenutaacconto = 0;
             $bollo = 0;
         }
- 
+
         $tipo_sconto = post('tipo_sconto_generico');
         $sconto = post('sconto_generico');
 
@@ -93,6 +93,7 @@ switch (post('op')) {
             'idpagamento' => $idpagamento,
             'idconto' => post('idconto'),
             'idanagrafica' => $id_anagrafica,
+            'idreferente' => post('idreferente'),
             'idspedizione' => post('idspedizione'),
             'idcausalet' => post('idcausalet'),
             'idsede_partenza' => post('idsede_partenza'),
@@ -406,7 +407,7 @@ switch (post('op')) {
             $order = explode(',', post('order', true));
 
             foreach ($order as $i => $id_riga) {
-                $dbo->query('UPDATE `dt_righe_ddt` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
+                $dbo->query('UPDATE `dt_righe_ddt` SET `order` = '.prepare($i + 1).' WHERE id='.prepare($id_riga));
             }
 
             break;

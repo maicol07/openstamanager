@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,7 +93,15 @@ if ($module['name'] == 'Ordini cliente') {
 					<?php
                     }
                 echo '
-				</div>
+                </div>
+                
+                <div class="col-md-3">';
+                    if (!empty($record['idreferente'])) {
+                        echo Plugins::link('Referenti', $record['idanagrafica'], null, null, 'class="pull-right"');
+                    }
+                    echo '
+                    {[ "type": "select", "label": "'.tr('Referente').'", "name": "idreferente", "value": "$idreferente$", "ajax-source": "referenti", "select-options": {"idanagrafica": '.$record['idanagrafica'].'} ]}
+                </div>
 
                 <div class="col-md-3">
 					{[ "type": "select", "label": "'.tr('Sede').'", "name": "idsede", "required": 1, "ajax-source": "sedi", "select-options": {"idanagrafica": '.$record['idanagrafica'].'}, "value": "'.$record['idsede'].'" ]}
@@ -108,7 +116,7 @@ if ($module['name'] == 'Ordini cliente') {
                 ?>
             <div class="row">
                 <div class="col-md-6">
-                    {[ "type": "text", "label": "<?php echo tr('Numero ordine cliente'); ?>", "name": "numero_cliente", "value": "<?php echo $record['numero_cliente']; ?>" ]}
+                    {[ "type": "text", "label": "<?php echo tr('Numero ordine cliente'); ?>", "name": "numero_cliente", "required":0, "value": "<?php echo $record['numero_cliente']; ?>", "help": "<?php echo tr('<span>Obbligatorio per valorizzare CIG/CUP. &Egrave; possible inserire: </span><ul><li>N. determina</li><li>RDO</li><li>Ordine MEPA</li></ul>'); ?>" ]}
                 </div>
 
                 <div class="col-md-6">
@@ -135,7 +143,7 @@ if ($module['name'] == 'Ordini cliente') {
 	</div>
 
     <?php
-        if (!empty($record['id_documento_fe']) || !empty($record['num_item']) || !empty($record['codice_cig']) || !empty($record['codice_cup'])) {
+        if (!empty($record['codice_commessa']) || !empty($record['num_item']) || !empty($record['codice_cig']) || !empty($record['codice_cup'])) {
             $collapsed = 'in';
         } else {
             $collapsed = '';
@@ -158,7 +166,7 @@ if ($module['name'] == 'Ordini cliente') {
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-md-6">
-                            {[ "type": "text", "label": "<?php echo tr('Identificatore Documento'); ?>", "name": "id_documento_fe", "required": 0, "help": "<?php echo tr('<span>Obbligatorio per valorizzare CIG/CUP. &Egrave; possible inserire: </span><ul><li>N. determina</li><li>RDO</li><li>Ordine MEPA</li></ul>'); ?>", "value": "$id_documento_fe$", "maxlength": 20 ]}
+                            {[ "type": "text", "label": "<?php echo tr('Codice Commessa'); ?>", "name": "codice_commessa", "required": 0, "value": "$codice_commessa$", "maxlength": 100 ]}
                         </div>
 
                         <div class="col-md-6">
@@ -194,11 +202,11 @@ echo '
 if (!$block_edit) {
     echo '
 		<div class="pull-left">';
-    
+
     $prev_query = 'SELECT COUNT(*) AS tot FROM co_preventivi WHERE idanagrafica='.prepare($record['idanagrafica']).' AND idstato IN(SELECT id FROM co_statipreventivi WHERE is_fatturabile = 1) AND default_revision=1 AND co_preventivi.id IN (SELECT idpreventivo FROM co_righe_preventivi WHERE co_righe_preventivi.idpreventivo = co_preventivi.id AND (qta - qta_evasa) > 0)';
     $preventivi = $dbo->fetchArray($prev_query)[0]['tot'];
-    if($dir=='entrata'){
-    echo '
+    if ($dir == 'entrata') {
+        echo '
         <div class="tip">
             <a class="btn btn-sm btn-primary '.(!empty($preventivi) ? '' : ' disabled').'" data-href="'.base_path().'/modules/ordini/add_preventivo.php?id_module='.$id_module.'&id_record='.$id_record.'" data-title="'.tr('Aggiungi preventivo').'" data-toggle="tooltip">
                 <i class="fa fa-plus"></i> '.tr('Preventivo').'
@@ -318,9 +326,9 @@ $("#idanagrafica").change(function() {
 $(document).ready(function() {
 	$("#codice_cig, #codice_cup").bind("keyup change", function(e) {
 		if ($("#codice_cig").val() == "" && $("#codice_cup").val() == "" ){
-			$("#id_documento_fe").prop("required", false);
+			$("#numero_cliente").prop("required", false);
 		} else{
-			$("#id_documento_fe").prop("required", true);
+			$("#numero_cliente").prop("required", true);
 		}
 	});
 });

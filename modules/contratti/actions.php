@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 
 include_once __DIR__.'/../../core.php';
 
+use Carbon\Carbon;
 use Modules\Anagrafiche\Anagrafica;
 use Modules\Articoli\Articolo as ArticoloOriginale;
 use Modules\Contratti\Components\Articolo;
@@ -75,10 +76,6 @@ switch (post('op')) {
             $contratto->data_accettazione = post('data_accettazione');
             $contratto->data_conclusione = post('data_conclusione');
 
-            $contratto->rinnovabile = post('rinnovabile');
-            $contratto->rinnovo_automatico = post('rinnovo_automatico');
-            $contratto->giorni_preavviso_rinnovo = post('giorni_preavviso_rinnovo');
-            $contratto->ore_preavviso_rinnovo = post('ore_preavviso_rinnovo');
             $contratto->esclusioni = post('esclusioni');
             $contratto->descrizione = post('descrizione');
             $contratto->id_documento_fe = post('id_documento_fe');
@@ -107,6 +104,16 @@ switch (post('op')) {
 
             flash()->info(tr('Contratto modificato correttamente!'));
         }
+
+        break;
+
+    case 'update_rinnovo':
+        $contratto->rinnovabile = post('rinnovabile');
+        $contratto->rinnovo_automatico = post('rinnovo_automatico');
+        $contratto->giorni_preavviso_rinnovo = post('giorni_preavviso_rinnovo');
+        $contratto->ore_preavviso_rinnovo = post('ore_preavviso_rinnovo');
+        $contratto->save();
+        flash()->info(tr('Contratto modificato correttamente!'));
 
         break;
 
@@ -300,14 +307,13 @@ $riga = $contratto->getRiga($type, $id_riga);
         $order = explode(',', post('order', true));
 
         foreach ($order as $i => $id_riga) {
-            $dbo->query('UPDATE `co_righe_contratti` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
+            $dbo->query('UPDATE `co_righe_contratti` SET `order` = '.prepare($i + 1).' WHERE id='.prepare($id_riga));
         }
 
         break;
 
     // eliminazione contratto
     case 'delete':
-
         // Fatture o interventi collegati a questo contratto
         $elementi = $dbo->fetchArray('SELECT 0 AS `codice`, `co_documenti`.`id` AS `id`, `co_documenti`.`numero` AS `numero`, `co_documenti`.`numero_esterno` AS `numero_esterno`,  `co_documenti`.`data`, `co_tipidocumento`.`descrizione` AS `tipo_documento`, `co_tipidocumento`.`dir` AS `dir`  FROM `co_documenti` JOIN `co_tipidocumento` ON `co_tipidocumento`.`id` = `co_documenti`.`idtipodocumento` WHERE `co_documenti`.`id` IN (SELECT `iddocumento` FROM `co_righe_documenti` WHERE `idcontratto` = '.prepare($id_record).')'.'
         UNION
@@ -339,6 +345,7 @@ $riga = $contratto->getRiga($type, $id_riga);
         $new_contratto->idcontratto_prev = $contratto->id;
         $new_contratto->data_accettazione = $contratto->data_conclusione->copy()->addDays(1);
         $new_contratto->data_conclusione = $new_contratto->data_accettazione->copy()->add($diff);
+        $new_contratto->data_bozza = Carbon::now();
         $new_contratto->stato = 'Bozza';
         $new_contratto->save();
         $new_idcontratto = $new_contratto->id;
@@ -405,7 +412,6 @@ $riga = $contratto->getRiga($type, $id_riga);
         break;
 
         case 'import':
-
         $rs = $dbo->fetchArray('SELECT * FROM co_contratti_tipiintervento WHERE idcontratto = '.prepare(post('idcontratto')).' AND idtipointervento='.prepare(post('idtipointervento')));
 
         // Se la riga in_tipiintervento esiste, la aggiorno...

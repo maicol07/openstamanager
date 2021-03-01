@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,6 +99,7 @@ if (!empty($record['idsede_destinazione'])) {
 $custom = [
     'tipo_doc' => Stringy\Stringy::create($tipo_doc)->toUpperCase(),
     'numero' => $numero,
+    'tipo_documento' => $tipo_doc,
     'data' => Translator::dateToLocale($record['data']),
     'pagamento' => $record['tipo_pagamento'],
     'c_destinazione' => $destinazione,
@@ -118,7 +119,7 @@ $custom = [
 // - utente qualsiasi con permessi almeno in lettura sul modulo
 // - admin
 if ((Auth::user()['gruppo'] == 'Clienti' && $id_cliente != Auth::user()['idanagrafica'] && !Auth::admin()) || Modules::getPermission($module_name) == '-') {
-    die(tr('Non hai i permessi per questa stampa!'));
+    exit(tr('Non hai i permessi per questa stampa!'));
 }
 
 if ($fattura_accompagnatoria) {

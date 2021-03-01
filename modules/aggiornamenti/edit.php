@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -156,6 +156,10 @@ function database(button) {
     openModal("'.tr('Controllo del database').'", "'.$module->fileurl('database.php').'?id_module='.$id_module.'");
 }
 
+function controlli(button) {
+    openModal("'.tr('Controlli del gestionale').'", "'.$module->fileurl('controlli.php').'?id_module='.$id_module.'");
+}
+
 function search(button) {
     let restore = buttonLoading(button);
 
@@ -217,6 +221,10 @@ function search(button) {
                 <button type="button" class="btn btn-info btn-block" onclick="database(this)">
                     <i class="fa fa-database"></i> '.tr('Controlla database').'
                 </button>
+
+                <button type="button" class="btn btn-block" onclick="controlli(this)">
+                    <i class="fa fa-cog"></i> '.tr('Controlla gestionale').'
+                </button>
             </div>
         </div>
     </div>
@@ -230,16 +238,16 @@ function search(button) {
             </div>
             <div class="box-body" id="update-search">';
     if (extension_loaded('curl')) {
-        echo'		<button type="button" class="btn btn-info btn-block" onclick="search(this)">
+        echo '		<button type="button" class="btn btn-info btn-block" onclick="search(this)">
                     <i class="fa fa-search"></i> '.tr('Ricerca').'
                 </button>';
     } else {
-        echo'		<button type="button" class="btn btn-warning btn-block disabled" >
+        echo '		<button type="button" class="btn btn-warning btn-block disabled" >
                     <i class="fa fa-warning"></i> '.tr('Estensione curl non supportata').'.
                 </button>';
     }
 
-    echo'   </div>
+    echo '   </div>
         </div>
     </div>
 </div>';

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,9 @@
 
 include_once __DIR__.'/../../core.php';
 
+use Modules\Aggiornamenti\Controlli\DatiFattureElettroniche;
 use Modules\Fatture\Export\CSV;
 use Modules\Fatture\Fattura;
-use Modules\Fatture\Stato;
 use Plugins\ExportFE\FatturaElettronica;
 use Plugins\ExportFE\Interaction;
 use Util\XML;
@@ -49,6 +49,47 @@ switch (post('op')) {
                 $print = Prints::getModulePredefinedPrint($id_module);
 
                 Prints::render($print['id'], $r['id'], $dir.'tmp/');
+            }
+
+            // Creazione zip
+            if (extension_loaded('zip')) {
+                Zip::create($dir.'tmp/', $zip);
+
+                // Invio al browser dello zip
+                download($zip);
+
+                // Rimozione dei contenuti
+                delete($dir.'tmp/');
+            }
+        }
+
+        break;
+
+    case 'exportFE-bulk':
+        $dir = base_dir().'/files/export_fatture/';
+        directory($dir.'tmp/');
+
+        $dir = slashes($dir);
+        $zip = slashes($dir.'fattureFE_'.time().'.zip');
+
+        // Rimozione dei contenuti precedenti
+        $files = glob($dir.'/*.zip');
+        foreach ($files as $file) {
+            delete($file);
+        }
+
+        $module = Modules::get($id_module);
+
+        if ($module['name'] == 'Fatture di vendita') {
+            $print_name = 'Fattura elettronica di vendita';
+        } else {
+            $print_name = 'Fattura elettronica di acquisto';
+        }
+        $print = $dbo->SelectOne('zz_prints', 'id', ['name' => $print_name]);
+
+        if (!empty($id_records)) {
+            foreach ($id_records as $id_record) {
+                Prints::render($print['id'], $id_record, $dir.'tmp/');
             }
 
             // Creazione zip
@@ -234,16 +275,6 @@ switch (post('op')) {
             $new->data = $data;
             $new->id_segment = $id_segment;
             $new->numero = Fattura::getNextNumero($data, $dir, $id_segment);
-            if (!empty($fattura->numero_esterno)) {
-                $new->numero_esterno = Fattura::getNextNumeroSecondario($data, $dir, $id_segment);
-            }
-
-            $new->codice_stato_fe = null;
-            $new->progressivo_invio = null;
-            $new->data_stato_fe = null;
-
-            $stato = Stato::where('descrizione', 'Bozza')->first();
-            $new->stato()->associate($stato);
 
             $new->save();
 
@@ -260,9 +291,6 @@ switch (post('op')) {
                     $new_riga->idordine = 0;
                 }
 
-                $new_riga->qta_evasa = 0;
-                $new_riga->original_type = null;
-                $new_riga->original_id = null;
                 $new_riga->save();
 
                 if ($new_riga->isArticolo()) {
@@ -278,155 +306,49 @@ switch (post('op')) {
         break;
 
     case 'check-bulk':
-            $list = [];
-            $anomalie = collect();
-
+            $controllo = new DatiFattureElettroniche();
+            $fatture = [];
             foreach ($id_records as $id) {
                 $fattura_vendita = Fattura::vendita()
-                ->whereNotIn('codice_stato_fe', ['ERR', 'NS', 'EC02', 'ERVAL'])
-                ->where('data', '>=', $_SESSION['period_start'])
-                ->where('data', '<=', $_SESSION['period_end'])
-                ->where('id', '=', $id)
-                ->orderBy('data')
-                ->get();
-
-                $fattura_vendita = $fattura_vendita[0];
+                    ->whereNotIn('codice_stato_fe', ['ERR', 'NS', 'EC02', 'ERVAL'])
+                    ->where('data', '>=', $_SESSION['period_start'])
+                    ->where('data', '<=', $_SESSION['period_end'])
+                    ->where('id', '=', $id)
+                    ->orderBy('data')
+                    ->first();
 
                 if (!empty($fattura_vendita)) {
-                    try {
-                        $xml = XML::read($fattura_vendita->getXML());
+                    $fatture[$id] = $fattura_vendita;
 
-                        $totale_documento_xml = null;
-
-                        // Totale basato sul campo ImportoTotaleDocumento
-                        $dati_generali = $xml['FatturaElettronicaBody']['DatiGenerali']['DatiGeneraliDocumento'];
-                        if (isset($dati_generali['ImportoTotaleDocumento'])) {
-                            $totale_documento_indicato = abs(floatval($dati_generali['ImportoTotaleDocumento']));
-
-                            // Calcolo del totale basato sui DatiRiepilogo
-                            if (empty($totale_documento_xml) && empty($dati_generali['ScontoMaggiorazione'])) {
-                                $totale_documento_xml = 0;
-
-                                $riepiloghi = $xml['FatturaElettronicaBody']['DatiBeniServizi']['DatiRiepilogo'];
-                                if (!empty($riepiloghi) && !isset($riepiloghi[0])) {
-                                    $riepiloghi = [$riepiloghi];
-                                }
-
-                                foreach ($riepiloghi as $riepilogo) {
-                                    $totale_documento_xml = sum([$totale_documento_xml, $riepilogo['ImponibileImporto'], $riepilogo['Imposta']]);
-                                }
-
-                                $totale_documento_xml = abs($totale_documento_xml);
-                            } else {
-                                $totale_documento_xml = $totale_documento_indicato;
-                            }
-                            $totale_documento_xml = $fattura_vendita->isNota() ? -$totale_documento_xml : $totale_documento_xml;
-                        }
-
-                        // Se riscontro un'anomalia
-                        if ($fattura_vendita->anagrafica->piva != $xml['FatturaElettronicaHeader']['CessionarioCommittente']['DatiAnagrafici']['IdFiscaleIVA']['IdCodice'] || $fattura_vendita->anagrafica->codice_fiscale != $xml['FatturaElettronicaHeader']['CessionarioCommittente']['DatiAnagrafici']['CodiceFiscale'] || $fattura_vendita->totale != $totale_documento_xml) {
-                            /*echo json_encode([
-                                'totale_documento_xml' => $totale_documento_xml,
-                                'totale_documento' => $totale_documento,
-                            ]);*/
-
-                            $anomalie->push([
-                                'fattura_vendita' => $fattura_vendita,
-                                'codice_fiscale_xml' => !empty($xml['FatturaElettronicaHeader']['CessionarioCommittente']['DatiAnagrafici']['CodiceFiscale']) ? $xml['FatturaElettronicaHeader']['CessionarioCommittente']['DatiAnagrafici']['CodiceFiscale'] : null,
-                                'codice_fiscale' => $fattura_vendita->anagrafica->codice_fiscale,
-                                'piva_xml' => !empty($xml['FatturaElettronicaHeader']['CessionarioCommittente']['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']) ? $xml['FatturaElettronicaHeader']['CessionarioCommittente']['DatiAnagrafici']['IdFiscaleIVA']['IdCodice'] : null,
-                                'piva' => $fattura_vendita->anagrafica->piva,
-                                'totale_documento_xml' => moneyFormat($totale_documento_xml, 2),
-                                'totale_documento' => moneyFormat($fattura_vendita->totale, 2),
-                                'have_xml' => 1,
-                            ]);
-                        }
-                    } catch (Exception $e) {
-                        $anomalie->push([
-                            'fattura_vendita' => $fattura_vendita,
-                            'have_xml' => 0,
-                        ]);
-                    }
-
-                    array_push($list, $fattura_vendita->numero_esterno);
+                    $controllo->checkFattura($fattura_vendita);
                 }
             }
 
+            $results = $controllo->getResults();
+            $num = count($results);
+
             // Messaggi di risposta
-            if (empty($list)) {
+            if (empty($fatture)) {
                 flash()->warning(tr('Nessuna fattura utile per il controllo!'));
+            } elseif (empty($results)) {
+                flash()->info(tr('Nessuna anomalia!'));
             } else {
                 flash()->info(tr('Fatture _LIST_ controllate.', [
-                    '_LIST_' => implode(',', $list),
+                    '_LIST_' => implode(',', array_column($results, 'numero')),
                 ]));
 
-                // Se ci sono anomalie
-                if ($anomalie->count() > 0) {
-                    function diff($old, $new)
-                    {
-                        $matrix = [];
-                        $maxlen = 0;
-                        foreach ($old as $oindex => $ovalue) {
-                            $nkeys = array_keys($new, $ovalue);
-                            foreach ($nkeys as $nindex) {
-                                $matrix[$oindex][$nindex] = isset($matrix[$oindex - 1][$nindex - 1]) ?
-                                    $matrix[$oindex - 1][$nindex - 1] + 1 : 1;
-                                if ($matrix[$oindex][$nindex] > $maxlen) {
-                                    $maxlen = $matrix[$oindex][$nindex];
-                                    $omax = $oindex + 1 - $maxlen;
-                                    $nmax = $nindex + 1 - $maxlen;
-                                }
-                            }
-                        }
-                        if ($maxlen == 0) {
-                            return [['d' => $old, 'i' => $new]];
-                        }
+                $riepilogo_anomalie = tr('Attenzione: Trovate _NUM_ anomalie! Le seguenti fatture non trovano corrispondenza tra XML e dati nel documento', ['_NUM_' => $num]).':</br></br>';
 
-                        return array_merge(
-                            diff(array_slice($old, 0, $omax), array_slice($new, 0, $nmax)),
-                            array_slice($new, $nmax, $maxlen),
-                            diff(array_slice($old, $omax + $maxlen), array_slice($new, $nmax + $maxlen)));
-                    }
+                foreach ($results as $anomalia) {
+                    $fattura = $fatture[$anomalia['id']];
 
-                    function htmlDiff($old, $new)
-                    {
-                        $ret = '';
-                        $diff = diff(preg_split("/[\s]+/", $old), preg_split("/[\s]+/", $new));
-                        foreach ($diff as $k) {
-                            if (is_array($k)) {
-                                $ret .= (!empty($k['d']) ? '<del>'.implode(' ', $k['d']).'</del> ' : '').
-                                    (!empty($k['i']) ? '<span>'.implode(' ', $k['i']).'</span> ' : '');
-                            } else {
-                                $ret .= $k.' ';
-                            }
-                        }
-
-                        return $ret;
-                    }
-
-                    $riepilogo_anomalie .= tr('Attenzione: Trovate _NUM_ anomalie! Le seguenti fatture non trovano corrispondenza tra XML e dati nel documento:', ['_NUM_' => $anomalie->count()]).' </br></br>';
-
-                    foreach ($anomalie as $anomalia) {
-                        $riepilogo_anomalie .= '<ul><li>'.reference($anomalia['fattura_vendita'], $anomalia['fattura_vendita']->getReference()).'</li>';
-
-                        if (!empty($anomalia['have_xml'])) {
-                            $riepilogo_anomalie .= '<li><table class="table table-bordered table-condensed">
-                            <tr><th>Sorgente</th><th>P. Iva</th><th>Cod. fiscale</th><th>Totale</th></tr>';
-
-                            $riepilogo_anomalie .= '<tr><td>XML</td> <td>'.$anomalia['piva_xml'].'</td> <td>'.$anomalia['codice_fiscale_xml'].'</td> <td>'.$anomalia['totale_documento_xml'].'</td></tr>';
-
-                            $riepilogo_anomalie .= '<tr><td>Gestionale</td> <td>'.htmlDiff($anomalia['piva_xml'], $anomalia['piva']).'</td> <td>'.htmlDiff($anomalia['codice_fiscale_xml'], $anomalia['codice_fiscale']).'</td> <td>'.htmlDiff($anomalia['totale_documento_xml'], $anomalia['totale_documento']).'</td></tr></table></li>';
-                        } else {
-                            $riepilogo_anomalie .= ' <li>'.tr('Impossibile verificare l\'XML di questa fattura.').'</li>';
-                        }
-
-                        $riepilogo_anomalie .= '</ul><br>';
-                    }
-
-                    flash()->warning($riepilogo_anomalie);
-                } else {
-                    flash()->info(tr('Nessuna anomalia!'));
+                    $riepilogo_anomalie .= '<ul>
+    <li>'.reference($fattura, $fattura->getReference()).'</li>
+    <li>'.$anomalia['descrizione'].'</li>
+</ul><br>';
                 }
+
+                flash()->warning($riepilogo_anomalie);
             }
         break;
 
@@ -476,7 +398,7 @@ if (App::debug()) {
 $operations['copy-bulk'] = [
     'text' => '<span><i class="fa fa-copy"></i> '.tr('Duplica selezionati').'</span>',
     'data' => [
-        'msg' => tr('Vuoi davvero duplicare le righe selezionate?').'<br><br>{[ "type": "select", "label": "'.tr('Fattura in avanti di').'", "name": "skip_time", "required": 1, "values": "list=\"Giorno\":\"'.tr('Un giorno').'\", \"Settimana\":\"'.tr('Una settimana').'\", \"Mese\":\"'.tr('Un mese').'\", \"Anno\":\"'.tr('Un anno').'\" ", "value": "Giorno" ]}<br>{[ "type": "select", "label": "'.tr('Sezionale').'", "name": "id_segment", "required": 1, "values": "query=SELECT id, name AS descrizione FROM zz_segments WHERE id_module='.$id_module.' ORDER BY name", "value": "'.$_SESSION['module_'.$id_module]['id_segment'].'" ]}<br>{[ "type": "checkbox", "placeholder": "'.tr('Aggiungere i riferimenti ai documenti esterni?').'", "name": "riferimenti" ]}',
+        'msg' => tr('Vuoi davvero duplicare le righe selezionate?').'<br><br>{[ "type": "select", "label": "'.tr('Fattura in avanti di').'", "name": "skip_time", "required": 1, "values": "list=\"Giorno\":\"'.tr('Un giorno').'\", \"Settimana\":\"'.tr('Una settimana').'\", \"Mese\":\"'.tr('Un mese').'\", \"Anno\":\"'.tr('Un anno').'\" ", "value": "Giorno" ]}<br>{[ "type": "select", "label": "'.tr('Sezionale').'", "name": "id_segment", "required": 1, "values": "query=SELECT id, name AS descrizione FROM zz_segments WHERE id_module='.$id_module.' ORDER BY name", "value": "'.$_SESSION['module_'.$id_module]['id_segment'].'" ]}<br>{[ "type": "checkbox", "label": "'.tr('Aggiungere i riferimenti ai documenti esterni?').'", "placeholder": "'.tr('Aggiungere i riferimenti ai documenti esterni?').'", "name": "riferimenti" ]}',
         'button' => tr('Procedi'),
         'class' => 'btn btn-lg btn-warning',
     ],
@@ -509,6 +431,17 @@ if ($module->name == 'Fatture di vendita') {
         'data' => [
             'title' => '',
             'msg' => tr('Vuoi davvero esportare i PDF delle fatture selezionate in un archivio ZIP?'),
+            'button' => tr('Procedi'),
+            'class' => 'btn btn-lg btn-warning',
+            'blank' => true,
+        ],
+    ];
+
+    $operations['exportFE-bulk'] = [
+        'text' => '<span class="'.((!extension_loaded('zip')) ? 'text-muted disabled' : '').'"><i class="fa fa-file-archive-o"></i> '.tr('Esporta stampe FE').'</span>',
+        'data' => [
+            'title' => '',
+            'msg' => tr('Vuoi davvero esportare i PDF delle fatture elettroniche selezionate in un archivio ZIP?'),
             'button' => tr('Procedi'),
             'class' => 'btn btn-lg btn-warning',
             'blank' => true,

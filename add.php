@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,15 +53,10 @@ echo '
 
 <script>
 $(document).ready(function(){
-    cleanup_inputs();
+    let form = $("#custom_fields_top-add").parent().find("form").first();
 
-    var form = $("#custom_fields_top-add").parent().find("form").first();
-
-    // Campi a inizio form
-    form.prepend($("#custom_fields_top-add").html());
-
-    // Campi a fine form
-    var last = form.find(".panel").last();
+    // Ultima sezione/campo del form
+    let last = form.find(".panel").last();
 
     if (!last.length) {
         last = form.find(".box").last();
@@ -71,8 +66,11 @@ $(document).ready(function(){
         last = form.find(".row").eq(-2);
     }
 
-    last.after($("#custom_fields_bottom-add").html());
-    restart_inputs();
+    // Campi a inizio form
+    aggiungiContenuto(form, "#custom_fields_top-add", {}, true);
+
+    // Campi a fine form
+    aggiungiContenuto(last, "#custom_fields_bottom-add", {});
 });
 </script>';
 
@@ -81,16 +79,17 @@ if (isAjaxRequest()) {
 <script>
 $(document).ready(function(){
     $("#form_'.$id_module.'-'.$id_plugin.'").find("form").submit(function () {
-        $form = $(this);
+        let $form = $(this);
         $form.variables = new Object();
         $form.variables.id_module = \''.$id_module.'\';
         $form.variables.id_plugin = \''.$id_plugin.'\';
 
         submitAjax(this, $form.variables, function(response) {
             // Selezione automatica nuovo valore per il select
-            select = "#'.get('select').'";
+            let select = "#'.get('select').'";
             if ($(select).val() !== undefined) {
                 $(select).selectSetNew(response.id, response.text, response.data);
+                $(select).change();
             }
 
             $form.closest("div[id^=bs-popup").modal("hide");

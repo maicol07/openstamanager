@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ switch ($name) {
             }
         }
 
-        if($value == $anagrafica->partita_iva){
+        if ($value == $anagrafica->partita_iva) {
             $partita_iva = !empty($anagrafica) && is_numeric($value) ? $anagrafica->nazione->iso2.$value : $value;
             $result = $disponibile;
             $check = Validate::isValidVatNumber($partita_iva);
@@ -129,7 +129,7 @@ switch ($name) {
         ])->count() == 0;
         $result = $disponibile;
 
-        $message = $disponibile ? tr("Questa email non è ancora stata utilizzata") : tr("L'email è già utilizzata in un'altra anagrafica");
+        $message = $disponibile ? tr('Questa email non è ancora stata utilizzata') : tr("L'email è già utilizzata in un'altra anagrafica");
 
         $errors = [];
         $check = Validate::isValidEmail($value);

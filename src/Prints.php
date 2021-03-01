@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -510,12 +510,12 @@ class Prints
 
         // Inclusione dei fogli di stile CSS
         $styles = [
-            'templates/base/bootstrap.css',
-            'templates/base/style.css',
+            App::filepath('templates/base|custom|', 'bootstrap.css'),
+            App::filepath('templates/base|custom|', 'style.css'),
         ];
 
         foreach ($styles as $value) {
-            $mpdf->WriteHTML(file_get_contents(base_dir().'/'.$value), 1);
+            $mpdf->WriteHTML(file_get_contents($value), 1);
         }
 
         // Impostazione del font-size

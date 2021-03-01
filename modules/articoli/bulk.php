@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,12 @@
  */
 
 include_once __DIR__.'/../../core.php';
+use Modules;
+use Modules\Anagrafiche\Anagrafica;
 use Modules\Articoli\Articolo;
+use Modules\Preventivi\Components\Articolo as ArticoloPreventivo;
+use Modules\Preventivi\Preventivo;
+use Modules\TipiIntervento\Tipo as TipoSessione;
 use Prints;
 
 switch (post('op')) {
@@ -54,12 +59,77 @@ switch (post('op')) {
         flash()->info(tr('Articoli eliminati!'));
 
         break;
-    
+
     case 'stampa-etichette':
         $_SESSION['superselect']['id_articolo_barcode'] = $id_records;
         $id_print = Prints::getPrints()['Barcode'];
 
-        redirect( base_path().'/pdfgen.php?id_print='.$id_print.'&id_record='.Articolo::where('barcode', '!=', '' )->first()->id );
+        redirect(base_path().'/pdfgen.php?id_print='.$id_print.'&id_record='.Articolo::where('barcode', '!=', '')->first()->id);
+        exit();
+
+        break;
+
+    case 'change-qta':
+        $descrizione = post('descrizione');
+        $data = post('data');
+        $qta = post('qta');
+        $n_articoli = 0;
+
+        foreach ($id_records as $id) {
+            $articolo = Articolo::find($id);
+            $qta_movimento = $qta - $articolo->qta;
+            $articolo->movimenta($qta_movimento, $descrizione, $data, true);
+
+            ++$n_articoli;
+        }
+
+        if ($n_articoli > 0) {
+            flash()->info(tr('Quantità cambiate a _NUM_ articoli!', [
+                '_NUM_' => $n_articoli,
+            ]));
+        } else {
+            flash()->warning(tr('Nessun articolo modificato!'));
+        }
+
+        break;
+
+    case 'crea-preventivo':
+        $nome = post('nome');
+        $data = post('data');
+        $id_tipo = post('id_tipo');
+        $id_cliente = post('id_cliente');
+        $anagrafica = Anagrafica::find($id_cliente);
+        $tipo = TipoSessione::find($id_tipo);
+        $n_articoli = 0;
+
+        $preventivo = Preventivo::build($anagrafica, $tipo, $nome, $data, 0);
+        $id_preventivo = $preventivo->id;
+
+        foreach ($id_records as $id) {
+            $originale = Articolo::find($id);
+            $articolo = ArticoloPreventivo::build($preventivo, $originale);
+            $articolo->qta = 1;
+            $articolo->descrizione = $originale->descrizione;
+            $articolo->um = $originale->um ?: null;
+            $articolo->costo_unitario = $originale->prezzo_acquisto;
+            $articolo->prezzo_unitario = $originale->prezzo_vendita;
+            $articolo->idiva = $originale->idiva_vendita;
+            $articolo->setPrezzoUnitario($originale->prezzo_vendita, $originale->idiva_vendita);
+            $articolo->save();
+
+            ++$n_articoli;
+        }
+
+        if ($n_articoli > 0) {
+            flash()->info(tr('_NUM_ articoli sono stati aggiunti al preventivo', [
+                '_NUM_' => $n_articoli,
+            ]));
+        } else {
+            flash()->warning(tr('Nessun articolo modificato!'));
+        }
+
+        $database->commitTransaction();
+        redirect(base_path().'/editor.php?id_module='.Modules::get('Preventivi')['id'].'&id_record='.$id_preventivo);
         exit();
 
         break;
@@ -95,6 +165,33 @@ $operations['stampa-etichette'] = [
         'button' => tr('Procedi'),
         'class' => 'btn btn-lg btn-warning',
         'blank' => true,
+    ],
+];
+
+$operations['change-qta'] = [
+    'text' => '<span><i class="fa fa-refresh"></i> '.tr('Aggiorna quantità').'</span>',
+    'data' => [
+        'title' => tr('Cambiare le quantità?'),
+        'msg' => tr('Per ciascun articolo selezionato, verrà modificata la quantità').'
+        <br><br>{[ "type": "text", "label": "'.tr('Quantità').'", "name": "qta", "required": 1 ]}
+        {[ "type": "text", "label": "'.tr('Causale').'", "name": "descrizione", "required": 1 ]}
+        {[ "type": "date", "label": "'.tr('Data').'", "name": "data", "required": 1, "value": "-now-" ]}',
+        'button' => tr('Procedi'),
+        'class' => 'btn btn-lg btn-warning',
+    ],
+];
+
+$operations['crea-preventivo'] = [
+    'text' => '<span><i class="fa fa-plus"></i> '.tr('Crea preventivo').'</span>',
+    'data' => [
+        'title' => tr('Creare preventivo?'),
+        'msg' => tr('Ogni articolo selezionato, verrà aggiunto al preventivo').'
+        <br><br>{[ "type": "text", "label": "'.tr('Nome preventivo').'", "name": "nome", "required": 1 ]}
+        {[ "type": "select", "label": "'.tr('Cliente').'", "name": "id_cliente", "ajax-source": "clienti", "required": 1 ]}
+        {[ "type": "select", "label": "'.tr('Tipo di attività').'", "name": "id_tipo", "values": "query=SELECT idtipointervento AS id, descrizione FROM in_tipiintervento", "required": 1 ]}
+        {[ "type": "date", "label": "'.tr('Data').'", "name": "data", "required": 1, "value": "-now-" ]}',
+        'button' => tr('Procedi'),
+        'class' => 'btn btn-lg btn-warning',
     ],
 ];
 

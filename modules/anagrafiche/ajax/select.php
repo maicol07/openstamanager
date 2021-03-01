@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -289,7 +289,7 @@ switch ($resource) {
      */
     case 'referenti':
         if (isset($superselect['idanagrafica'])) {
-            $query = 'SELECT id, nome AS descrizione FROM an_referenti |where| ORDER BY nome';
+            $query = 'SELECT id, nome AS descrizione, an_referenti.mansione AS optgroup FROM an_referenti |where| ORDER BY optgroup, nome';
 
             foreach ($elements as $element) {
                 $filter[] = 'id='.prepare($element);
@@ -343,7 +343,7 @@ switch ($resource) {
         }
 
         $where[] = '( '.prepare($superselect['data']).' BETWEEN data_inizio AND data_fine)';
-        
+
         //$where[] = 'data_inizio < NOW()';
         //$where[] = 'data_fine > NOW()';
         if (empty($filter)) {

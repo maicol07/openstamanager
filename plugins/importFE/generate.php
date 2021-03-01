@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -110,13 +110,20 @@ $citta = $sede['comune'];
 $provincia = $sede['provincia'];
 
 // Dati generali
-$dati_generali = $fattura_pa->getBody()['DatiGenerali']['DatiGeneraliDocumento'];
+$fattura_body = $fattura_pa->getBody();
+$dati_generali = $fattura_body['DatiGenerali']['DatiGeneraliDocumento'];
 
 $tipo_documento = $database->fetchOne('SELECT CONCAT("(", codice, ") ", descrizione) AS descrizione FROM fe_tipi_documento WHERE codice = '.prepare($dati_generali['TipoDocumento']))['descrizione'];
 
-$pagamenti = $fattura_pa->getBody()['DatiPagamento'];
-$pagamenti = isset($pagamenti[0]) ? $pagamenti : [$pagamenti];
-$metodi = $pagamenti[0]['DettaglioPagamento'];
+// Gestione per fattura elettroniche senza pagamento definito
+$pagamenti = [];
+if (isset($fattura_body['DatiPagamento'])) {
+    $pagamenti = $fattura_body['DatiPagamento'];
+    $pagamenti = isset($pagamenti[0]) ? $pagamenti : [$pagamenti];
+}
+
+// Individuazione metodo di pagamento di base
+$metodi = isset($pagamenti[0]['DettaglioPagamento']) ? $pagamenti[0]['DettaglioPagamento'] : [];
 $metodi = isset($metodi[0]) ? $metodi : [$metodi];
 
 $codice_modalita_pagamento = $metodi[0]['ModalitaPagamento'];
@@ -164,9 +171,9 @@ if (!empty($pagamenti)) {
             <h4>'.tr('Pagamento').'</h4>
 
             <p>'.tr('La fattura importata presenta _NUM_ rat_E_ di pagamento con le seguenti scadenze', [
-            '_NUM_' => count($metodi),
-            '_E_' => ((count($metodi) > 1) ? 'e' : 'a'),
-        ]).':</p>
+                '_NUM_' => count($metodi),
+                '_E_' => ((count($metodi) > 1) ? 'e' : 'a'),
+            ]).':</p>
             <ol>';
 
     foreach ($pagamenti as $pagamento) {
@@ -238,14 +245,14 @@ if (!empty($anagrafica)) {
     if (in_array($dati_generali['TipoDocumento'], ['TD04', 'TD05'])) {
         echo '
         <div class="col-md-3">
-            {[ "type": "select", "label": "'.tr('Fattura collegata').'", "name": "ref_fattura", "required": 1, "values": "query='.$query.'" ]}
+            {[ "type": "select", "label": "'.tr('Fattura collegata').'", "name": "ref_fattura", "required": 0, "values": "query='.$query.'" ]}
         </div>';
     } elseif ($dati_generali['TipoDocumento'] == 'TD06') {
         $query .= "AND co_documenti.id_segment = (SELECT id FROM zz_segments WHERE name = 'Fatture pro-forma' AND id_module = ".prepare($id_module).')';
 
         echo '
         <div class="col-md-3">
-            {[ "type": "select", "label": "'.tr('Fattura pro-forma').'", "name": "ref_fattura", "values": "query='.$query.'" ]}
+            {[ "type": "select", "label": "'.tr('Collega a fattura pro-forma').'", "name": "ref_fattura", "values": "query='.$query.'" ]}
         </div>';
     }
 }
@@ -256,7 +263,7 @@ echo '
 // Pagamento
 echo '
     <div class="row" >
-		<div class="col-md-6">
+		<div class="col-md-3">
 		    <button type="button" class="btn btn-info btn-xs pull-right" onclick="updateSelectOption(\'codice_modalita_pagamento_fe\', \'\')">
 		        <i class="fa fa-refresh"></i> '.tr('Visualizza tutte le modalità').'
             </button>
@@ -272,7 +279,17 @@ echo '
 
         <div class="col-md-3">
             {[ "type": "checkbox", "label": "'.tr('Creazione automatica articoli').'", "name": "crea_articoli", "value": 0, "help": "'.tr("Nel caso di righe con tag CodiceArticolo, il gestionale procede alla creazione dell'articolo se la riga non risulta assegnata manualmente").'" ]}
-        </div>
+        </div>';
+
+        $ritenuta = $dati_generali['DatiRitenuta'];
+
+        if (!empty($ritenuta)) {
+            echo '
+            <div class="col-md-3">
+                {[ "type": "checkbox", "label": "'.tr('Ritenuta pagata dal fornitore').'", "name": "is_ritenuta_pagata", "value": 0, "help": "'.tr('Attivare se la ritenuta è stata pagata dal fornitore').'" ]}
+            </div>';
+        }
+    echo '
     </div>';
 
 // Righe
@@ -306,7 +323,7 @@ if (!empty($righe)) {
             $query .= ' AND codice_natura_fe = '.prepare($riga['Natura']);
 
             // Fallback per natura iva mancante
-            if( empty($dbo->fetchArray($query)) ){
+            if (empty($dbo->fetchArray($query))) {
                 $query = $start_query;
             }
         }
@@ -342,7 +359,9 @@ if (!empty($righe)) {
         echo '
         <tr data-id="'.$key.'" data-qta="'.$qta.'" data-prezzo_unitario="'.$prezzo_unitario.'" data-iva_percentuale="'.$riga['AliquotaIVA'].'">
             <td>
+                '.(empty($id_articolo) ? '<span class="label label-warning pull-right text-muted articolo-warning hidden">'.tr('Creazione articolo non disponibile').'</span>' : '').'
                 <small class="pull-right text-muted" id="riferimento_'.$key.'"></small>
+
 
                 '.$riga['Descrizione'].'<br>
 
@@ -380,21 +399,39 @@ if (!empty($righe)) {
                 <input type="hidden" name="id_riga_riferimento['.$key.']" id="id_riga_riferimento_'.$key.'" value="">
                 <input type="hidden" name="tipo_riga_riferimento['.$key.']" id="tipo_riga_riferimento_'.$key.'" value="">
 
-                <div class="col-md-3">
-                    {[ "type": "select", "name": "articoli['.$key.']", "ajax-source": "articoli", "select-options": '.json_encode(['permetti_movimento_a_zero' => 1, 'dir' => 'entrata', 'idanagrafica' => $anagrafica ? $anagrafica->id : '']).', "icon-after": "add|'.Modules::get('Articoli')['id'].'|codice='.htmlentities($codice_principale).'&descrizione='.htmlentities($riga['Descrizione']).'", "value": "'.$id_articolo.'", "label": "'.tr('Articolo').'" ]}
+                <input type="hidden" name="tipo_riferimento_vendita['.$key.']" id="tipo_riferimento_vendita_'.$key.'" value="">
+                <input type="hidden" name="id_riferimento_vendita['.$key.']" id="id_riferimento_vendita_'.$key.'" value="">
+                <input type="hidden" name="id_riga_riferimento_vendita['.$key.']" id="id_riga_riferimento_vendita_'.$key.'" value="">
+                <input type="hidden" name="tipo_riga_riferimento_vendita['.$key.']" id="tipo_riga_riferimento_vendita_'.$key.'" value="">
+
+                <div class="col-md-12">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {[ "type": "select", "name": "articoli['.$key.']", "ajax-source": "articoli", "select-options": '.json_encode(['permetti_movimento_a_zero' => 1, 'dir' => 'entrata', 'idanagrafica' => $anagrafica ? $anagrafica->id : '']).', "icon-after": "add|'.Modules::get('Articoli')['id'].'|codice='.htmlentities($codice_principale).'&descrizione='.htmlentities($riga['Descrizione']).'", "value": "'.$id_articolo.'", "label": "'.tr('Articolo').'" ]}
+                        </div>
+
+                        <div class="col-md-3">
+                            {[ "type": "select", "name": "conto['.$key.']", "ajax-source": "conti-acquisti", "required": 1, "label": "'.tr('Conto acquisti').'" ]}
+                        </div>
+
+                        <div class="col-md-3">
+                            {[ "type": "select", "name": "iva['.$key.']", "values": '.json_encode('query='.$query).', "required": 1, "label": "'.tr('Aliquota IVA').'" ]}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            {[ "type": "select", "name": "selezione_riferimento['.$key.']", "ajax-source": "riferimenti-fe", "select-options": '.json_encode(['id_anagrafica' => $anagrafica ? $anagrafica->id : '']).', "label": "'.tr('Riferimento acquisto').'", "icon-after": '.json_encode('<button type="button" onclick="rimuoviRiferimento(this)" class="btn btn-primary disabled" id="rimuovi_riferimento_'.$key.'"><i class="fa fa-close"></i></button>').', "help": "'.tr('Articoli contenuti in Ordini o DDT del Fornitore').'" ]}
+                        </div>
+
+                        <div class="col-md-3">
+                            {[ "type": "select", "name": "selezione_riferimento_vendita['.$key.']", "ajax-source": "riferimenti-vendita-fe", "select-options": '.json_encode(['id_articolo' => $id_articolo]).', "label": "'.tr('Riferimento vendita').'", "icon-after": '.json_encode('<button type="button" onclick="rimuoviRiferimentoVendita(this)" class="btn btn-primary disabled" id="rimuovi_riferimento_vendita_'.$key.'"><i class="fa fa-close"></i></button>').', "help": "'.tr('Articoli contenuti in Ordini Cliente').'" ]}
+                        </div>
+                    </div>
+
                 </div>
 
-                <div class="col-md-3">
-                    {[ "type": "select", "name": "conto['.$key.']", "ajax-source": "conti-acquisti", "required": 1, "label": "'.tr('Conto acquisti').'" ]}
-                </div>
-
-                <div class="col-md-3">
-                    {[ "type": "select", "name": "iva['.$key.']", "values": '.json_encode('query='.$query).', "required": 1, "label": "'.tr('Aliquota IVA').'" ]}
-                </div>
-
-                <div class="col-md-3">
-                    {[ "type": "select", "name": "selezione_riferimento['.$key.']", "ajax-source": "riferimenti-fe", "select-options": '.json_encode(['id_anagrafica' => $anagrafica ? $anagrafica->id : '']).', "label": "'.tr('Riferimento').'", "icon-after": '.json_encode('<button type="button" onclick="rimuoviRiferimento(this)" class="btn btn-primary disabled" id="rimuovi_riferimento_'.$key.'"><i class="fa fa-close"></i></button>').' ]}
-                </div>
             </td>
         </tr>';
     }
@@ -465,13 +502,21 @@ echo '
 </form>
 
 <script>
+input("crea_articoli").on("change", function (){
+    if (input("crea_articoli").get()) {
+        $(".articolo-warning").removeClass("hidden");
+    } else {
+        $(".articolo-warning").addClass("hidden");
+    }
+});
+
  $("select[name^=selezione_riferimento").change(function() {
     let $this = $(this);
     let data = $this.selectData();
 
     if (data) {
         let riga = $this.closest("tr").prev();
-        selezionaRiferimento(riga, data.tipo, data.id);
+        selezionaRiferimento(riga, data.tipo, data.id, data.dir);
     }
 });
 
@@ -487,7 +532,7 @@ function rimuoviRiferimento(button) {
     riga.removeClass("success").removeClass("warning");
 }
 
-function selezionaRiferimento(riga, tipo_documento, id_documento) {
+function selezionaRiferimento(riga, tipo_documento, id_documento, dir) {
     let id_riga = riga.data("id");
     let qta = riga.data("qta");
 
@@ -501,6 +546,7 @@ function selezionaRiferimento(riga, tipo_documento, id_documento) {
         tipo_documento: tipo_documento,
         righe_ddt: riferimenti.ddt,
         righe_ordini: riferimenti.ordini,
+        dir: dir,
     };
 
     let url = "'.$structure->fileurl('riferimento.php').'?" + $.param(query);
@@ -562,7 +608,14 @@ function impostaRiferimento(id_riga, documento, riga) {
     impostaContenuto(riga_fe.data("iva_percentuale"), riga.iva_percentuale, "%", "#riferimento_" + id_riga + "_iva");
 
     $("#riferimento_" + id_riga).html(documento.descrizione ? documento.descrizione : "");
-    $("#riferimento_" + id_riga + "_descrizione").html(riga.descrizione ? riga.descrizione : "");
+
+    var descrizione = riga.descrizione;
+    console.log(descrizione);
+    if(typeof descrizione !== "undefined"){
+        descrizione = descrizione.replace(/_/g, " ");
+    }
+
+    $("#riferimento_" + id_riga + "_descrizione").html(descrizione ? descrizione : "");
 
     // Colorazione dell\'intera riga
     let warnings = riga_fe.find(".text-warning");
@@ -595,4 +648,32 @@ function impostaContenuto(valore_riga, valore_riferimento, contenuto_successivo,
 
     elemento.html("<br>" + contenuto);
 }
+
+function impostaRiferimentoVendita(id_riga, documento, riga) {
+    // Informazioni interne per il riferimento
+    $("#tipo_riferimento_vendita_" + id_riga).val(documento.tipo);
+    $("#id_riferimento_vendita_" + id_riga).val(documento.id);
+    $("#tipo_riga_riferimento_vendita_" + id_riga).val(riga.tipo);
+    $("#id_riga_riferimento_vendita_" + id_riga).val(riga.id);
+
+    // Gestione della selezione
+    input("selezione_riferimento_vendita[" + id_riga + "]").disable();
+    $("#rimuovi_riferimento_vendita_" + id_riga).removeClass("disabled");
+}
+
+function rimuoviRiferimentoVendita(button) {
+    let riga = $(button).closest("tr").prev();
+    let id_riga = riga.data("id");
+
+    impostaRiferimentoVendita(id_riga, {}, {});
+
+    input("selezione_riferimento_vendita[" + id_riga + "]").enable()
+        .getElement().selectReset();
+    $(button).addClass("disabled");
+    riga.removeClass("success").removeClass("warning");
+}
+
+$("[id^=\'articoli\']").change(function() {
+    updateSelectOption("id_articolo", $(this).val());
+});
 </script>';

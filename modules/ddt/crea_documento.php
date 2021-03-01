@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,15 +20,25 @@
 include_once __DIR__.'/../../core.php';
 
 use Modules\DDT\DDT;
-use Modules\Fatture\Fattura;
 
 $documento = DDT::find($id_record);
 
 $module = Modules::get($id_module);
-
-$final_module = $module['name'] == 'Ddt di vendita' ? 'Fatture di vendita' : 'Fatture di acquisto';
-$dir = $module['name'] == 'Ddt di vendita' ? 'entrata' : 'uscita';
-$tipo_documento_finale = Fattura::class;
+if ($documento->reversed) {
+    if ($module['name'] == 'Ddt di vendita') {
+        $final_module = 'Fatture di acquisto';
+        $dir = 'uscita';
+    } else {
+        $final_module = 'Fatture di vendita';
+        $dir = 'entrata';
+    }
+} elseif ($module['name'] == 'Ddt di vendita') {
+    $final_module = 'Fatture di vendita';
+    $dir = 'entrata';
+} else {
+    $final_module = 'Fatture di acquisto';
+    $dir = 'uscita';
+}
 
 $options = [
     'op' => 'add_documento',
@@ -40,6 +50,7 @@ $options = [
     'create_document' => true,
     'documento' => $documento,
     'tipo_documento_finale' => $tipo_documento_finale,
+    'reversed' => $documento->reversed,
 ];
 
 echo App::load('importa.php', [], $options, true);

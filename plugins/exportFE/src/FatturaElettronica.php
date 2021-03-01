@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ use GuzzleHttp\Client;
 use Modules;
 use Modules\Anagrafiche\Anagrafica;
 use Modules\Fatture\Fattura;
+use Modules\Fatture\Gestori\Bollo;
 use Prints;
 use Translator;
 use UnexpectedValueException;
@@ -163,17 +164,37 @@ class FatturaElettronica
             $documento = $this->getDocumento();
             $database = database();
 
-            $ordini = $database->fetchArray('SELECT `id_documento_fe` AS id_documento, `num_item`, `codice_cig`, `codice_cup` FROM `or_ordini` INNER JOIN `co_righe_documenti` ON `co_righe_documenti`.`idordine` = `or_ordini`.`id` WHERE `co_righe_documenti`.`iddocumento` = '.prepare($documento['id']).' AND `id_documento_fe` IS NOT NULL AND `co_righe_documenti`.`idddt` = 0');
-
-            $ddt = $database->fetchArray('SELECT `id_documento_fe` AS id_documento, `num_item`, `codice_cig`, `codice_cup` FROM `dt_ddt` INNER JOIN `co_righe_documenti` ON `co_righe_documenti`.`idddt` = `dt_ddt`.`id` WHERE `co_righe_documenti`.`iddocumento` = '.prepare($documento['id']).' AND `id_documento_fe` IS NOT NULL');
+            $ordini = $database->fetchArray('SELECT `or_ordini`.`numero_cliente` AS id_documento, `or_ordini`.`num_item`, `or_ordini`.`codice_cig`, `or_ordini`.`codice_cup`, `or_ordini`.`codice_commessa`, `or_ordini`.`data_cliente`, `co_righe_documenti`.`order` AS riferimento_linea FROM `or_ordini` INNER JOIN `co_righe_documenti` ON `co_righe_documenti`.`idordine` = `or_ordini`.`id` WHERE `co_righe_documenti`.`iddocumento` = '.prepare($documento['id']));
 
             $dati_aggiuntivi = $documento->dati_aggiuntivi_fe;
             $dati = $dati_aggiuntivi['dati_ordine'] ?: [];
 
-            $this->ordini = array_merge($ordini, $ddt, $dati);
+            $this->ordini = array_merge($ordini, $dati);
         }
 
         return $this->ordini;
+    }
+
+    /**
+     * Restituisce i ddt collegati al documento.
+     *
+     * @return array
+     */
+    public function getDDT()
+    {
+        if (empty($this->ddt)) {
+            $documento = $this->getDocumento();
+            $database = database();
+
+            $ddt = $database->fetchArray('SELECT `dt_ddt`.`numero_esterno` AS id_documento, `co_righe_documenti`.`order` AS riferimento_linea, `dt_ddt`.`data` FROM `dt_ddt` INNER JOIN `co_righe_documenti` ON `co_righe_documenti`.`idddt` = `dt_ddt`.`id` WHERE `co_righe_documenti`.`iddocumento` = '.prepare($documento['id']));
+
+            $dati_aggiuntivi = $documento->dati_aggiuntivi_fe;
+            $dati = $dati_aggiuntivi['dati_ddt'] ?: [];
+
+            $this->ddt = array_merge($ddt, $dati);
+        }
+
+        return $this->ddt;
     }
 
     /**
@@ -704,7 +725,7 @@ class FatturaElettronica
     {
         $result = [
             'Indirizzo' => $anagrafica['indirizzo'],
-            'CAP' => ($anagrafica->nazione->iso2 == 'IT') ? $anagrafica['cap'] : '00000',
+            'CAP' => ($anagrafica->nazione->iso2 == 'IT') ? $anagrafica['cap'] : '99999',
             'Comune' => $anagrafica['citta'],
         ];
 
@@ -881,7 +902,7 @@ class FatturaElettronica
             // Con la nuova versione in vigore dal 01/01/2021, questo nodo diventa ripetibile.
             $result['DatiRitenuta'] = [
                 'TipoRitenuta' => (Validate::isValidTaxCode($azienda['codice_fiscale']) and $cliente['tipo'] == 'Privato') ? 'RT01' : 'RT02',
-                'ImportoRitenuta' => $totale_ritenutaacconto,
+                'ImportoRitenuta' => $documento->isNota() ? -$totale_ritenutaacconto : $totale_ritenutaacconto,
                 'AliquotaRitenuta' => $percentuale,
                 'CausalePagamento' => setting("Causale ritenuta d'acconto"),
             ];
@@ -890,11 +911,10 @@ class FatturaElettronica
         // Bollo (2.1.1.6)
         // ImportoBollo --> con la nuova versione in vigore dal 01/01/2021, la compilazione di questo nodo è diventata facoltativa.
         // considerato che l'importo è noto e può essere solo di 2,00 Euro.
-        $riga_bollo = $documento->rigaBollo;
-        if (!empty($riga_bollo)) {
+        $bollo = new Bollo($documento);
+        if (!empty($bollo->getBollo())) {
             $result['DatiBollo'] = [
                 'BolloVirtuale' => 'SI',
-                //'ImportoBollo' => $riga_bollo->totale,
             ];
         }
 
@@ -906,8 +926,8 @@ class FatturaElettronica
             $dati_cassa = [
                 'TipoCassa' => setting('Tipo Cassa Previdenziale'),
                 'AlCassa' => $percentuale,
-                'ImportoContributoCassa' => $totale_rivalsainps,
-                'ImponibileCassa' => $documento->imponibile,
+                'ImportoContributoCassa' => $documento->isNota() ? -$totale_rivalsainps : $totale_rivalsainps,
+                'ImponibileCassa' => $documento->isNota() ? -$documento->imponibile : $documento->imponibile,
                 'AliquotaIVA' => $iva['percentuale'],
             ];
 
@@ -925,16 +945,40 @@ class FatturaElettronica
         }
 
         // Sconto / Maggiorazione (2.1.1.8)
+        $sconti_maggiorazioni = [];
+        $sconto_finale = $documento->getScontoFinale();
+        if (!empty($sconto_finale)) {
+            $sconto = [
+                'Tipo' => 'SC',
+            ];
+
+            if (!empty($documento->sconto_finale_percentuale)) {
+                $sconto['Percentuale'] = $documento->sconto_finale_percentuale;
+            } else {
+                $sconto['Importo'] = $documento->sconto_finale;
+            }
+
+            $sconti_maggiorazioni[] = $sconto;
+        }
+
         if (!empty($documento->dati_aggiuntivi_fe['sconto_maggiorazione_tipo'])) {
-            $result['ScontoMaggiorazione']['Tipo'] = $documento->dati_aggiuntivi_fe['sconto_maggiorazione_tipo'];
+            $sconto = [
+                'Tipo' => $documento->dati_aggiuntivi_fe['sconto_maggiorazione_tipo'],
+            ];
+
+            if (!empty($documento->dati_aggiuntivi_fe['sconto_maggiorazione_percentuale'])) {
+                $sconto['Percentuale'] = $documento->dati_aggiuntivi_fe['sconto_maggiorazione_percentuale'];
+            }
+
+            if (!empty($documento->dati_aggiuntivi_fe['sconto_maggiorazione_importo'])) {
+                $sconto['Importo'] = $documento->dati_aggiuntivi_fe['sconto_maggiorazione_importo'];
+            }
+
+            $sconti_maggiorazioni[] = $sconto;
         }
 
-        if (!empty($documento->dati_aggiuntivi_fe['sconto_maggiorazione_percentuale'])) {
-            $result['ScontoMaggiorazione']['Percentuale'] = $documento->dati_aggiuntivi_fe['sconto_maggiorazione_percentuale'];
-        }
-
-        if (!empty($documento->dati_aggiuntivi_fe['sconto_maggiorazione_importo'])) {
-            $result['ScontoMaggiorazione']['Importo'] = $documento->dati_aggiuntivi_fe['sconto_maggiorazione_importo'];
+        if (!empty($sconti_maggiorazioni)) {
+            $result['ScontoMaggiorazione'] = $sconti_maggiorazioni;
         }
 
         // Importo Totale Documento (2.1.1.9)
@@ -1015,11 +1059,7 @@ class FatturaElettronica
 
             $dati = [];
 
-            foreach ($element['riferimento_linea'] as $linea) {
-                $dati[] = [
-                    'RiferimentoNumeroLinea' => $linea,
-                ];
-            }
+            $dati['RiferimentoNumeroLinea'] = $element['riferimento_linea'];
 
             $dati['IdDocumento'] = $element['id_documento'];
 
@@ -1042,6 +1082,36 @@ class FatturaElettronica
             if (!empty($element['codice_cig'])) {
                 $dati['CodiceCIG'] = $element['codice_cig'];
             }
+            $result[] = $dati;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Restituisce l'array responsabile per la generazione del tag DatiDdt.
+     *
+     * @return array
+     */
+    protected static function getDatiDDT($fattura)
+    {
+        $ddt = $fattura->getDDT();
+
+        $result = [];
+        foreach ($ddt as $element) {
+            if (empty($element['id_documento'])) {
+                continue;
+            }
+
+            $dati = [];
+
+            $dati['NumeroDDT'] = $element['id_documento'];
+
+            if (!empty($element['data'])) {
+                $dati['DataDDT'] = $element['data'];
+            }
+
+            $dati['RiferimentoNumeroLinea'] = $element['riferimento_linea'];
             $result[] = $dati;
         }
 
@@ -1176,6 +1246,18 @@ class FatturaElettronica
             }
         }
 
+        // Controllo le le righe per la fatturazione di contratti
+        $dati_ddt = static::getDatiDDT($fattura);
+        if (!empty($dati_ddt)) {
+            foreach ($dati_ddt as $dato) {
+                if (!empty($dato)) {
+                    $result[] = [
+                        'DatiDDT' => $dato,
+                    ];
+                }
+            }
+        }
+
         if ($documento->tipo->descrizione == 'Fattura accompagnatoria di vendita') {
             $result['DatiTrasporto'] = static::getDatiTrasporto($fattura);
         }
@@ -1207,13 +1289,11 @@ class FatturaElettronica
             return $item->aliquota != null;
         })->aliquota;
 
-        $numero = 1;
-
         foreach ($righe as $idx => $riga) {
             $dati_aggiuntivi = $riga->dati_aggiuntivi_fe;
 
             $dettaglio = [
-                'NumeroLinea' => $numero++,
+                'NumeroLinea' => $riga['order'],
             ];
 
             // 2.2.1.2

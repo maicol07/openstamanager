@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ use API\Interfaces\UpdateInterface;
 use API\Resource;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Collection;
 
 /**
  * Risorsa di base per la gestione delle operazioni standard di comunicazione con l'applicazione.
@@ -142,7 +143,7 @@ abstract class AppResource extends Resource implements RetrieveInterface, Create
      *
      * @param string $last_sync_at
      *
-     * @return array
+     * @return array<number, array>
      */
     abstract public function getModifiedRecords($last_sync_at);
 
@@ -188,6 +189,28 @@ abstract class AppResource extends Resource implements RetrieveInterface, Create
      */
     public function deleteRecord($id)
     {
+    }
+
+    /**
+     * Genera la mappatura id => updated_at necessaria per la gestione dei record modificati.
+     *
+     * @param $records
+     *
+     * @return array[]
+     */
+    protected function mapModifiedRecords($records)
+    {
+        if ($records instanceof Collection) {
+            return $records->mapToGroups(function ($item, $key) {
+                return [$item['id'] => $item];
+            })->toArray();
+        }
+
+        return array_reduce($records, function ($accumulator, $item) {
+            $accumulator[$item['id']] = $item;
+
+            return $accumulator;
+        }) ?: [];
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ namespace Plugins\ReceiptFE;
 
 use Hooks\Manager;
 use Models\Cache;
+use Modules;
 
 class ReceiptHook extends Manager
 {
@@ -101,10 +102,13 @@ class ReceiptHook extends Manager
         $notify = $total_number != 0;
         $color = $total_number == $completed_number ? 'success' : 'yellow';
 
+        $module = Modules::get('Fatture di vendita');
+
         return [
             'icon' => 'fa fa-ticket text-'.$color,
             'message' => $message,
             'show' => $notify,
+            'link' => base_path().'/controller.php?id_module='.$module->id,
         ];
     }
 }

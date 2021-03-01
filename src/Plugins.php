@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -135,7 +135,7 @@ class Plugins
         if (!empty($plugin) && in_array($plugin->permission, ['r', 'rw'])) {
             $anchor = 'tab_'.$plugin->id;
 
-            return Modules::link($plugin->originalModule->id, $id_record, $testo, $alternativo, $extra, $blank, $anchor);
+            return Modules::link($plugin->module->id, $id_record, $testo, $alternativo, $extra, $blank, $anchor);
         }
 
         return $alternativo;

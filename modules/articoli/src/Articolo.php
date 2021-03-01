@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -102,7 +102,7 @@ class Articolo extends Model
         }
 
         // Movimento il magazzino solo se l'articolo non è un servizio
-        if ($this->servizio == 0) {
+        if (empty($this->servizio)) {
             // Registrazione della movimentazione
             database()->insert('mg_movimenti', array_merge($array, [
                 'idarticolo' => $this->id,
@@ -204,14 +204,13 @@ class Articolo extends Model
     {
         return $this->movimenti()
             ->select(
-                'idsede_azienda',
+                'idsede',
                 database()->raw('SUM(qta) AS qta')
-            )->groupBy(['idsede_azienda'])
+            )->groupBy(['idsede'])
             ->get()
             ->mapToGroups(function ($item, $key) {
-                return [$item->idsede_azienda => (float) $item->attributes['qta']];
+                return [$item->idsede => (float) $item->attributes['qta']];
             })
-            ->flatten()
             ->toArray();
     }
 

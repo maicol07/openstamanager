@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,18 @@ include_once __DIR__.'/../../core.php';
 
 $block_edit = $record['flag_completato'];
 $module_anagrafiche = Modules::get('Anagrafiche');
+
+// Verifica aggiuntive sulla sequenzialità dei numeri
+$numero_previsto = verifica_numero_intervento($intervento);
+if (!empty($numero_previsto)) {
+    echo '
+<div class="alert alert-warning">
+    <i class="fa fa-warning"></i> '.tr("E' assente una attività di numero _NUM_ in data precedente o corrispondente a _DATE_: si potrebbero verificare dei problemi con la numerazione corrente delle attività", [
+            '_DATE_' => dateFormat($intervento->data_richiesta),
+            '_NUM_' => '"'.$numero_previsto.'"',
+        ]).'.</b>
+</div>';
+}
 
 echo '
 <form action="" method="post" id="edit-form">
@@ -91,6 +103,22 @@ echo '
                             <input type="hidden" name="idcontratto_riga" value="'.$idcontratto_riga.'">
                         </div>
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-6">';
+
+                    $idcontratto_riga = $dbo->fetchOne('SELECT id FROM co_promemoria WHERE idintervento='.prepare($id_record))['id'];
+
+                    if (!empty($record['idordine'])) {
+                        echo '
+                            '.Modules::link('Ordini cliente', $record['idordine'], null, null, 'class="pull-right"');
+                    }
+                    echo '
+
+                            {[ "type": "select", "label": "'.tr('Ordine').'", "name": "idordine", "value": "'.$record['id_ordine'].'", "ajax-source": "ordini-cliente", "select-options": '.json_encode(['idanagrafica' => $record['idanagrafica']]).', "readonly": "'.$record['flag_completato'].'" ]}
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>';
@@ -118,7 +146,7 @@ $map_load_message = '<p>'.tr('Clicca per visualizzare').'</p>';
 if (empty($google)) {
     echo '
                         <div class="alert alert-info">
-                            '.Modules::link('Impostazioni', $dbo->fetchOne("SELECT `id` FROM `zz_settings` WHERE nome='Google Maps API key'")['id'], tr('Per abilitare la visualizzazione delle anagrafiche nella mappa, inserire la Google Maps API Key nella scheda Impostazioni')).'.
+                            '.Modules::link('Impostazioni', null, tr('Per abilitare la visualizzazione delle anagrafiche nella mappa, inserire la Google Maps API Key nella scheda Impostazioni'), true, null, true, null, '&search=Google Maps API key').'.
                         </div>';
 } elseif (!empty($sede_cliente->gaddress) || (!empty($sede_cliente->lat) && !empty($sede_cliente->lng))) {
     echo '
@@ -242,7 +270,7 @@ echo '
             <!-- RIGA 3 -->
             <div class="row">
                 <div class="col-md-3">
-                    {[ "type": "span", "label": "<?php echo tr('Numero'); ?>", "name": "codice", "value": "$codice$", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
+                    {[ "type": "text", "label": "<?php echo tr('Numero'); ?>", "name": "codice", "value": "$codice$", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
                 </div>
 
                 <div class="col-md-3">
@@ -283,7 +311,7 @@ echo '
             <!-- RIGA 5 -->
             <div class="row">
                 <div class="col-md-12">
-                    {[ "type": "textarea", "label": "<?php echo tr('Richiesta'); ?>", "name": "richiesta", "required": 1, "class": "autosize", "value": "$richiesta$", "extra": "rows='5'", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
+                    {[ "type": "ckeditor", "label": "<?php echo tr('Richiesta'); ?>", "name": "richiesta", "required": 1, "class": "autosize", "value": "$richiesta$", "extra": "rows='5'", "readonly": "<?php echo $record['flag_completato']; ?>" ]}
                 </div>
 
                 <div class="col-md-12">
@@ -559,59 +587,103 @@ $(document).ready(function() {
     caricaCosti();
 });
 
-$("#idanagrafica").change(function () {
-    updateSelectOption("idanagrafica", $(this).val());
-    session_set("superselect,idanagrafica", $(this).val(), 0);
+    var anagrafica = input("idanagrafica");
+    var sede = input("idsede_destinazione");
+    var contratto = input("idcontratto");
+    var preventivo = input("idpreventivo");
+    var ordine = input("idordine");
 
-    $("#idsede_destinazione").selectReset();
-    $("#idpreventivo").selectReset();
-    $("#idcontratto").selectReset();
+    // Gestione della modifica dell\'anagrafica
+	anagrafica.change(function() {
+        updateSelectOption("idanagrafica", $(this).val());
+        session_set("superselect,idanagrafica", $(this).val(), 0);
 
-    if (($(this).val())) {
-        if (($(this).selectData().idzona)) {
-            $("#idzona").val($(this).selectData().idzona).change();
+        let value = !$(this).val();
+        let placeholder = value ? "'.tr('Seleziona prima un cliente').'" : "'.tr("Seleziona un'opzione").'";
 
-        } else {
-            $("#idzona").val("").change();
+        sede.setDisabled(value)
+            .getElement().selectReset(placeholder);
+
+        preventivo.setDisabled(value)
+            .getElement().selectReset(placeholder);
+
+        contratto.setDisabled(value)
+            .getElement().selectReset(placeholder);
+
+        ordine.setDisabled(value)
+            .getElement().selectReset(placeholder);
+
+        input("idimpianti").setDisabled(value);
+
+        let data = anagrafica.getData();
+		if (data) {
+		    input("idzona").set(data.idzona ? data.idzona : "");
+			// session_set("superselect,idzona", $(this).selectData().idzona, 0);
+
+            // Impostazione del tipo intervento da anagrafica
+            input("idtipointervento").getElement()
+                .selectSetNew(data.idtipointervento, data.idtipointervento_descrizione);
+		}
+	});
+
+    // Gestione della modifica della sede selezionato
+	sede.change(function() {
+        updateSelectOption("idsede_destinazione", $(this).val());
+		session_set("superselect,idsede_destinazione", $(this).val(), 0);
+        input("idimpianti").getElement().selectReset();
+
+        let data = sede.getData();
+		if (data) {
+		    input("idzona").set(data.idzona ? data.idzona : "");
+			// session_set("superselect,idzona", $(this).selectData().idzona, 0);
+		}
+	});
+
+    // Gestione della modifica dell\'ordine selezionato
+	ordine.change(function() {
+		if (ordine.get()) {
+            contratto.getElement().selectReset();
+            preventivo.getElement().selectReset();
         }
-    }
-});
+	});
 
-$("#idpreventivo").change(function () {
-    if ($("#idcontratto").val() && $(this).val()) {
-        $("#idcontratto").val("").trigger("change");
-    }
-});
+    // Gestione della modifica del preventivo selezionato
+	preventivo.change(function() {
+		if (preventivo.get()){
+            contratto.getElement().selectReset();
+            ordine.getElement().selectReset();
 
-$("#idcontratto").change(function () {
-    if ($("#idpreventivo").val() && $(this).val()) {
-        $("#idpreventivo").val("").trigger("change");
-        $("input[name=idcontratto_riga]").val("");
-    }
-});
-
-$("#matricola").change(function () {
-    session_set("superselect,matricola", $(this).val(), 0);
-});
-
-$("#idsede").change(function () {
-    if (($(this).val())) {
-        if (($(this).selectData().idzona)) {
-            $("#idzona").val($(this).selectData().idzona).change();
-        } else {
-            $("#idzona").val("").change();
+            input("idtipointervento").getElement()
+                .selectSetNew($(this).selectData().idtipointervento, $(this).selectData().idtipointervento_descrizione);
         }
-        //session_set("superselect,idzona", $(this).selectData().idzona, 0);
-    }
-});
+	});
 
-$("#codice_cig, #codice_cup").bind("keyup change", function (e) {
-    if ($("#codice_cig").val() == "" && $("#codice_cup").val() == "") {
-        $("#id_documento_fe").prop("required", false);
-    } else {
-        $("#id_documento_fe").prop("required", true);
-    }
-});
+    // Gestione della modifica del contratto selezionato
+	contratto.change(function() {
+		if (contratto.get()){
+            preventivo.getElement().selectReset();
+            ordine.getElement().selectReset();
+
+            $("input[name=idcontratto_riga]").val("");
+        }
+	});
+
+    // Gestione delle modifiche agli impianti selezionati
+	input("idimpianti").change(function() {
+        updateSelectOption("matricola", $(this).val());
+		session_set("superselect,matricola", $(this).val(), 0);
+
+        input("componenti").setDisabled(!$(this).val())
+            .getElement().selectReset();
+	});
+
+    $("#codice_cig, #codice_cup").bind("keyup change", function (e) {
+        if ($("#codice_cig").val() == "" && $("#codice_cup").val() == "") {
+            $("#id_documento_fe").prop("required", false);
+        } else {
+            $("#id_documento_fe").prop("required", true);
+        }
+    });
 </script>';
 
 // Collegamenti diretti

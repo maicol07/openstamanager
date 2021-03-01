@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,11 +58,11 @@ echo '
 
     <div class="row">
 		<div class="col-md-6">
-			{[ "type": "date", "label": "'.tr('Data protocollo').'", "name": "data_protocollo" ]}
+			{[ "type": "date", "label": "'.tr('Data protocollo').'", "name": "data_protocollo", "required": 1 ]}
 		</div>
 
         <div class="col-md-6">
-			{[ "type": "date", "label": "'.tr('Data di emissione').'", "name": "data_emissione" ]}
+			{[ "type": "date", "label": "'.tr('Data di emissione').'", "name": "data_emissione", "required": 1 ]}
 		</div>
 	</div>
 

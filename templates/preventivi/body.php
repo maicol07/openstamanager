@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -321,7 +321,7 @@ if (($options['pricing'] && !isset($options['hide_total'])) || $options['show_on
     </tr>';
 }
 
-echo'
+echo '
 </table>';
 
 // CONDIZIONI GENERALI DI FORNITURA
@@ -386,8 +386,22 @@ echo '
             '.nl2br($documento['esclusioni']).'
         </td>
     </tr>
+
+    <tr>
+        <th>
+            '.tr('Garanzia', [], ['upper' => true]).'
+        </th>
+
+        <td>
+            '.nl2br($documento['garanzia']).'
+        </td>
+    </tr>
 </table>';
 
 // Conclusione
 echo '
 <p class="text-center">'.tr("In attesa di un Vostro Cortese riscontro, colgo l'occasione per porgere Cordiali Saluti").'</p>';
+
+if (!empty($documento->condizioni_fornitura)) {
+    echo '<pagebreak>'.$documento->condizioni_fornitura;
+}

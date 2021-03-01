@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,20 +50,19 @@ if (!$is_cliente) {
 
 $nazione_anagrafica = $anagrafica->sedeLegale->nazione;
 
-
 // Avvisi problemi scheda anagrafica
 $problemi_anagrafica = [];
-if ($is_cliente && empty($record['idconto_cliente'])){
+if ($is_cliente && empty($record['idconto_cliente'])) {
     array_push($problemi_anagrafica, ' Piano dei conti mancante per il cliente');
 }
 
-if ($is_fornitore && empty($record['idconto_fornitore'])){
+if ($is_fornitore && empty($record['idconto_fornitore'])) {
     array_push($problemi_anagrafica, ' Piano dei conti mancante per il fornitore');
 }
 
 if (sizeof($problemi_anagrafica) > 0) {
-    echo '<div class="alert alert-warning"><i class="fa fa-warning"></i> '.tr("Attenzione: _CAMPI_" , [
-    '_CAMPI_' => implode(', ', $problemi_anagrafica)
+    echo '<div class="alert alert-warning"><i class="fa fa-warning"></i> '.tr('Attenzione: _CAMPI_', [
+    '_CAMPI_' => implode(', ', $problemi_anagrafica),
     ]).'</div>';
 }
 
@@ -87,7 +86,7 @@ if (sizeof($problemi_anagrafica) > 0) {
 					</div>
 
 					<div class="col-md-3">
-                        {[ "type": "text", "label": "<?php echo tr('Partita IVA'); ?>", "maxlength": 13, "name": "piva", "class": "text-center alphanumeric-mask text-uppercase", "value": "$piva$", "validation": "partita_iva" ]}
+                        {[ "type": "text", "label": "<?php echo tr('Partita IVA'); ?>", "maxlength": 16, "name": "piva", "class": "text-center alphanumeric-mask text-uppercase", "value": "$piva$", "validation": "partita_iva" ]}
                     </div>
 
 					<div class="col-md-3">
@@ -181,7 +180,7 @@ if (sizeof($problemi_anagrafica) > 0) {
                             </div>
 
                             <div class="col-md-2">
-                                {[ "type": "text", "label": "<?php echo tr('C.A.P.'); ?>", "name": "cap", "maxlength": 5, "class": "text-center", "value": "$cap$" ]}
+                                {[ "type": "text", "label": "<?php echo tr('C.A.P.'); ?>", "name": "cap", "maxlength": 6, "class": "text-center", "value": "$cap$" ]}
                             </div>
 
                         </div>
@@ -251,7 +250,7 @@ $map_load_message = '<p>'.tr('Clicca per visualizzare').'</p>';
 if (empty($google)) {
     echo '
                         <div class="alert alert-info">
-                            '.Modules::link('Impostazioni', $dbo->fetchOne("SELECT `id` FROM `zz_settings` WHERE nome='Google Maps API key'")['id'], tr('Per abilitare la visualizzazione delle anagrafiche nella mappa, inserire la Google Maps API Key nella scheda Impostazioni')).'.
+                            '.Modules::link('Impostazioni', null, tr('Per abilitare la visualizzazione delle anagrafiche nella mappa, inserire la Google Maps API Key nella scheda Impostazioni'), true, null, true, null, '&search=Google Maps API key').'.
                         </div>';
 } elseif (!empty($sede_cliente->gaddress) || (!empty($sede_cliente->lat) && !empty($sede_cliente->lng))) {
     echo '
@@ -450,7 +449,9 @@ if ($is_cliente or $is_fornitore or $is_tecnico) {
                         </div>';
     } else {
         echo '
-                        <p>'.tr("Nessuna banca disponibile per l'Anagrafica").'</p>';
+                        <div class="alert alert-info">
+                            '.tr('Non sono presenti banche per l\'anagrafica').'... '.Modules::link('Banche', null, tr('Creane una')).'
+                        </div>';
     }
 
     echo '
@@ -677,7 +678,7 @@ if ($is_cliente or $is_fornitore or $is_tecnico) {
 
                 <div class="row">
                     <div class="col-md-12">
-                        {[ "type": "checkbox", "label": "<?php echo tr('Opt-out newsletter'); ?>", "name": "disable_newsletter", "value": "<?php echo empty($record['enable_newsletter']); ?>" ]}
+                        {[ "type": "checkbox", "label": "<?php echo tr('Opt-out per newsletter'); ?>", "name": "disable_newsletter", "value": "<?php echo empty($record['enable_newsletter']); ?>" ]}
                     </div>
                 </div>
 			</div>

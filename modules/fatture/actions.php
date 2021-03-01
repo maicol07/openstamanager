@@ -1,7 +1,7 @@
 <?php
 /*
  * OpenSTAManager: il software gestionale open source per l'assistenza tecnica e la fatturazione
- * Copyright (C) DevCode s.n.c.
+ * Copyright (C) DevCode s.r.l.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ include_once __DIR__.'/../../core.php';
 
 use Modules\Anagrafiche\Anagrafica;
 use Modules\Articoli\Articolo as ArticoloOriginale;
+use Modules\DDT\DDT;
 use Modules\Fatture\Components\Articolo;
 use Modules\Fatture\Components\Descrizione;
 use Modules\Fatture\Components\Riga;
@@ -88,6 +89,7 @@ switch (post('op')) {
 
         $fattura->idanagrafica = post('idanagrafica');
         $fattura->idagente = post('idagente');
+        $fattura->idreferente = post('idreferente');
         $fattura->idpagamento = post('idpagamento');
         $fattura->id_banca_azienda = post('id_banca_azienda');
         $fattura->id_banca_controparte = post('id_banca_controparte');
@@ -125,17 +127,24 @@ switch (post('op')) {
         }
 
         // Operazioni sul bollo
-        $fattura->addebita_bollo = post('addebita_bollo');
-        $bollo_automatico = post('bollo_automatico');
-        if (empty($bollo_automatico)) {
-            $fattura->bollo = post('bollo');
-        } else {
-            $fattura->bollo = null;
+        if ($dir == 'entrata') {
+            $fattura->addebita_bollo = post('addebita_bollo');
+            $bollo_automatico = post('bollo_automatico');
+            if (empty($bollo_automatico)) {
+                $fattura->bollo = post('bollo');
+            } else {
+                $fattura->bollo = null;
+            }
         }
 
         // Operazioni sulla dichiarazione d'intento
         $dichiarazione_precedente = $fattura->dichiarazione;
         $fattura->id_dichiarazione_intento = post('id_dichiarazione_intento') ?: null;
+
+        // Flag pagamento ritenuta
+        $fattura->is_ritenuta_pagata = post('is_ritenuta_pagata') ?: 0;
+
+        $fattura->setScontoFinale(post('sconto_finale'), post('tipo_sconto_finale'));
 
         $fattura->save();
 
@@ -248,8 +257,6 @@ switch (post('op')) {
                 } else {
                     $totale_documento = $totale_documento_indicato;
                 }
-
-                $totale_documento = $fattura->isNota() ? -$totale_documento : $totale_documento;
             }
         } catch (Exception $e) {
         }
@@ -300,18 +307,8 @@ switch (post('op')) {
 
     // Duplicazione fattura
     case 'copy':
-        $stato = Stato::where('descrizione', 'Bozza')->first();
-
         $new = $fattura->replicate();
         $new->numero = Fattura::getNextNumero($new->data, $new->direzione, $new->id_segment);
-        if (!empty($fattura->numero_esterno)) {
-            $new->numero_esterno = Fattura::getNextNumeroSecondario($new->data, $new->direzione, $new->id_segment);
-        }
-
-        $new->codice_stato_fe = null;
-        $new->progressivo_invio = null;
-        $new->data_stato_fe = null;
-        $new->stato()->associate($stato);
         $new->save();
 
         $id_record = $new->id;
@@ -321,16 +318,12 @@ switch (post('op')) {
             $new_riga = $riga->replicate();
             $new_riga->setDocument($new);
 
-            // Rimozione riferimenti (deorecati)
+            // Rimozione riferimenti (deprecati)
             $new_riga->idpreventivo = 0;
             $new_riga->idcontratto = 0;
             $new_riga->idintervento = 0;
             $new_riga->idddt = 0;
             $new_riga->idordine = 0;
-
-            $new_riga->qta_evasa = 0;
-            $new_riga->original_type = null;
-            $new_riga->original_id = null;
             $new_riga->save();
 
             if ($new_riga->isArticolo()) {
@@ -449,11 +442,6 @@ switch (post('op')) {
                 $id_conto = $originale->idconto_acquisto;
             }
 
-            // Inversione quantità per Note
-            if (!empty($record['is_reversed'])) {
-                $qta = -$qta;
-            }
-
             // Creazione articolo
             $originale = ArticoloOriginale::find($id_articolo);
             $articolo = Articolo::build($fattura, $originale);
@@ -484,10 +472,6 @@ switch (post('op')) {
         }
 
         $qta = post('qta');
-        // Inversione quantità per Note
-        if (!empty($record['is_reversed'])) {
-            $qta = -$qta;
-        }
 
         $articolo->descrizione = post('descrizione');
         $articolo->um = post('um') ?: null;
@@ -667,7 +651,7 @@ switch (post('op')) {
         $order = explode(',', post('order', true));
 
         foreach ($order as $i => $id_riga) {
-            $dbo->query('UPDATE `co_righe_documenti` SET `order` = '.prepare($i).' WHERE id='.prepare($id_riga));
+            $dbo->query('UPDATE `co_righe_documenti` SET `order` = '.prepare($i + 1).' WHERE id='.prepare($id_riga));
         }
 
         break;
@@ -676,6 +660,7 @@ switch (post('op')) {
     case 'add_documento':
         $class = post('class');
         $id_documento = post('id_documento');
+        $reversed = post('reversed');
 
         // Individuazione del documento originale
         if (!is_subclass_of($class, \Common\Document::class)) {
@@ -691,7 +676,17 @@ switch (post('op')) {
         // Creazione della fattura al volo
         if (post('create_document') == 'on') {
             $descrizione = ($documento->direzione == 'entrata') ? 'Fattura immediata di vendita' : 'Fattura immediata di acquisto';
-            $tipo = Tipo::where('descrizione', $descrizione)->first();
+
+            // Fattura differita in caso di importazione da DDT
+            if ($documento instanceof DDT) {
+                $descrizione = ($documento->direzione == 'entrata') ? 'Fattura differita di vendita' : 'Fattura differita di acquisto';
+            }
+
+            if ($reversed) {
+                $tipo = Tipo::where('descrizione', 'Nota di credito')->where('dir', '!=', $documento->direzione)->first();
+            } else {
+                $tipo = Tipo::where('descrizione', $descrizione)->first();
+            }
 
             $fattura = Fattura::build($documento->anagrafica, $tipo, post('data'), post('id_segment'));
 
@@ -777,7 +772,7 @@ switch (post('op')) {
             if (post('evadere')[$riga->id] == 'on' and !empty(post('qta_da_evadere')[$riga->id])) {
                 $qta = post('qta_da_evadere')[$riga->id];
 
-                $copia = $riga->copiaIn($nota, -$qta);
+                $copia = $riga->copiaIn($nota, $qta);
                 $copia->ref_riga_documento = $riga->id;
 
                 // Aggiornamento seriali dalla riga dell'ordine
@@ -785,7 +780,6 @@ switch (post('op')) {
                     $serials = is_array(post('serial')[$riga->id]) ? post('serial')[$riga->id] : [];
 
                     $copia->serials = $serials;
-                    $riga->removeSerials($serials);
                 }
 
                 $copia->save();
