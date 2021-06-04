@@ -39,9 +39,21 @@ if (!empty($id_record)) {
     ]);
     Util\Query::setSegments(true);
 }
-// Replace automatico del campo deleted_at se non specifico a una tabella
-if (!string_contains($query, '.`deleted_at`') && !string_contains($query, '.deleted_at')) {
-    $query = str_replace(['AND `deleted_at` IS NULL', '`deleted_at` IS NULL AND', '`deleted_at` IS NULL', 'AND deleted_at IS NULL', 'deleted_at IS NULL AND', 'deleted_at IS NULL'], '', $query);
+// Rimozione della condizione deleted_at IS NULL per visualizzare anche i record eliminati
+if (preg_match('/[`]*([a-z0-9_]*)[`]*[\.]*([`]*deleted_at[`]* IS NULL)/i', $query, $m)) {
+    $conditions_to_remove = [];
+
+    $condition = trim($m[0]);
+
+    if (!empty($table_name)) {
+        $condition = $table_name.'.'.$condition;
+    }
+
+    $conditions_to_remove[] = ' AND '.$condition;
+    $conditions_to_remove[] = $condition.' AND ';
+
+    $query = str_replace($conditions_to_remove, '', $query);
+    $query = str_replace($condition, '', $query);
 }
 
 $has_access = !empty($query) ? $dbo->fetchNum($query) !== 0 : true;
@@ -155,7 +167,7 @@ if (empty($record) || !$has_access) {
 
 		<script>
             $(document).ready(function(){
-                $("#restore").click(function(){
+                $("#restore, #restore-close").click(function(){
                     $("input[name=op]").attr("value", "restore");
                     $("#submit").trigger("click");
                 })
@@ -171,13 +183,25 @@ if (empty($record) || !$has_access) {
                         </a>
 
                         <div class="pull-right">
-                            {( "name": "button", "type": "print", "id_module": "'.$id_module.'", "id_record": "'.$id_record.'" )}
+                            {( "name": "button", "type": "print", "id_module": "'.$id_module.'", "id_plugin": "'.$id_plugin.'", "id_record": "'.$id_record.'" )}
 
-                            {( "name": "button", "type": "email", "id_module": "'.$id_module.'", "id_record": "'.$id_record.'" )}
+                            {( "name": "button", "type": "email", "id_module": "'.$id_module.'", "id_plugin": "'.$id_plugin.'", "id_record": "'.$id_record.'" )}
 
-                            <a class="btn btn-success" id="'.(!empty($record['deleted_at']) ? 'restore' : 'save').'">
-                                <i class="fa fa-'.(!empty($record['deleted_at']) ? 'undo' : 'check').'"></i> '.(!empty($record['deleted_at']) ? tr('Salva e Ripristina') : tr('Salva')).'
-                            </a>
+                            <div class="btn-group" id="save-buttons">
+                                <a class="btn btn-success" id="'.(!empty($record['deleted_at']) ? 'restore' : 'save').'">
+                                    <i class="fa fa-'.(!empty($record['deleted_at']) ? 'undo' : 'check').'"></i> '.(!empty($record['deleted_at']) ? tr('Salva e ripristina') : tr('Salva')).'
+                                </a>
+                                <a type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <span class="caret"></span>
+                                    <span class="sr-only">Toggle Dropdown</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    <li><a href="#" id="'.(!empty($record['deleted_at']) ? 'restore' : 'save').'-close">
+                                        <i class="fa fa-'.(!empty($record['deleted_at']) ? 'undo' : 'check-square-o').'"></i>
+                                         '.(!empty($record['deleted_at']) ? tr('Ripristina e chiudi') : tr('Salva e chiudi')).'
+                                    </a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -191,6 +215,11 @@ if (empty($record) || !$has_access) {
                         $("#save").click(function(){
                             //submitAjax(form);
 
+                            $("#submit").trigger("click");
+                        });
+
+                        $("#save-close").on("click", function (){
+                            form.find("[name=backto]").val("record-list");
                             $("#submit").trigger("click");
                         });';
 
@@ -244,7 +273,10 @@ if (empty($record) || !$has_access) {
 
                     <div id="module-edit">';
 
-    include $structure->getEditFile();
+    $path = $structure->getEditFile();
+    if (!empty($path)) {
+        include $path;
+    }
 
     echo '
                     </div>
@@ -309,7 +341,7 @@ if (empty($record) || !$has_access) {
         echo '
                 <div id="tab_info" class="tab-pane">';
 
-        $operations = $dbo->fetchArray('SELECT `zz_operations`.*, `zz_users`.`username` FROM `zz_operations` JOIN `zz_users` ON `zz_operations`.`id_utente` = `zz_users`.`id` WHERE id_module = '.prepare($id_module).' AND id_record = '.prepare($id_record).' ORDER BY `created_at` ASC LIMIT 200');
+        $operations = $dbo->fetchArray('SELECT `zz_operations`.*, `zz_users`.`username` FROM `zz_operations` JOIN `zz_users` ON `zz_operations`.`id_utente` = `zz_users`.`id` WHERE id_module = '.prepare($id_module).' AND id_record = '.prepare($id_record).' ORDER BY `created_at` DESC LIMIT 200');
 
         if (!empty($operations)) {
             echo '

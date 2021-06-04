@@ -23,6 +23,7 @@ use Auth;
 use Common\Components\Component;
 use Common\Document;
 use Modules\Anagrafiche\Anagrafica;
+use Modules\Fatture\Fattura;
 use Traits\RecordTrait;
 use Traits\ReferenceTrait;
 use Util\Generator;
@@ -38,6 +39,9 @@ class DDT extends Document
         'bollo' => 'float',
         'peso' => 'float',
         'volume' => 'float',
+
+        'sconto_finale' => 'float',
+        'sconto_finale_percentuale' => 'float',
     ];
 
     protected $with = [
@@ -125,12 +129,15 @@ class DDT extends Document
 
     public function isImportabile()
     {
-        $stati_non_importabili = ['Bozza', 'Fatturato'];
-
         $database = database();
+        $stati = $database->fetchArray('SELECT descrizione FROM `dt_statiddt` WHERE `is_fatturabile` = 1');
+        foreach ($stati as $stato) {
+            $stati_importabili[] = $stato['descrizione'];
+        }
+
         $causale = $database->fetchOne('SELECT * FROM `dt_causalet` WHERE `id` = '.prepare($this->idcausalet));
 
-        return $causale['is_importabile'] && !in_array($this->stato->descrizione, $stati_non_importabili);
+        return $causale['is_importabile'] && in_array($this->stato->descrizione, $stati_importabili);
     }
 
     public function getReversedAttribute()
@@ -218,16 +225,24 @@ class DDT extends Document
 
         if (setting('Cambia automaticamente stato ddt fatturati')) {
             $righe = $this->getRighe();
-
-            $qta_evasa = $righe->sum('qta_evasa');
             $qta = $righe->sum('qta');
+            $qta_evasa = $righe->sum('qta_evasa');
             $parziale = $qta != $qta_evasa;
+
+            $fattura = Fattura::find($trigger->iddocumento);
+            if (!empty($fattura)) {
+                $righe_fatturate = $fattura->getRighe()->where('idddt', '=', $this->id);
+                $qta_fatturate = $righe_fatturate->sum('qta');
+                $parziale_fatturato = $qta != $qta_fatturate;
+            }
 
             // Impostazione del nuovo stato
             if ($qta_evasa == 0) {
                 $descrizione = 'Bozza';
+            } elseif (empty($qta_fatturate)) {
+                $descrizione = $parziale ? 'Parzialmente evaso' : 'Evaso';
             } else {
-                $descrizione = $parziale ? 'Parzialmente fatturato' : 'Fatturato';
+                $descrizione = $parziale_fatturato ? 'Parzialmente fatturato' : 'Fatturato';
             }
 
             $stato = Stato::where('descrizione', $descrizione)->first();

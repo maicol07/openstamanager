@@ -23,6 +23,7 @@ use Modules\Fatture\Fattura;
 use Modules\Fatture\Stato;
 use Modules\Fatture\Tipo;
 use Modules\Preventivi\Preventivo;
+use Modules\Articoli\Articolo as ArticoloOriginale;
 
 $module_fatture = 'Fatture di vendita';
 
@@ -48,6 +49,7 @@ switch (post('op')) {
 
         $data = date('Y-m-d');
         $id_segment = post('id_segment');
+        $idconto = setting('Conto predefinito fatture di vendita');
 
         // Lettura righe selezionate
         foreach ($id_records as $id) {
@@ -92,9 +94,11 @@ switch (post('op')) {
                     $qta = $riga->qta_rimanente;
 
                     if ($qta > 0) {
-                        //Fix per idconto righe fattura
-                        $riga->idconto = $fattura->idconto;
                         $copia = $riga->copiaIn($fattura, $qta);
+
+                        //Fix per idconto righe fattura
+                        $articolo = ArticoloOriginale::find($copia->idarticolo);
+                        $copia->id_conto = ($articolo->idconto_vendita ? $articolo->idconto_vendita : $idconto);
 
                         // Aggiornamento seriali dalla riga dell'ordine
                         if ($copia->isArticolo()) {

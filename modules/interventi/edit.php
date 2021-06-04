@@ -27,7 +27,8 @@ $module_anagrafiche = Modules::get('Anagrafiche');
 
 // Verifica aggiuntive sulla sequenzialità dei numeri
 $numero_previsto = verifica_numero_intervento($intervento);
-if (!empty($numero_previsto)) {
+
+if (!empty($numero_previsto) && intval((setting('Verifica numero intervento'))) ) {
     echo '
 <div class="alert alert-warning">
     <i class="fa fa-warning"></i> '.tr("E' assente una attività di numero _NUM_ in data precedente o corrispondente a _DATE_: si potrebbero verificare dei problemi con la numerazione corrente delle attività", [
@@ -142,7 +143,7 @@ echo '
                     </div>
                     <div class="panel-body">';
 
-$map_load_message = '<p>'.tr('Clicca per visualizzare').'</p>';
+$map_load_message = tr('Clicca per visualizzare');
 if (empty($google)) {
     echo '
                         <div class="alert alert-info">
@@ -151,7 +152,7 @@ if (empty($google)) {
 } elseif (!empty($sede_cliente->gaddress) || (!empty($sede_cliente->lat) && !empty($sede_cliente->lng))) {
     echo '
                         <div id="map-edit" style="height: 200px;width: 100%;display: flex;align-items: center;justify-content: center;" onclick="caricaMappa()">
-                            '.$map_load_message.'
+                            <p class="clickable badge">'.$map_load_message.'</p>
                         </div>
 
                         <div class="clearfix"></div>
@@ -226,7 +227,7 @@ echo '
 
             function caricaMappa() {
                 const map_div = $("#map-edit");
-                if (map_div.html().trim() !== "'.$map_load_message.'"){
+                if (map_div.text().trim() !== "'.$map_load_message.'"){
                     return;
                 }
 
@@ -302,7 +303,7 @@ $tecnici_assegnati = $database->fetchArray('SELECT id_tecnico FROM in_interventi
 $tecnici_assegnati = array_column($tecnici_assegnati, 'id_tecnico');
 echo '
                 <div class="col-md-4">
-                    {[ "type": "select", "label": "'.tr('Tecnici assegnati').'", "multiple": "1", "name": "tecnici_assegnati[]", "ajax-source": "tecnici", "value": "'.implode(',', $tecnici_assegnati).'", "icon-after": "add|'.$module_anagrafiche['id'].'|tipoanagrafica=Tecnico" ]}
+                    {[ "type": "select", "label": "'.tr('Tecnici assegnati').'", "multiple": "1", "name": "tecnici_assegnati[]", "ajax-source": "tecnici", "value": "'.implode(',', $tecnici_assegnati).'", "icon-after": "add|'.$module_anagrafiche['id'].'|tipoanagrafica=Tecnico&readonly_tipo=1" ]}
                 </div>';
 
 ?>
@@ -384,12 +385,17 @@ echo '
 		</div>
 
 		<div class="panel-body">
-			<div class="pull-right">
-				<a class='btn btn-default btn-details' onclick="$('.extra').removeClass('hide'); $(this).addClass('hide'); $('#dontshowall_dettagli').removeClass('hide');" id='showall_dettagli'><i class='fa fa-square-o'></i> <?php echo tr('Visualizza dettaglio costi'); ?></a>
-				<a class='btn btn-info btn-details hide' onclick="$('.extra').addClass('hide'); $(this).addClass('hide'); $('#showall_dettagli').removeClass('hide');" id='dontshowall_dettagli'><i class='fa fa-check-square-o'></i> <?php echo tr('Visualizza dettaglio costi'); ?></a>
-			</div>
-			<div class="clearfix"></div>
-			<br>
+        <?php
+        if($show_prezzi){
+            echo "
+            <div class=\"pull-right\">
+                <a class='btn btn-default btn-details' onclick=\"$('.extra').removeClass('hide'); $(this).addClass('hide'); $('#dontshowall_dettagli').removeClass('hide');\" id='showall_dettagli'><i class='fa fa-square-o'></i> <?php echo tr('Visualizza dettaglio costi'); ?></a>
+                <a class='btn btn-info btn-details hide' onclick=\"$('.extra').addClass('hide'); $(this).addClass('hide'); $('#showall_dettagli').removeClass('hide');\" id='dontshowall_dettagli'><i class='fa fa-check-square-o'></i> <?php echo tr('Visualizza dettaglio costi'); ?></a>
+            </div>
+            <div class=\"clearfix\"></div>
+			<br>";
+        }
+        ?>	
 
 			<div class="row">
 				<div class="col-md-12" id="tecnici"></div>
@@ -422,9 +428,11 @@ if (!$block_edit) {
                 AND dt_ddt.id IN (SELECT idddt FROM dt_righe_ddt WHERE dt_righe_ddt.idddt = dt_ddt.id AND (qta - qta_evasa) > 0)';
     $ddt = $dbo->fetchArray($ddt_query)[0]['tot'];
     echo '
-            <button type="button" class="btn btn-sm btn-primary'.(!empty($ddt) ? '' : ' disabled').'" data-href="'.base_path().'/modules/interventi/add_ddt.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="tooltip" data-title="'.tr('Aggiungi ddt').'">
-                <i class="fa fa-plus"></i> '.tr('Ddt').'
-            </button>';
+            <div class="tip" data-toggle="tooltip" title="'.tr('DDT in uscita per il Cliente che si trovano nello stato di Evaso o Parzialmente Evaso con una Causale importabile.').'">
+                <button type="button" class="btn btn-sm btn-primary'.(!empty($ddt) ? '' : ' disabled').'" data-href="'.base_path().'/modules/interventi/add_ddt.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="tooltip" data-title="'.tr('Aggiungi DDT in uscita').'">
+                    <i class="fa fa-plus"></i> '.tr('Ddt').'
+                </button>
+            </div>';
 
     echo '
             <button type="button" class="btn btn-sm btn-primary tip" title="'.tr('Aggiungi articolo').'" onclick="gestioneArticolo(this)">
@@ -528,18 +536,15 @@ function gestioneDescrizione(button) {
 
 async function gestioneRiga(button, options) {
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
+
+    // Lettura titolo e chiusura tooltip
+    let title = $(button).tooltipster("content");
+    $(button).tooltipster("close");
 
     // Apertura modal
-    if (valid) {
-        // Lettura titolo e chiusura tooltip
-        let title = $(button).tooltipster("content");
-        $(button).tooltipster("close");
-
-        // Apertura modal
-        options = options ? options : "is_riga";
-        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
-    }
+    options = options ? options : "is_riga";
+    openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
 }
 
 /**

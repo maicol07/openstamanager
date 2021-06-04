@@ -115,21 +115,8 @@ abstract class Component extends Model
      */
     public function setQtaAttribute($value)
     {
-        $previous = $this->qta;
-        $diff = $value - $previous;
-
-        // Controlli su eventuale massimo per la quantità
-        if ($this->hasOriginalComponent()) {
-            $original = $this->getOriginalComponent();
-
-            // Controllo per evitare di superare la quantità totale del componente di origine
-            if ($original->qta_rimanente < $diff) {
-                $diff = $original->qta_rimanente;
-                $value = $previous + $diff;
-            }
-        }
-
-        $this->attributes['qta'] = $value;
+        list($qta, $diff) = $this->parseQta($value);
+        $this->attributes['qta'] = $qta;
 
         // Aggiornamento della quantità evasa di origine
         if ($this->hasOriginalComponent()) {
@@ -194,12 +181,13 @@ abstract class Component extends Model
     /**
      * Copia l'oggetto (articolo, riga, descrizione) nel corrispettivo per il documento indicato.
      *
-     * @param Document   $document Documento di destinazione
-     * @param float|null $qta      Quantità da riportare
+     * @param Document      $document           Documento di destinazione
+     * @param float|null    $qta                Quantità da riportare
+     * @param boolean       $evadi_qta_parent   Definisce se evadere la quantità di provenienza 
      *
      * @return self
      */
-    public function copiaIn(Document $document, $qta = null)
+    public function copiaIn(Document $document, $qta = null, $evadi_qta_parent = true)
     {
         // Individuazione classe di destinazione
         $class = get_class($document);
@@ -229,8 +217,7 @@ abstract class Component extends Model
         unset($attributes[$model->getDocumentID()]);
 
         // Riferimento di origine per l'evasione automatica della riga
-        $is_evasione = true;
-        if ($is_evasione) {
+        if ($evadi_qta_parent) {
             // Mantenimento dell'origine della riga precedente
             $model->original_id = $attributes['original_id'];
             $model->original_type = $attributes['original_type'];
@@ -361,6 +348,32 @@ abstract class Component extends Model
         $new->original_id = null;
 
         return $new;
+    }
+
+    /**
+     * Verifica e calcola quantità e differenziale delle quantità.
+     *
+     * @param $value
+     *
+     * @return array [nuova quantità, differenza rispetto alla quantità precedente]
+     */
+    protected function parseQta($value)
+    {
+        $previous = $this->qta;
+        $diff = $value - $previous;
+
+        // Controlli su eventuale massimo per la quantità
+        if ($this->hasOriginalComponent()) {
+            $original = $this->getOriginalComponent();
+
+            // Controllo per evitare di superare la quantità totale del componente di origine
+            if ($original->qta_rimanente < $diff) {
+                $diff = $original->qta_rimanente;
+                $value = $previous + $diff;
+            }
+        }
+
+        return [$value, $diff];
     }
 
     /**

@@ -179,28 +179,22 @@ class FatturaElettronica
         foreach ($allegati as $allegato) {
             $content = base64_decode($allegato['Attachment']);
 
-            $extension = '';
+            $extension = '.pdf';
             if (!empty($allegato['FormatoAttachment'])) {
                 $extension = '.'.strtolower($allegato['FormatoAttachment']);
             }
 
             $original = $allegato['NomeAttachment'].$extension;
-            $filename = Uploads::getName($original, [
-                'id_module' => $module['id'],
-            ]);
-
-            file_put_contents($module->upload_directory.'/'.$filename, $content);
-
-            Uploads::register(array_merge($info, [
-                'filename' => $filename,
-                'original' => $original,
+            Uploads::upload($content, array_merge($info, [
+                'name' => $allegato['NomeAttachment'],
+                'original_name' => $original,
             ]));
         }
 
         // Registrazione XML come allegato
         Uploads::upload($this->file, array_merge($info, [
             'name' => tr('Fattura Elettronica'),
-            'original' => basename($this->file),
+            'original_name' => basename($this->file),
         ]));
     }
 

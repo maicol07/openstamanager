@@ -138,6 +138,10 @@ echo '
 					{[ "type": "text", "label": "<?php echo tr('Tempi di consegna'); ?>", "name": "tempi_consegna", "value": "$tempi_consegna$" ]}
 				</div>
 
+                <div class="col-md-3">
+                    {[ "type": "number", "label": "<?php echo 'Sconto finale'; ?>", "name": "sconto_finale", "value": "<?php echo $preventivo->sconto_finale_percentuale ?: $preventivo->sconto_finale; ?>", "icon-after": "choice|untprc|<?php echo empty($preventivo->sconto_finale) ? 'PRC' : 'UNT'; ?>", "help": "<?php echo tr('Sconto finale, utilizzabile per applicare sconti sul Netto a pagare del documento'); ?>." ]}
+                </div>
+
 			</div>
 			<div class="row">
 
@@ -292,18 +296,15 @@ function gestioneDescrizione(button) {
 
 async function gestioneRiga(button, options) {
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
+
+    // Lettura titolo e chiusura tooltip
+    let title = $(button).tooltipster("content");
+    $(button).tooltipster("close")
 
     // Apertura modal
-    if (valid) {
-        // Lettura titolo e chiusura tooltip
-        let title = $(button).tooltipster("content");
-        $(button).tooltipster("close")
-
-        // Apertura modal
-        options = options ? options : "is_riga";
-        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
-    }
+    options = options ? options : "is_riga";
+    openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
 }
 
 /**

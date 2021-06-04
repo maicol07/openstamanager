@@ -23,6 +23,7 @@ use Modules\Contratti\Contratto;
 use Modules\Fatture\Fattura;
 use Modules\Fatture\Stato;
 use Modules\Fatture\Tipo;
+use Modules\Articoli\Articolo as ArticoloOriginale;
 
 $module_fatture = 'Fatture di vendita';
 
@@ -33,6 +34,7 @@ if (!isset($_SESSION['module_'.$id_fatture]['id_segment'])) {
     $_SESSION['module_'.$id_fatture]['id_segment'] = isset($segments[0]['id']) ? $segments[0]['id'] : null;
 }
 $id_segment = $_SESSION['module_'.$id_fatture]['id_segment'];
+$idconto = setting('Conto predefinito fatture di vendita');
 
 switch (post('op')) {
     case 'crea_fattura':
@@ -55,7 +57,7 @@ switch (post('op')) {
             $anagrafica = $documento_import->anagrafica;
             $id_anagrafica = $anagrafica->id;
 
-            if (!$documento_import->stato->is_pianificabile) {
+            if (!$documento_import->stato->is_fatturabile) {
                 break;
             }
 
@@ -92,9 +94,11 @@ switch (post('op')) {
                     $qta = $riga->qta_rimanente;
 
                     if ($qta > 0) {
-                        //Fix per idconto righe fattura
-                        $riga->idconto = $fattura->idconto;
                         $copia = $riga->copiaIn($fattura, $qta);
+
+                        //Fix per idconto righe fattura
+                        $articolo = ArticoloOriginale::find($copia->idarticolo);
+                        $copia->id_conto = ($articolo->idconto_vendita ? $articolo->idconto_vendita : $idconto);
 
                         // Aggiornamento seriali dalla riga dell'ordine
                         if ($copia->isArticolo()) {

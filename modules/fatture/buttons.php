@@ -68,8 +68,11 @@ $totale_scadenze = $dbo->fetchOne('SELECT SUM(da_pagare - pagato) AS differenza,
 if (!empty($record['is_fiscale'])) {
     // Aggiunta insoluto
     $registrazione_insoluto = 0;
-    if (!empty($record['riba']) && $dir == 'entrata' && in_array($record['stato'], ['Emessa', 'Parzialmente pagato', 'Pagato'])) {
-        $registrazione_insoluto = 1;
+    $pagamento = $fattura->pagamento;
+    if(!empty($pagamento)){
+        if ($pagamento->isRiBa() && $dir == 'entrata' && in_array($record['stato'], ['Emessa', 'Parzialmente pagato', 'Pagato'])) {
+            $registrazione_insoluto = 1;
+        }
     }
 
     if (floatval($totale_scadenze['da_pagare']) == 0) {

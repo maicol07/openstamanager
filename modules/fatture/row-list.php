@@ -121,6 +121,18 @@ foreach ($righe as $riga) {
         echo nl2br($riga->descrizione);
     }
 
+    if ($riga->isArticolo() && !empty($riga->articolo->deleted_at)){
+        echo '
+        <br><b><small class="text-danger">'.tr('Articolo eliminato', []).'</small></b>';
+    }
+
+    if ($riga->isArticolo() && empty($riga->articolo->codice)){
+        echo '
+        <br><b><small class="text-danger">'.tr('_DATO_ articolo mancante', [
+            '_DATO_' => 'Codice',
+        ]).'</small></b>';
+    }
+
     if ($riga->isArticolo() && !empty($riga->abilita_serial)) {
         if (!empty($mancanti)) {
             echo '
@@ -402,16 +414,14 @@ async function modificaRiga(button) {
     let type = riga.data("type");
 
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
 
-    if (valid) {
-        // Chiusura tooltip
-        if ($(button).hasClass("tooltipstered"))
-            $(button).tooltipster("close");
+    // Chiusura tooltip
+    if ($(button).hasClass("tooltipstered"))
+        $(button).tooltipster("close");
 
-        // Apertura modal
-        openModal("'.tr('Modifica riga').'", "'.$module->fileurl('row-edit.php').'?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&riga_id=" + id + "&riga_type=" + type);
-    }
+    // Apertura modal
+    openModal("'.tr('Modifica riga').'", "'.$module->fileurl('row-edit.php').'?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&riga_id=" + id + "&riga_type=" + type);
 }
 
 function rimuoviRiga(button) {

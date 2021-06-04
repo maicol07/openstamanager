@@ -51,13 +51,14 @@ switch ($op) {
 
             // Upload file
             if (!empty($_FILES) && !empty($_FILES['immagine']['name'])) {
-                $filename = Uploads::upload($_FILES['immagine'], [
+                $upload = Uploads::upload($_FILES['immagine'], [
                     'name' => 'Immagine',
                     'id_module' => $id_module,
                     'id_record' => $id_record,
                 ], [
                     'thumbnails' => true,
                 ]);
+                $filename = $upload->filename;
 
                 if (!empty($filename)) {
                     $dbo->update('my_impianti', [
@@ -155,15 +156,15 @@ switch ($op) {
 }
 
 // Operazioni aggiuntive per l'immagine
-if (filter('op') == 'unlink_file' && filter('filename') == $record['immagine']) {
+if (filter('op') == 'rimuovi-allegato' && filter('filename') == $record['immagine']) {
     $dbo->update('my_impianti', [
         'immagine' => null,
     ], [
         'id' => $id_record,
     ]);
-} elseif (filter('op') == 'link_file' && filter('nome_allegato') == 'Immagine') {
+} elseif (filter('op') == 'aggiungi-allegato' && filter('nome_allegato') == 'Immagine') {
     $dbo->update('my_impianti', [
-        'immagine' => $upload,
+        'immagine' => $upload->filename,
     ], [
         'id' => $id_record,
     ]);

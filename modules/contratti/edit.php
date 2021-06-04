@@ -21,6 +21,11 @@ include_once __DIR__.'/../../core.php';
 
 $block_edit = $record['is_completato'];
 
+if (strtotime($record['data_conclusione']) < strtotime($record['data_accettazione'])) {
+    echo '
+    <div class="alert alert-warning"><a class="clickable" onclick="$(\'.alert\').hide();"><i class="fa fa-times"></i></a> '.tr('Attenzione! La data di accettazione supera la data di conclusione del contratto. verificare tali informazioni.').'</div>';
+}
+
 ?>
 <form action="" method="post" id="edit-form">
 	<input type="hidden" name="backto" value="record-edit">
@@ -44,7 +49,7 @@ $block_edit = $record['is_completato'];
                 </div>
 
                 <div class="col-md-2">
-                    {[ "type": "date", "label": "<?php echo tr('Data accettazione'); ?>", "name": "data_accettazione", "value": "$data_accettazione$" ]}
+                    {[ "type": "date", "label": "<?php echo tr('Data accettazione'); ?>", "name": "data_accettazione", "value": "$data_accettazione$", "max-date": "$data_conclusione$" ]}
                 </div>
 
                 <div class="col-md-2">
@@ -108,8 +113,12 @@ $block_edit = $record['is_completato'];
 					{[ "type": "number", "label": "<?php echo tr('Validità contratto'); ?>", "name": "validita", "decimals": "0", "value": "$validita$", "icon-after": "choice|period|<?php echo $record['tipo_validita']; ?>", "help": "<?php echo tr('Il campo Validità contratto viene utilizzato per il calcolo della Data di conclusione del contratto'); ?>" ]}
 				</div>
 
-                <div class="col-md-9">
+                <div class="col-md-6">
 					{[ "type": "select", "multiple": "1", "label": "<?php echo tr('Impianti'); ?>", "name": "matricolaimpianto[]", "values": "query=SELECT idanagrafica, id AS id, IF(nome = '', matricola, CONCAT(matricola, ' - ', nome)) AS descrizione FROM my_impianti WHERE idanagrafica='$idanagrafica$' ORDER BY descrizione", "value": "$idimpianti$", "icon-after": "add|<?php echo Modules::get('Impianti')['id']; ?>|||<?php echo (empty($block_edit)) ? '' : 'disabled'; ?>" ]}
+				</div>
+
+                <div class="col-md-3">
+                    {[ "type": "number", "label": "<?php echo 'Sconto finale'; ?>", "name": "sconto_finale", "value": "<?php echo $contratto->sconto_finale_percentuale ?: $contratto->sconto_finale; ?>", "icon-after": "choice|untprc|<?php echo empty($contratto->sconto_finale) ? 'PRC' : 'UNT'; ?>", "help": "<?php echo tr('Sconto finale, utilizzabile per applicare sconti sul Netto a pagare del documento'); ?>." ]}
 				</div>
 
             </div>
@@ -359,18 +368,15 @@ function gestioneDescrizione(button) {
 
 async function gestioneRiga(button, options) {
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
+
+    // Lettura titolo e chiusura tooltip
+    let title = $(button).tooltipster("content");
+    $(button).tooltipster("close")
 
     // Apertura modal
-    if (valid) {
-        // Lettura titolo e chiusura tooltip
-        let title = $(button).tooltipster("content");
-        $(button).tooltipster("close")
-
-        // Apertura modal
-        options = options ? options : "is_riga";
-        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
-    }
+    options = options ? options : "is_riga";
+    openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
 }
 
 /**
@@ -508,6 +514,15 @@ $(document).ready(function() {
         }else{
             input("giorni_preavviso_rinnovo").disable();
             input("rinnovo_automatico").disable();
+        }
+    });
+
+    $("#data_conclusione").on("dp.change", function (e) {
+        let data_accettazione = $("#data_accettazione");
+        data_accettazione.data("DateTimePicker").maxDate(e.date);
+
+        if(data_accettazione.data("DateTimePicker").date() > e.date){
+            data_accettazione.data("DateTimePicker").date(e.date);
         }
     });
 });

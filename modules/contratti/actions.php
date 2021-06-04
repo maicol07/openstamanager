@@ -67,14 +67,14 @@ switch (post('op')) {
             $contratto->idreferente = post('idreferente');
 
             // Informazioni sulle date del documento
-            $contratto->data_bozza = post('data_bozza');
-            $contratto->data_rifiuto = post('data_rifiuto');
+            $contratto->data_bozza = post('data_bozza') ?: null;
+            $contratto->data_rifiuto = post('data_rifiuto') ?: null;
 
             // Dati relativi alla validità del documento
             $contratto->validita = post('validita');
             $contratto->tipo_validita = post('tipo_validita');
-            $contratto->data_accettazione = post('data_accettazione');
-            $contratto->data_conclusione = post('data_conclusione');
+            $contratto->data_accettazione = post('data_accettazione') ?: null;
+            $contratto->data_conclusione = post('data_conclusione') ?: null;
 
             $contratto->esclusioni = post('esclusioni');
             $contratto->descrizione = post('descrizione');
@@ -82,6 +82,8 @@ switch (post('op')) {
             $contratto->num_item = post('num_item');
             $contratto->codice_cig = post('codice_cig');
             $contratto->codice_cup = post('codice_cup');
+
+            $contratto->setScontoFinale(post('sconto_finale'), post('tipo_sconto_finale'));
 
             $contratto->save();
 
@@ -391,15 +393,14 @@ $riga = $contratto->getRiga($type, $id_riga);
             }
 
             // Copia degli allegati
-            Uploads::copy([
-                'id_module' => $id_module,
-                'id_plugin' => Plugins::get('Pianificazione interventi')['id'],
-                'id_record' => $p['id'],
-            ], [
-                'id_module' => $id_module,
-                'id_plugin' => Plugins::get('Pianificazione interventi')['id'],
-                'id_record' => $id_promemoria,
-            ]);
+            $allegati = $promemoria->uploads();
+            foreach ($allegati as $allegato) {
+                $allegato->copia([
+                    'id_module' => $id_module,
+                    'id_plugin' => Plugins::get('Pianificazione interventi')['id'],
+                    'id_record' => $id_promemoria,
+                ]);
+            }
         }
 
         // Cambio stato precedente contratto in concluso (non più pianificabile)
@@ -474,11 +475,20 @@ $riga = $contratto->getRiga($type, $id_riga);
 
             $contratto->descrizione = $documento->descrizione;
             $contratto->esclusioni = $documento->esclusioni;
+            $contratto->idreferente = $documento->idreferente;
 
             $contratto->save();
 
             $id_record = $contratto->id;
         }
+
+        if (!empty($documento->sconto_finale)) {
+            $contratto->sconto_finale = $documento->sconto_finale;
+        } elseif (!empty($documento->sconto_finale_percentuale)) {
+            $contratto->sconto_finale_percentuale = $documento->sconto_finale_percentuale;
+        }
+
+        $contratto->save();
 
         $righe = $documento->getRighe();
         foreach ($righe as $riga) {

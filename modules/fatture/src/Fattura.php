@@ -69,7 +69,7 @@ class Fattura extends Document
     /** @var GestoreMovimenti */
     protected $gestoreMovimenti;
     /** @var GestoreBollo */
-    private $gestoreBollo;
+    protected $gestoreBollo;
 
     public function __construct(array $attributes = [])
     {
@@ -284,55 +284,6 @@ class Fattura extends Document
     // Calcoli
 
     /**
-     * Imposta lo sconto finale sulla Fattura.
-     * Nota: lo sconto finale è limitato alla Fattura, e non può derivare da ulteriori documenti.
-     *
-     * @param $sconto
-     * @param $tipo
-     */
-    public function setScontoFinale($sconto, $tipo)
-    {
-        if ($tipo == 'PRC') {
-            $this->sconto_finale_percentuale = $sconto;
-            $this->sconto_finale = 0;
-        } else {
-            $this->sconto_finale = $sconto;
-            $this->sconto_finale_percentuale = 0;
-        }
-    }
-
-    /**
-     * Restituisce lo sconto finale sulla Fattura.
-     * Nota: lo sconto finale è limitato alla Fattura, e non può derivare da ulteriori documenti.
-     */
-    public function getScontoFinale()
-    {
-        $netto = $this->calcola('netto');
-
-        if (!empty($this->sconto_finale_percentuale)) {
-            $sconto = $netto * ($this->sconto_finale_percentuale / 100);
-        } else {
-            $sconto = $this->sconto_finale;
-        }
-
-        return $sconto;
-    }
-
-    /**
-     * Calcola il netto a pagare della fattura.
-     * Nota: lo sconto finale è limitato alla Fattura, e non può derivare da ulteriori documenti.
-     *
-     * @return float
-     */
-    public function getNettoAttribute()
-    {
-        $netto = $this->calcola('netto');
-        $sconto_finale = $this->getScontoFinale();
-
-        return $netto - $sconto_finale;
-    }
-
-    /**
      * Calcola la rivalsa INPS totale della fattura.
      *
      * @return float
@@ -499,9 +450,9 @@ class Fattura extends Document
             return $fe->toXML();
         }
 
-        $file = $this->uploads()->where('name', 'Fattura Elettronica')->first();
+        $file = $this->uploads()->where('name', '=', 'Fattura Elettronica')->first();
 
-        return file_get_contents($file->filepath);
+        return $file->getContent();
     }
 
     /**
@@ -536,13 +487,25 @@ class Fattura extends Document
     }
 
     /**
+     * Restituisce la fattura elettronica registrata come allegato.
+     *
+     * @return Upload|null
+     */
+    public function getFatturaElettronica()
+    {
+        return $this->uploads()
+            ->where('name', '=', 'Fattura Elettronica')
+            ->first();
+    }
+
+    /**
      * Controlla se la fattura di acquisto è elettronica.
      *
      * @return bool
      */
     public function isFE()
     {
-        $file = $this->uploads()->where('name', 'Fattura Elettronica')->first();
+        $file = $this->getFatturaElettronica();
 
         return !empty($this->progressivo_invio) and file_exists($file->filepath);
     }
@@ -573,6 +536,14 @@ class Fattura extends Document
      */
     public function save(array $options = [])
     {
+        // Informazioni sul cambio dei valori
+        $stato_precedente = Stato::find($this->original['idstatodocumento']);
+        $dichiarazione_precedente = Dichiarazione::find($this->original['id_dichiarazione_intento']);
+        $is_fiscale = $this->isFiscale();
+
+        // Salvataggio effettivo
+        $result = parent::save($options);
+
         // Fix dei campi statici
         $this->id_riga_bollo = $this->gestoreBollo->manageRigaMarcaDaBollo();
 
@@ -580,11 +551,6 @@ class Fattura extends Document
         $this->attributes['iva_rivalsainps'] = $this->iva_rivalsa_inps;
         $this->attributes['rivalsainps'] = $this->rivalsa_inps;
         $this->attributes['ritenutaacconto'] = $this->ritenuta_acconto;
-
-        // Informazioni sul cambio dei valori
-        $stato_precedente = Stato::find($this->original['idstatodocumento']);
-        $dichiarazione_precedente = Dichiarazione::find($this->original['id_dichiarazione_intento']);
-        $is_fiscale = $this->isFiscale();
 
         // Generazione numero fattura se non presente (Bozza -> Emessa)
         if ((($stato_precedente->descrizione == 'Bozza' && $this->stato['descrizione'] == 'Emessa') or (!$is_fiscale)) && empty($this->numero_esterno)) {
@@ -653,16 +619,21 @@ class Fattura extends Document
     public function replicate(array $except = null)
     {
         $new = parent::replicate($except);
+        $now = Carbon::now();
 
         // In fase di duplicazione di una fattura non deve essere calcolato il numero progressivo ma questo deve
         // essere generato in fase di emissione della stessa.
         $new->numero_esterno = '';
+        $new->numero = Fattura::getNextNumero($now, $new->direzione, $new->id_segment);
 
         // Rimozione informazioni di Fattura Elettronica
         $new->hook_send = false;
         $new->codice_stato_fe = null;
         $new->progressivo_invio = null;
         $new->data_stato_fe = null;
+        $new->data = $now;
+        $new->data_registrazione = $now;
+        $new->data_competenza = $now;
         $new->descrizione_ricevuta_fe = null;
         $new->id_ricevuta_principale = null;
 
@@ -736,9 +707,9 @@ class Fattura extends Document
      */
     public function getBanca()
     {
-        $riba = database()->fetchOne('SELECT riba FROM co_pagamenti WHERE id ='.prepare($this->idpagamento));
+        $pagamento = $this->pagamento;
 
-        if ($riba['riba'] == 1) {
+        if ($pagamento->isRiBa()) {
             $banca = Banca::where('id_anagrafica', $this->idanagrafica)
                  ->where('predefined', 1)
                  ->first();

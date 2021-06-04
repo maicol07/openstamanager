@@ -78,15 +78,14 @@ class FatturaElettronica
     }
 
     /**
-     * Restituisce le informazioni sull'anagrafica azienda.
-     *
      * @return bool
      */
     public function isGenerated()
     {
         $documento = $this->getDocumento();
+        $file = $documento->getFatturaElettronica();
 
-        return !empty($documento['progressivo_invio']) && file_exists(base_dir().'/'.static::getDirectory().'/'.$this->getFilename());
+        return !empty($documento['progressivo_invio']) && file_exists(base_dir().'/'.$file->filepath);
     }
 
     /**
@@ -293,11 +292,9 @@ class FatturaElettronica
     /**
      * Salva il file XML.
      *
-     * @param string $directory
-     *
      * @return string Nome del file
      */
-    public function save($directory)
+    public function save()
     {
         $this->delete();
 
@@ -307,15 +304,17 @@ class FatturaElettronica
         // Generazione nome XML
         $filename = $this->getFilename(true);
 
-        // Salvataggio del file
-        $file = rtrim($directory, '/').'/'.$filename;
-        $result = directory($directory) && file_put_contents($file, $this->toXML());
+        // Rimozione allegato precedente
+        $precedente = $this->getDocumento()->getFatturaElettronica();
+        if (!empty($precedente)) {
+            $precedente->delete();
+        }
 
         // Registrazione come allegato
-        Uploads::register(array_merge([
+        Uploads::upload($this->toXML(), array_merge($data, [
             'name' => $name,
-            'original' => $filename,
-        ], $data));
+            'original_name' => $filename,
+        ]));
 
         // Aggiornamento effettivo
         database()->update('co_documenti', [
@@ -668,6 +667,8 @@ class FatturaElettronica
     {
         $result = [];
 
+        $is_privato_estero = ($anagrafica->nazione->iso2 != 'IT' && $anagrafica->tipo == 'Privato');
+
         // Partita IVA (obbligatoria se presente)
         if (!empty($anagrafica['piva'])) {
             if (!empty($anagrafica->nazione->iso2)) {
@@ -686,6 +687,13 @@ class FatturaElettronica
 
             //Rimuovo eventuali idicazioni relative all'iso2 della nazione, solo se la stringa inizia con quest'ultima.
             $result['CodiceFiscale'] = preg_replace('/^'.preg_quote($anagrafica->nazione->iso2, '/').'/', '', $anagrafica['codice_fiscale']);
+        }
+
+        // Partita IVA: se privato estero non va considerato il codice fiscale ma la partita iva con 9 zeri
+        if ($is_privato_estero) {
+            $result['IdFiscaleIVA']['IdPaese'] = $anagrafica->nazione->iso2;
+            $result['IdFiscaleIVA']['IdCodice'] = '999999999';
+            unset( $result['Anagrafica']['CodiceFiscale'] );
         }
 
         if (!empty($anagrafica['nome']) or !empty($anagrafica['cognome'])) {
@@ -725,7 +733,7 @@ class FatturaElettronica
     {
         $result = [
             'Indirizzo' => $anagrafica['indirizzo'],
-            'CAP' => ($anagrafica->nazione->iso2 == 'IT') ? $anagrafica['cap'] : '99999',
+            'CAP' => ($anagrafica->nazione->iso2 == 'IT') ? $anagrafica['cap'] : '00000',
             'Comune' => $anagrafica['citta'],
         ];
 
@@ -902,7 +910,7 @@ class FatturaElettronica
             // Con la nuova versione in vigore dal 01/01/2021, questo nodo diventa ripetibile.
             $result['DatiRitenuta'] = [
                 'TipoRitenuta' => (Validate::isValidTaxCode($azienda['codice_fiscale']) and $cliente['tipo'] == 'Privato') ? 'RT01' : 'RT02',
-                'ImportoRitenuta' => $documento->isNota() ? -$totale_ritenutaacconto : $totale_ritenutaacconto,
+                'ImportoRitenuta' =>  $totale_ritenutaacconto,
                 'AliquotaRitenuta' => $percentuale,
                 'CausalePagamento' => setting("Causale ritenuta d'acconto"),
             ];
@@ -926,8 +934,8 @@ class FatturaElettronica
             $dati_cassa = [
                 'TipoCassa' => setting('Tipo Cassa Previdenziale'),
                 'AlCassa' => $percentuale,
-                'ImportoContributoCassa' => $documento->isNota() ? -$totale_rivalsainps : $totale_rivalsainps,
-                'ImponibileCassa' => $documento->isNota() ? -$documento->imponibile : $documento->imponibile,
+                'ImportoContributoCassa' => $totale_rivalsainps,
+                'ImponibileCassa' => $documento->imponibile,
                 'AliquotaIVA' => $iva['percentuale'],
             ];
 
@@ -1059,7 +1067,11 @@ class FatturaElettronica
 
             $dati = [];
 
-            $dati['RiferimentoNumeroLinea'] = $element['riferimento_linea'];
+            foreach ($element['riferimento_linea'] as $linea) {
+                $dati[] = [
+                    'RiferimentoNumeroLinea' => $linea,
+                ];
+            }
 
             $dati['IdDocumento'] = $element['id_documento'];
 
@@ -1111,7 +1123,10 @@ class FatturaElettronica
                 $dati['DataDDT'] = $element['data'];
             }
 
-            $dati['RiferimentoNumeroLinea'] = $element['riferimento_linea'];
+            if (!empty($element['riferimento_linea'])) {
+                $dati['RiferimentoNumeroLinea'] = $element['riferimento_linea'];
+            }
+
             $result[] = $dati;
         }
 
@@ -1362,7 +1377,7 @@ class FatturaElettronica
             $aliquota = $riga->aliquota ?: $iva_descrizioni;
             $percentuale = floatval($aliquota->percentuale);
 
-            $prezzo_totale = $documento->isNota() ? -$riga->totale_imponibile : $riga->totale_imponibile;
+            $prezzo_totale = $riga->totale_imponibile;
             $prezzo_totale = $prezzo_totale ?: 0;
             $dettaglio['PrezzoTotale'] = $prezzo_totale;
 
@@ -1409,7 +1424,7 @@ class FatturaElettronica
                 $dettaglio[]['AltriDatiGestionali'] = [
                     'TipoDato' => 'AswDichInt',
                     'RiferimentoTesto' => $dichiarazione->numero_protocollo,
-                    'RiferimentoTesto' => $dichiarazione->numero_progressivo,
+                    'RiferimentoNumero' => $dichiarazione->numero_progressivo,
                     'RiferimentoData' => $dichiarazione->data_emissione,
                 ];
             }
@@ -1454,8 +1469,8 @@ class FatturaElettronica
             $totale = round($riepilogo->sum('totale_imponibile') + $riepilogo->sum('rivalsa_inps'), 2);
             $imposta = round($riepilogo->sum('iva') + $riepilogo->sum('iva_rivalsa_inps'), 2);
 
-            $totale = $documento->isNota() ? -$totale : $totale;
-            $imposta = $documento->isNota() ? -$imposta : $imposta;
+            $totale = $totale;
+            $imposta = $imposta;
 
             $dati = $riepilogo->first()->aliquota;
 
@@ -1493,8 +1508,8 @@ class FatturaElettronica
             $totale = round($riepilogo->sum('totale_imponibile') + $riepilogo->sum('rivalsa_inps'), 2);
             $imposta = round($riepilogo->sum('iva') + $riepilogo->sum('iva_rivalsa_inps'), 2);
 
-            $totale = $documento->isNota() ? -$totale : $totale;
-            $imposta = $documento->isNota() ? -$imposta : $imposta;
+            $totale = $totale;
+            $imposta = $imposta;
 
             $dati = $riepilogo->first()->aliquota;
 
@@ -1617,24 +1632,26 @@ class FatturaElettronica
         }
 
         $data = $fattura->getUploadData();
-        $dir = static::getDirectory();
 
+        // Generazione stampa
         $print = Prints::getModulePredefinedPrint($id_module);
-        $info = Prints::render($print['id'], $documento['id'], base_dir().'/'.$dir);
+        $info = Prints::render($print['id'], $documento['id'], null, true);
 
+        // Salvataggio stampa come allegato
         $name = 'Stampa allegata';
         $is_presente = database()->fetchNum('SELECT id FROM zz_files WHERE id_module = '.prepare($id_module).' AND id_record = '.prepare($documento['id']).' AND name = '.prepare($name));
         if (empty($is_presente)) {
-            Uploads::register(array_merge([
+            Uploads::upload($info['pdf'], array_merge($data, [
                 'name' => $name,
-                'original' => basename($info['path']),
-            ], $data));
+                'original_name' => $info['path'],
+            ]));
         }
 
+        // Introduzione allegato in Fattura Elettronica
         $attachments[] = [
             'NomeAttachment' => 'Fattura',
             'FormatoAttachment' => 'PDF',
-            'Attachment' => base64_encode(file_get_contents($info['path'])),
+            'Attachment' => base64_encode($info['pdf']),
         ];
 
         return $attachments;

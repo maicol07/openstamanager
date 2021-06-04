@@ -25,13 +25,18 @@ use Util\Ini;
 include_once __DIR__.'/../../core.php';
 
 switch (post('op')) {
+    case 'restore':
+        $articolo->restore();
+        flash()->info(tr('Articolo ripristinato correttamente!'));
+
     // Aggiunta articolo
+    // no break
     case 'add':
         //Se non specifico il codice articolo lo imposto uguale all'id della riga
         if (empty(post('codice'))) {
             $codice = $dbo->fetchOne('SELECT MAX(id) as codice FROM mg_articoli')['codice'] + 1;
         } else {
-            $codice = post('codice');
+            $codice = post('codice', true);
         }
 
         // Inserisco l'articolo e avviso se esiste un altro articolo con stesso codice.
@@ -66,7 +71,7 @@ switch (post('op')) {
         if (isAjaxRequest()) {
             echo json_encode([
                 'id' => $id_record,
-                'text' => post('descrizione'),
+                'text' => post('codice', true).' - '.post('descrizione'),
                 'data' => [
                     'descrizione' => post('descrizione'),
                     'prezzo_acquisto' => post('prezzo_acquisto'),
@@ -91,12 +96,12 @@ switch (post('op')) {
         ])->count();
         if ($numero_codice > 0) {
             flash()->warning(tr('Attenzione: il codice _CODICE_ è già stato utilizzato _N_ volta', [
-                '_CODICE_' => post('codice'),
+                '_CODICE_' => post('codice', true),
                 '_N_' => $numero_codice,
             ]));
         }
 
-        $articolo->codice = post('codice');
+        $articolo->codice = post('codice', true);
         $articolo->barcode = post('barcode');
         $articolo->descrizione = post('descrizione');
         $articolo->um = post('um');
@@ -166,13 +171,14 @@ switch (post('op')) {
 
         // Upload file
         if (!empty($_FILES) && !empty($_FILES['immagine']['name'])) {
-            $filename = Uploads::upload($_FILES['immagine'], [
+            $upload = Uploads::upload($_FILES['immagine'], [
                 'name' => 'Immagine',
                 'id_module' => $id_module,
                 'id_record' => $id_record,
             ], [
                 'thumbnails' => true,
             ]);
+            $filename = $upload->filename;
 
             if (!empty($filename)) {
                 $dbo->update('mg_articoli', [
@@ -206,7 +212,7 @@ switch (post('op')) {
     // Duplica articolo
     case 'copy':
         $new = $articolo->replicate();
-        $new->codice = post('codice');
+        $new->codice = post('codice', true);
         $new->qta = 0;
         $new->save();
 
@@ -324,15 +330,15 @@ switch (post('op')) {
 }
 
 // Operazioni aggiuntive per l'immagine
-if (filter('op') == 'unlink_file' && filter('filename') == $record['immagine']) {
+if (filter('op') == 'rimuovi-allegato' && filter('filename') == $record['immagine']) {
     $dbo->update('mg_articoli', [
         'immagine' => null,
     ], [
         'id' => $id_record,
     ]);
-} elseif (filter('op') == 'link_file' && filter('nome_allegato') == 'Immagine') {
+} elseif (filter('op') == 'aggiungi-allegato' && filter('nome_allegato') == 'Immagine') {
     $dbo->update('mg_articoli', [
-        'immagine' => $upload,
+        'immagine' => $upload->filename,
     ], [
         'id' => $id_record,
     ]);

@@ -68,7 +68,7 @@ if (sizeof($problemi_anagrafica) > 0) {
 
 ?>
 
-<form action="" method="post" id="edit-form"  autocomplete="<?php echo setting('Autocompletamento form'); ?>" >
+<form action="" method="post" id="edit-form">
 	<fieldset>
 		<input type="hidden" name="backto" value="record-edit">
 		<input type="hidden" name="op" value="update">
@@ -246,7 +246,7 @@ echo '
                     </div>
                     <div class="panel-body">';
 
-$map_load_message = '<p>'.tr('Clicca per visualizzare').'</p>';
+$map_load_message = tr('Clicca per visualizzare');
 if (empty($google)) {
     echo '
                         <div class="alert alert-info">
@@ -255,7 +255,7 @@ if (empty($google)) {
 } elseif (!empty($sede_cliente->gaddress) || (!empty($sede_cliente->lat) && !empty($sede_cliente->lng))) {
     echo '
                         <div id="map-edit" style="height: 200px;width: 100%;display: flex;align-items: center;justify-content: center;" onclick="caricaMappa()">
-                            '.$map_load_message.'
+                            <p class="clickable badge">'.$map_load_message.'</p>
                         </div>
 
                         <div class="clearfix"></div>
@@ -342,7 +342,7 @@ echo '
 
             function caricaMappa() {
                 const map_div = $("#map-edit");
-                if (map_div.html().trim() !== "'.$map_load_message.'"){
+                if (map_div.text().trim() !== "'.$map_load_message.'"){
                     return;
                 }
 
@@ -672,7 +672,7 @@ if ($is_cliente or $is_fornitore or $is_tecnico) {
 
 				<div class="row">
 					<div class="col-md-12">
-						{[ "type": "textarea", "label": "<?php echo tr('Note'); ?>", "name": "note", "value": "$note$" ]}
+						{[ "type": "textarea", "label": "<?php echo tr('Note'); ?>", "name": "note", "value": "$note$", "maxlength": 255, "charcounter": 1 ]}
 					</div>
 				</div>
 

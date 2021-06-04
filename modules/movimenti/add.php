@@ -94,9 +94,14 @@ echo '
 <script>
     // Lettura codici da lettore barcode
     $(document).unbind("keyup");
-    $("#modals > div").on( "shown.bs.modal", function(){
+    $("#modals > div").on( "shown.bs.modal", function(){';
+        if (setting('Attiva scorciatoie da tastiera')) {
+            echo 'EnableHotkeys()';
+        }
+echo '  
         $("#barcode").focus();
     });
+    
     $(document).on("keyup", function (event) {
         if ($(":focus").is("input, textarea")) {
             return;
@@ -185,78 +190,88 @@ echo '
         let qta_input = input("qta");
         let tipo_movimento = $("#tipo_movimento").val();
 
-        let valid = await salvaForm(button, "#add-form");
+        await salvaForm("#add-form", {}, button);
 
-        if (valid) {
-            let articolo = $("#idarticolo").selectData();
+        let articolo = $("#idarticolo").selectData();
 
-            let prezzo_acquisto = parseFloat(articolo.prezzo_acquisto);
-            let prezzo_vendita = parseFloat(articolo.prezzo_vendita);
+        let prezzo_acquisto = parseFloat(articolo.prezzo_acquisto);
+        let prezzo_vendita = parseFloat(articolo.prezzo_vendita);
+        let iva_vendita = articolo.iva_vendita;
 
-            let qta_movimento = qta_input.get();
+        let qta_movimento = qta_input.get();
 
-            let alert_type, icon, text, qta_rimanente;
-            if (tipo_movimento === "carico") {
-                alert_type = "alert-success";
-                icon = "fa-arrow-up";
-                text = "Carico";
-                qta_rimanente = parseFloat(articolo.qta) + parseFloat(qta_movimento);
-            } else if (tipo_movimento === "scarico") {
-                alert_type = "alert-danger";
-                icon = "fa-arrow-down";
-                text = "Scarico";
-                qta_rimanente = parseFloat(articolo.qta) - parseFloat(qta_movimento);
-            } else if (tipo_movimento === "spostamento") {
-                alert_type = "alert-info";
-                icon = "fa-arrow-down";
-                text = "Spostamento";
-                qta_rimanente = parseFloat(articolo.qta);
-            }
+        let alert_type, icon, text, qta_rimanente;
+        if (tipo_movimento === "carico") {
+            alert_type = "alert-success";
+            icon = "fa-arrow-up";
+            text = "Carico";
+            qta_rimanente = parseFloat(articolo.qta) + parseFloat(qta_movimento);
+        } else if (tipo_movimento === "scarico") {
+            alert_type = "alert-danger";
+            icon = "fa-arrow-down";
+            text = "Scarico";
+            qta_rimanente = parseFloat(articolo.qta) - parseFloat(qta_movimento);
+        } else if (tipo_movimento === "spostamento") {
+            alert_type = "alert-info";
+            icon = "fa-arrow-down";
+            text = "Spostamento";
+            qta_rimanente = parseFloat(articolo.qta);
+        }
 
-            if (articolo.descrizione) {
-                let testo = $("#info-articolo").html();
+        if (articolo.descrizione) {
+            let testo = $("#info-articolo").html();
 
-                testo = testo.replace("|alert-type|", alert_type)
-                    .replace("|icon|", icon)
-                    .replace("|descrizione|", articolo.descrizione)
-                    .replace("|codice|", articolo.codice)
-                    .replace("|misura|", articolo.um)
-                    .replace("|misura|", articolo.um)
-                    .replace("|descrizione-movimento|", text)
-                    .replace("|movimento|", qta_movimento.toLocale())
-                    .replace("|rimanente|", qta_rimanente.toLocale())
-                    .replace("|prezzo_acquisto|", prezzo_acquisto.toLocale())
-                    .replace("|prezzo_vendita|", prezzo_vendita.toLocale());
+            testo = testo.replace("|alert-type|", alert_type)
+                .replace("|icon|", icon)
+                .replace("|descrizione|", articolo.descrizione)
+                .replace("|codice|", articolo.codice)
+                .replace("|misura|", articolo.um)
+                .replace("|misura|", articolo.um)
+                .replace("|descrizione-movimento|", text)
+                .replace("|movimento|", qta_movimento.toLocale())
+                .replace("|rimanente|", qta_rimanente.toLocale())
+                .replace("|prezzo_acquisto|", prezzo_acquisto.toLocale())
+                .replace("|prezzo_vendita|", prezzo_vendita.toLocale())
+                .replace("|iva_vendita|", iva_vendita);
 
-                $("#messages").html(testo);
-            }
+            $("#messages").html(testo);
+        }
 
-            qta_input.set(1);
-            $("#causale").trigger("change");
+        qta_input.set(1);
+        $("#causale").trigger("change");
 
-            if( input("barcode").get() !== "" ){
-                $("#idarticolo").selectReset();
-                input("barcode").set("");
-                $("#barcode").focus();
-            }
+        if( input("barcode").get() !== "" ){
+            $("#idarticolo").selectReset();
+            input("barcode").set("");
+            $("#barcode").focus();
         }
     }
-</script>';
 
-if (setting('Attiva scorciatoie da tastiera')) {
-    echo '
-<script>
-hotkeys("f8", "carico", function() {
-    $("#modals > div #direzione").val(1).change();
-});
-hotkeys.setScope("carico");
+    function EnableHotkeys(){
+        hotkeys("f7,f8,f9,f10", function(event, handler) {
+            switch (handler.key) {
+                case "f7": 
+                    event.preventDefault();
+                    $("#barcode").focus();
+                break;
+                case "f8": 
+                    event.preventDefault();
+                    input("causale").set("1");
+                break;
+                case "f9": 
+                    event.preventDefault();
+                    input("causale").set("2");
+                break;
+                case "f10": 
+                    event.preventDefault();
+                    input("causale").set("3");
+                break;
+                default: alert(event);
+            }
+        });
+    }
 
-hotkeys("f9", "scarico", function() {
-    $("#modals > div #direzione").val(2).change();
-});
-hotkeys.setScope("scarico");
 </script>';
-}
 
 echo '
 <div class="hidden" id="info-articolo">
@@ -269,6 +284,7 @@ echo '
                 <p><b>'.tr('Descrizione').':</b> |descrizione|</p>
                 <p><b>'.tr('Prezzo acquisto').':</b> |prezzo_acquisto| '.currency().'</p>
                 <p><b>'.tr('Prezzo vendita').':</b> |prezzo_vendita| '.currency().'</p>
+                <p><b>'.tr('IVA').':</b> |iva_vendita|</p>
             </div>
         </div>
         <div class="col-md-6">

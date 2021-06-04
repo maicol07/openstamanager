@@ -25,7 +25,7 @@ include_once __DIR__.'/../../core.php';
 echo '
 <script>
 $(document).ready(function() {
-    $("#save").hide();
+    $("#save-buttons").hide();
 });
 </script>';
 
@@ -205,14 +205,15 @@ echo '
 // Tipo del documento
 $query = "SELECT id, CONCAT (descrizione, IF((codice_tipo_documento_fe IS NULL), '', CONCAT(' (', codice_tipo_documento_fe, ')' ) )) AS descrizione FROM co_tipidocumento WHERE dir = 'uscita'";
 $query_tipo = $query.' AND codice_tipo_documento_fe = '.prepare($dati_generali['TipoDocumento']);
-if ($database->fetchNum($query_tipo)) {
+$numero_tipo = $database->fetchNum($query_tipo);
+if (!empty($numero_tipo)) {
     $query = $query_tipo;
 }
 
 echo '
     <div class="row">
         <div class="col-md-3">
-            {[ "type": "select", "label": "'.tr('Tipo fattura').'", "name": "id_tipo", "required": 1, "values": "query='.$query.'" ]}
+            {[ "type": "select", "label": "'.tr('Tipo fattura').'", "name": "id_tipo", "required": 1, "values": "query='.$query.'", "value": "'.($numero_tipo == 1 ? $database->fetchOne($query_tipo)['id'] : '').'" ]}
         </div>';
 
 // Sezionale
@@ -359,7 +360,7 @@ if (!empty($righe)) {
         echo '
         <tr data-id="'.$key.'" data-qta="'.$qta.'" data-prezzo_unitario="'.$prezzo_unitario.'" data-iva_percentuale="'.$riga['AliquotaIVA'].'">
             <td>
-                '.(empty($id_articolo) ? '<span class="label label-warning pull-right text-muted articolo-warning hidden">'.tr('Creazione articolo non disponibile').'</span>' : '').'
+                '.(empty($codice_principale) ? '<span class="label label-warning pull-right text-muted articolo-warning hidden">'.tr('Creazione automatica articolo non disponibile').'</span>' : '').'
                 <small class="pull-right text-muted" id="riferimento_'.$key.'"></small>
 
 
@@ -408,7 +409,7 @@ if (!empty($righe)) {
 
                     <div class="row">
                         <div class="col-md-6">
-                            {[ "type": "select", "name": "articoli['.$key.']", "ajax-source": "articoli", "select-options": '.json_encode(['permetti_movimento_a_zero' => 1, 'dir' => 'entrata', 'idanagrafica' => $anagrafica ? $anagrafica->id : '']).', "icon-after": "add|'.Modules::get('Articoli')['id'].'|codice='.htmlentities($codice_principale).'&descrizione='.htmlentities($riga['Descrizione']).'", "value": "'.$id_articolo.'", "label": "'.tr('Articolo').'" ]}
+                            {[ "type": "select", "name": "articoli['.$key.']", "ajax-source": "articoli", "select-options": '.json_encode(['permetti_movimento_a_zero' => 1, 'dir' => 'entrata', 'idanagrafica' => $anagrafica ? $anagrafica->id : '']).', "icon-after": "add|'.Modules::get('Articoli')['id'].'|codice='.str_replace('\\', '/', htmlentities($codice_principale)).'&descrizione='.str_replace('\\', '/', htmlentities($riga['Descrizione'])).'", "value": "'.$id_articolo.'", "label": "'.tr('Articolo').'" ]}
                         </div>
 
                         <div class="col-md-3">

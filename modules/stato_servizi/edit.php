@@ -105,8 +105,17 @@ if (Services::isEnabled()) {
                     <thead>
                         <tr>
                             <th>'.tr('Anno').'</th>
-                            <th>'.tr('Fatture transitate').'</th>
-                            <th>'.tr('Spazio occupato').'</th>
+                            <th>'.tr('Documenti archiviati').' 
+                            <span class="tip" title="'.tr('Fatture attive e relative ricevute, fatture passive').'.">
+                                <i class="fa fa-question-circle-o"></i>
+                            </span>
+                            </th>
+
+                            <th>'.tr('Totale spazio occupato').'
+                            <span class="tip" title="'.tr('Fatture attive con eventuali allegati e ricevute, fatture passive con eventuali allegati').'.">
+                                <i class="fa fa-question-circle-o"></i>
+                            </span>
+                            </th>
                         </tr>
                     </thead>
 

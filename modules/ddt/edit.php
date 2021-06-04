@@ -157,11 +157,16 @@ if ($module['name'] == 'Ddt di vendita') {
 				</div>
 
 				<div class="col-md-3">
+                    <?php
+                        if (!empty($record['idcausalet'])) {
+                            echo Modules::link('Causali', $record['idcausalet'], null, null, 'class="pull-right"');
+                        }
+                    ?>
 					{[ "type": "select", "label": "<?php echo tr('Causale trasporto'); ?>", "name": "idcausalet", "required": 1, "value": "$idcausalet$", "ajax-source": "causali", "icon-after": "add|<?php echo Modules::get('Causali')['id']; ?>|||<?php echo $block_edit ? 'disabled' : ''; ?>", "help": "<?php echo tr('Definisce la causale del trasporto'); ?>" ]}
 				</div>
 
 				<div class="col-md-3">
-					{[ "type": "select", "label": "<?php echo tr('Tipo di spedizione'); ?>", "name": "idspedizione", "placeholder": "-", "values": "query=SELECT id, descrizione FROM dt_spedizione ORDER BY descrizione ASC", "value": "$idspedizione$" ]}
+					{[ "type": "select", "label": "<?php echo tr('Tipo di spedizione'); ?>", "name": "idspedizione", "placeholder": "-", "values": "query=SELECT id, descrizione, esterno FROM dt_spedizione ORDER BY descrizione ASC", "value": "$idspedizione$" ]}
 				</div>
 
 				<div class="col-md-3">
@@ -183,8 +188,11 @@ if ($module['name'] == 'Ddt di vendita') {
                         if (!empty($record['idvettore'])) {
                             echo Modules::link('Anagrafiche', $record['idvettore'], null, null, 'class="pull-right"');
                         }
+                        $esterno = $dbo->selectOne('dt_spedizione', 'esterno', [
+                            'id' => $record['idspedizione'],
+                        ])['esterno'];
                     ?>
-					{[ "type": "select", "label": "<?php echo tr('Vettore'); ?>", "name": "idvettore", "ajax-source": "vettori", "value": "$idvettore$", "disabled": <?php echo intval($record['idspedizione'] == 3); ?>, "required": <?php echo (!empty($record['idspedizione'])) ? intval($record['idspedizione'] != 3) : 0; ?>, "icon-after": "add|<?php echo Modules::get('Anagrafiche')['id']; ?>|tipoanagrafica=Vettore&readonly_tipo=1|btn_idvettore|<?php echo (($record['idspedizione'] != 3 and intval(!$record['flag_completato']))) ? '' : 'disabled'; ?>" ]}
+					{[ "type": "select", "label": "<?php echo tr('Vettore'); ?>", "name": "idvettore", "ajax-source": "vettori", "value": "$idvettore$", "disabled": <?php echo empty($esterno) ? 1 : 0; ?>, "required": <?php echo !empty($esterno) ?: 0; ?>, "icon-after": "add|<?php echo Modules::get('Anagrafiche')['id']; ?>|tipoanagrafica=Vettore&readonly_tipo=1|btn_idvettore|<?php echo ((!empty($esterno) and intval(!$record['flag_completato']))) ? '' : 'disabled'; ?>" ]}
 				</div>
 
                 <div class="col-md-3">
@@ -194,20 +202,29 @@ if ($module['name'] == 'Ddt di vendita') {
                  <script>
                     $("#idspedizione").change(function() {
                         //Per tutti tipi di spedizione, a parte "Espressa" o "Vettore", il campo vettore non deve essere richiesto
-                        if ($(this).val() != 1 && $(this).val() != 2 ) {
+                        if($(this).val()){
+                            if (!$(this).selectData().esterno) {
+                                $("#idvettore").attr("required", false);
+                                input("idvettore").disable();
+                                $("label[for=idvettore]").text("<?php echo tr('Vettore'); ?>");
+                                $("#idvettore").selectReset("<?php echo tr("Seleziona un\'opzione"); ?>");
+                                $(".btn_idvettore").prop("disabled", true);
+                                $(".btn_idvettore").addClass("disabled");
+                            }else{
+                                $("#idvettore").attr("required", true);
+                                input("idvettore").enable();
+                                $("label[for=idvettore]").text("<?php echo tr('Vettore'); ?>*");
+                                $(".btn_idvettore").prop("disabled", false);
+                                $(".btn_idvettore").removeClass("disabled");
+
+                            }
+                        } else{
                             $("#idvettore").attr("required", false);
-                            $("#idvettore").attr("disabled", true);
+                            input("idvettore").disable();
                             $("label[for=idvettore]").text("<?php echo tr('Vettore'); ?>");
                             $("#idvettore").selectReset("<?php echo tr("Seleziona un\'opzione"); ?>");
                             $(".btn_idvettore").prop("disabled", true);
                             $(".btn_idvettore").addClass("disabled");
-                        }else{
-                            $("#idvettore").attr("required", true);
-                            $("#idvettore").attr("disabled", false);
-                            $("label[for=idvettore]").text("<?php echo tr('Vettore'); ?>*");
-                            $(".btn_idvettore").prop("disabled", false);
-                            $(".btn_idvettore").removeClass("disabled");
-
                         }
                     });
 
@@ -242,11 +259,16 @@ if ($dir == 'entrata') {
             <div class="col-md-3">
                 {[ "type": "checkbox", "label": "'.tr('Modifica volume').'", "name": "volume_manuale", "value":"$volume_manuale$", "help": "'.tr('Seleziona per modificare manualmente il campo volume').'", "placeholder": "'.tr('Modifica volume').'" ]}
             </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                {[ "type": "number", "label": "'.('Sconto finale').'", "name": "sconto_finale", "value": "'.($ddt->sconto_finale_percentuale ?: $ddt->sconto_finale).'", "icon-after": "choice|untprc|'.(empty($ddt->sconto_finale) ? 'PRC' : 'UNT').'", "help": "'.tr('Sconto finale, utilizzabile per applicare sconti sul Netto a pagare del documento').'." ]}
+            </div>
         </div>';
 }
 
 ?>
-
 			<div class="row">
 				<div class="col-md-12">
 					{[ "type": "textarea", "label": "<?php echo tr('Note'); ?>", "name": "note", "value": "$note$" ]}
@@ -326,13 +348,13 @@ if (!$block_edit) {
         $ddt_query = 'SELECT COUNT(*) AS tot FROM dt_ddt WHERE idstatoddt IN (SELECT id FROM dt_statiddt WHERE descrizione IN(\'Evaso\', \'Parzialmente evaso\', \'Parzialmente fatturato\')) AND idtipoddt=(SELECT id FROM or_tipiordine WHERE dir="uscita") AND dt_ddt.id IN (SELECT idddt FROM dt_righe_ddt WHERE dt_righe_ddt.idddt = dt_ddt.id AND (qta - qta_evasa) > 0)';
         $ddt = $dbo->fetchArray($ddt_query)[0]['tot'];
         echo '
-            <a class="btn btn-sm btn-primary'.(!empty($ddt) ? '' : ' disabled').'" data-href="'.base_path().'/modules/ddt/add_ddt.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="modal" data-title="Aggiungi ddt">
+            <a class="btn btn-sm btn-primary'.(!empty($ddt) ? '' : ' disabled').'" data-href="'.base_path().'/modules/ddt/add_ddt.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="modal" data-title="'.tr('Aggiungi DDT').'">
                 <i class="fa fa-plus"></i> '.tr('Ddt').'
             </a>';
     }
 
     echo '
-            <a class="btn btn-sm btn-primary'.(!empty($ordini) ? '' : ' disabled').'" data-href="'.base_path().'/modules/ddt/add_ordine.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="modal" data-title="Aggiungi ordine">
+            <a class="btn btn-sm btn-primary'.(!empty($ordini) ? '' : ' disabled').'" data-href="'.base_path().'/modules/ddt/add_ordine.php?id_module='.$id_module.'&id_record='.$id_record.'" data-toggle="modal" data-title="'.tr('Aggiungi Ordine').'">
                 <i class="fa fa-plus"></i> '.tr('Ordine').'
             </a>';
 
@@ -396,18 +418,15 @@ function gestioneDescrizione(button) {
 
 async function gestioneRiga(button, options) {
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
+
+    // Lettura titolo e chiusura tooltip
+    let title = $(button).tooltipster("content");
+    $(button).tooltipster("close")
 
     // Apertura modal
-    if (valid) {
-        // Lettura titolo e chiusura tooltip
-        let title = $(button).tooltipster("content");
-        $(button).tooltipster("close")
-
-        // Apertura modal
-        options = options ? options : "is_riga";
-        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
-    }
+    options = options ? options : "is_riga";
+    openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
 }
 
 /**

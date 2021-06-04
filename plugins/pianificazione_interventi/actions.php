@@ -48,8 +48,8 @@ switch ($operazione) {
             'data_richiesta' => post('data_richiesta'),
             'idtipointervento' => post('idtipointervento'),
             'richiesta' => post('richiesta'),
-            'idimpianti' => implode(',', post('idimpianti')),
-            'idsede' => implode(',', post('idsede_c')),
+            'idimpianti' => implode(',', post('idimpianti') ?: []),
+            'idsede' => implode(',', post('idsede_c') ?: []),
         ], ['id' => $id_record]);
 
         flash()->info(tr('Promemoria inserito!'));
@@ -154,6 +154,7 @@ switch ($operazione) {
                     $intervento->idsede_destinazione = $promemoria_corrente->idsede ?: 0;
                     $intervento->richiesta = $promemoria_corrente->richiesta;
                     $intervento->idclientefinale = post('idclientefinale') ?: 0;
+                    $intervento->id_contratto = $contratto->id;
                     $intervento->save();
 
                     // Aggiungo i tecnici selezionati

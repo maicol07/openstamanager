@@ -103,8 +103,12 @@ Input.prototype.init = function () {
     }
 
     // Inizializzazione per textarea
-    else if (this.element.hasClass('autosize')) {
-        initCompleted = initTextareaInput(htmlElement);
+    else if (this.element.hasClass('autosize') || this.element.attr('maxlength')) {
+        if (this.element.hasClass('autosize'))
+            initCompleted = initTextareaInput(htmlElement);
+
+        if (htmlElement.hasAttribute('charcounter'))
+            initCompleted = initCharCounter(htmlElement);
     }
 
     // Inizializzazione per select
@@ -132,7 +136,7 @@ Input.prototype.getElement = function () {
 /**
  * Gestisce l'abilitazione e la disibilitazione dell'input sulla base del valore indicato.
  *
- * @param {bool} value
+ * @param {boolean} value
  * @returns {Input}
  */
 Input.prototype.setDisabled = function (value) {
@@ -212,6 +216,15 @@ Input.prototype.enable = function () {
 }
 
 /**
+ * Controlla se l'input è disabilitato.
+ *
+ * @returns {boolean}
+ */
+Input.prototype.isDisabled = function () {
+    return this.element.hasClass("disabled")
+}
+
+/**
  * Restituisce un oggetto cotentente le caratteristiche dell'input.
  *
  * @returns {{value: (string|number)}|jQuery|any}
@@ -233,6 +246,11 @@ Input.prototype.getData = function () {
  */
 Input.prototype.get = function () {
     let value = this.element.val();
+
+    // Gestione dei valori per select
+    if (this.element.hasClass("select-input")) {
+        value = value ? value : null;
+    }
 
     // Gestione dei valori per l'editor
     if (this.element.hasClass("editor-input")) {

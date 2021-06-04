@@ -64,14 +64,14 @@ switch (post('op')) {
             $preventivo->condizioni_fornitura = post('condizioni_fornitura');
 
             // Informazioni sulle date del documento
-            $preventivo->data_bozza = post('data_bozza');
-            $preventivo->data_rifiuto = post('data_rifiuto');
+            $preventivo->data_bozza = post('data_bozza') ?: null;
+            $preventivo->data_rifiuto = post('data_rifiuto') ?: null;
 
             // Dati relativi alla validità del documento
             $preventivo->validita = post('validita');
             $preventivo->tipo_validita = post('tipo_validita');
-            $preventivo->data_accettazione = post('data_accettazione');
-            $preventivo->data_conclusione = post('data_conclusione');
+            $preventivo->data_accettazione = post('data_accettazione') ?: null;
+            $preventivo->data_conclusione = post('data_conclusione') ?: null;
 
             $preventivo->esclusioni = post('esclusioni');
             $preventivo->garanzia = post('garanzia');
@@ -82,6 +82,7 @@ switch (post('op')) {
             $preventivo->codice_cup = post('codice_cup');
             $preventivo->idtipointervento = post('idtipointervento');
             $preventivo->idiva = post('idiva');
+            $preventivo->setScontoFinale(post('sconto_finale'), post('tipo_sconto_finale'));
 
             $preventivo->save();
 
@@ -325,6 +326,7 @@ switch (post('op')) {
 
         $new->default_revision = 1;
         $new->numero_revision = $new->ultima_revisione + 1;
+        $new->descrizione_revision = post('descrizione');
         $new->save();
 
         $id_record = $new->id;

@@ -19,6 +19,60 @@
 
 include_once __DIR__.'/../../core.php';
 
+// Individuazione dati selezionabili
+// Stati interventi
+$stati_intervento = $dbo->fetchArray('SELECT idstatointervento AS id, descrizione, colore FROM in_statiintervento WHERE deleted_at IS NULL ORDER BY descrizione ASC');
+
+// Tipi intervento
+$tipi_intervento = $dbo->fetchArray('SELECT idtipointervento AS id, descrizione FROM in_tipiintervento ORDER BY descrizione ASC');
+
+// Tecnici disponibili
+$tecnici_disponibili = $dbo->fetchArray("SELECT an_anagrafiche.idanagrafica AS id, ragione_sociale, colore FROM an_anagrafiche
+    INNER JOIN
+    an_tipianagrafiche_anagrafiche ON an_anagrafiche.idanagrafica=an_tipianagrafiche_anagrafiche.idanagrafica
+    INNER JOIN an_tipianagrafiche ON an_tipianagrafiche_anagrafiche.idtipoanagrafica=an_tipianagrafiche.idtipoanagrafica
+    LEFT OUTER JOIN in_interventi_tecnici ON in_interventi_tecnici.idtecnico = an_anagrafiche.idanagrafica
+    INNER JOIN in_interventi ON in_interventi_tecnici.idintervento=in_interventi.id
+WHERE an_anagrafiche.deleted_at IS NULL AND an_tipianagrafiche.descrizione='Tecnico' ".Modules::getAdditionalsQuery('Interventi').'
+GROUP BY an_anagrafiche.idanagrafica
+ORDER BY ragione_sociale ASC');
+
+// Zone
+$zone = $dbo->fetchArray('(SELECT 0 AS ordine, \'0\' AS id, \'Nessuna zona\' AS descrizione) UNION (SELECT 1 AS ordine, id, descrizione FROM an_zone) ORDER BY ordine, descrizione ASC');
+
+// Prima selezione globale per tutti i filtri
+if (!isset($_SESSION['dashboard']['idtecnici'])) {
+    $_SESSION['dashboard']['idtecnici'] = ["'-1'"];
+
+    foreach ($tecnici_disponibili as $tecnico) {
+        $_SESSION['dashboard']['idtecnici'][] = "'".$tecnico['id']."'";
+    }
+}
+
+if (!isset($_SESSION['dashboard']['idstatiintervento'])) {
+    $_SESSION['dashboard']['idstatiintervento'] = ["'-1'"];
+
+    foreach ($stati_intervento as $stato) {
+        $_SESSION['dashboard']['idstatiintervento'][] = "'".$stato['id']."'";
+    }
+}
+
+if (!isset($_SESSION['dashboard']['idtipiintervento'])) {
+    $_SESSION['dashboard']['idtipiintervento'] = ["'-1'"];
+
+    foreach ($tipi_intervento as $tipo) {
+        $_SESSION['dashboard']['idtipiintervento'][] = "'".$tipo['id']."'";
+    }
+}
+
+if (!isset($_SESSION['dashboard']['idzone'])) {
+    $_SESSION['dashboard']['idzone'] = ["'-1'"];
+
+    foreach ($zone as $zona) {
+        $_SESSION['dashboard']['idzone'][] = "'".$zona['id']."'";
+    }
+}
+
 echo '
 <!-- Filtri -->
 <div class="row">
@@ -32,7 +86,6 @@ echo '
 
 // Stati intervento
 $stati_sessione = session_get('dashboard.idstatiintervento', []);
-$stati_intervento = $dbo->fetchArray('SELECT idstatointervento AS id, descrizione, colore FROM in_statiintervento WHERE deleted_at IS NULL ORDER BY descrizione ASC');
 foreach ($stati_intervento as $stato) {
     $attr = '';
     if (in_array("'".$stato['id']."'", $stati_sessione)) {
@@ -70,7 +123,6 @@ echo '
 
 // Tipi intervento
 $tipi_sessione = session_get('dashboard.idtipiintervento', []);
-$tipi_intervento = $dbo->fetchArray('SELECT idtipointervento AS id, descrizione FROM in_tipiintervento ORDER BY descrizione ASC');
 foreach ($tipi_intervento as $tipo) {
     $attr = '';
     if (in_array("'".$tipo['id']."'", $tipi_sessione)) {
@@ -107,15 +159,6 @@ echo '
 		<ul class="dropdown-menu" role="menu">';
 
 $tecnici_sessione = session_get('dashboard.idtecnici', []);
-$tecnici_disponibili = $dbo->fetchArray("SELECT an_anagrafiche.idanagrafica AS id, ragione_sociale, colore FROM an_anagrafiche
-    INNER JOIN
-    an_tipianagrafiche_anagrafiche ON an_anagrafiche.idanagrafica=an_tipianagrafiche_anagrafiche.idanagrafica
-    INNER JOIN an_tipianagrafiche ON an_tipianagrafiche_anagrafiche.idtipoanagrafica=an_tipianagrafiche.idtipoanagrafica
-    LEFT OUTER JOIN in_interventi_tecnici ON in_interventi_tecnici.idtecnico = an_anagrafiche.idanagrafica
-    INNER JOIN in_interventi ON in_interventi_tecnici.idintervento=in_interventi.id
-WHERE an_anagrafiche.deleted_at IS NULL AND an_tipianagrafiche.descrizione='Tecnico' ".Modules::getAdditionalsQuery('Interventi').'
-GROUP BY an_anagrafiche.idanagrafica
-ORDER BY ragione_sociale ASC');
 foreach ($tecnici_disponibili as $tecnico) {
     $attr = '';
     if (in_array("'".$tecnico['id']."'", $tecnici_sessione)) {
@@ -153,7 +196,6 @@ echo '
 
 // Zone
 $zone_sessione = session_get('dashboard.idzone', []);
-$zone = $dbo->fetchArray('(SELECT 0 AS ordine, \'0\' AS id, \'Nessuna zona\' AS descrizione) UNION (SELECT 1 AS ordine, id, descrizione FROM an_zone) ORDER BY ordine, descrizione ASC');
 foreach ($zone as $zona) {
     $attr = '';
     if (in_array("'".$zona['id']."'", $zone_sessione)) {
@@ -476,7 +518,7 @@ echo '
             lazyFetching: true,
             selectMirror: true,
             eventLimit: false, // allow "more" link when too many events
-            allDaySlot: false,
+            allDaySlot: true,
 
             loading: function (isLoading, view) {
                 if (isLoading) {
@@ -501,7 +543,6 @@ echo '
                 } else {
                     name = "id_intervento";
                 }
-
                 openModal(globals.dashboard.drop.title, globals.dashboard.drop.url + "&data=" + data + "&orario_inizio=" + ora_dal + "&orario_fine=" + ora_al + "&ref=dashboard&idcontratto=" + $(this).data("idcontratto") + "&" + name + "=" + $(this).data("id") + "&id_tecnico=" + $(this).data("id_tecnico"));
 
                 // Ricaricamento dei dati alla chiusura del modal
@@ -518,24 +559,28 @@ echo '
             select: function(start, end, allDay) { // info
                 // let start = info.start;
                 // let end = info.end;
+                
+                let is_allDay = !start.hasTime() && !end.hasTime();
 
-                let data = moment(start).format("YYYY-MM-DD");
-                let data_fine = moment(end).format("YYYY-MM-DD");
-                let orario_inizio = moment(start).format("HH:mm");
-                let orario_fine = moment(end).format("HH:mm");
+                if (is_allDay!==true){
+                    let data = moment(start).format("YYYY-MM-DD");
+                    let data_fine = moment(end).format("YYYY-MM-DD");
+                    let orario_inizio = moment(start).format("HH:mm");
+                    let orario_fine = moment(end).format("HH:mm");
 
-                // Fix selezione di un giorno avanti per vista mensile
-                if (globals.dashboard.calendar.fullCalendar("getView").name == "month") {
-                    data_fine = moment(end).subtract(1, "days").format("YYYY-MM-DD");
+                    // Fix selezione di un giorno avanti per vista mensile
+                    if (globals.dashboard.calendar.fullCalendar("getView").name == "month") {
+                        data_fine = moment(end).subtract(1, "days").format("YYYY-MM-DD");
+                    }
+
+                    openModal(globals.dashboard.select.title, globals.dashboard.select.url + "&ref=dashboard&data=" + data + "&data_fine=" + data_fine + "&orario_inizio=" + orario_inizio + "&orario_fine=" + orario_fine);
                 }
-
-                openModal(globals.dashboard.select.title, globals.dashboard.select.url + "&ref=dashboard&data=" + data + "&data_fine=" + data_fine + "&orario_inizio=" + orario_inizio + "&orario_fine=" + orario_fine);
             },
 
             editable: globals.dashboard.write_permission,
             eventDrop: function(event, delta, revertFunc ) {// info
                 // let event = info.event;
-
+                
                 $.post(globals.dashboard.load_url, {
                     op: "modifica_intervento",
                     id: event.id,
@@ -572,10 +617,10 @@ echo '
             eventAfterRender: function(event, element) {
                 // let event = info.event;
                 // let element = $(info.el);
-
                 element.find(".fc-title").html(event.title);
                 let id_intervento = event.idintervento;
-                if (globals.dashboard.tooltip == 1) {
+                
+                if (globals.dashboard.tooltip == 1 && event.allDay==false ) {
                     element.tooltipster({
                         content: "'.tr('Caricamento...').'",
                         animation: "grow",
@@ -594,8 +639,9 @@ echo '
 
                             if ($origin.data("loaded") !== true) {
                             $.post(globals.dashboard.load_url, {
-                                    op: "info_intervento",
+                                    op: "tooltip_info",
                                     id: id_intervento,
+                                    allDay: event.allDay,
                                 }, function (data, response) {
                                     instance.content(data);
 
@@ -620,48 +666,3 @@ echo '
         globals.dashboard.calendar = calendar;
     }
 </script>';
-
-// Prima selezione globale per tutti i filtri
-if (!isset($_SESSION['dashboard']['idtecnici'])) {
-    $_SESSION['dashboard']['idtecnici'] = ["'-1'"];
-
-    echo '
-<script>
-$(document).ready(function (){
-    $("#dashboard_tecnici .seleziona_tutto").click();
-})
-</script>';
-}
-
-if (!isset($_SESSION['dashboard']['idstatiintervento'])) {
-    $_SESSION['dashboard']['idstatiintervento'] = ["'-1'"];
-
-    echo '
-<script>
-$(document).ready(function (){
-    $("#dashboard_stati .seleziona_tutto").click();
-})
-</script>';
-}
-
-if (!isset($_SESSION['dashboard']['idtipiintervento'])) {
-    $_SESSION['dashboard']['idtipiintervento'] = ["'-1'"];
-
-    echo '
-<script>
-$(document).ready(function (){
-    $("#dashboard_tipi .seleziona_tutto").click();
-})
-</script>';
-}
-
-if (!isset($_SESSION['dashboard']['idzone'])) {
-    $_SESSION['dashboard']['idzone'] = ["'-1'"];
-
-    echo '
-<script>
-$(document).ready(function (){
-    $("#dashboard_zone .seleziona_tutto").click();
-})
-</script>';
-}

@@ -73,36 +73,33 @@ if ($module['name'] == 'Interventi') {
 echo App::internalLoad('riga.php', $result, $options);
 
 // Informazioni aggiuntive
-if ($module['name'] != 'Contratti' && $module['name'] != 'Preventivi') {
-    $disabled = empty($result['idarticolo']);
+$disabled = empty($result['idarticolo']);
 
-    echo '
+echo '
 <div class="row '.(!empty($options['nascondi_prezzi']) ? 'hidden' : '').'" id="prezzi_articolo">
     <div class="col-md-4 text-center">
         <button type="button" class="btn btn-sm btn-info btn-block '.($disabled ? 'disabled' : '').'" '.($disabled ? 'disabled' : '').' onclick="$(\'#prezziacquisto\').toggleClass(\'hide\'); $(\'#prezziacquisto\').load(\''.base_path()."/ajax_complete.php?module=Articoli&op=getprezziacquisto&idarticolo=' + ( $('#idarticolo option:selected').val() || $('#idarticolo').val()) + '&idanagrafica=".$options['idanagrafica'].'\');">
-            <i class="fa fa-search"></i> '.tr('Ultimi prezzi di acquisto').'
+            <i class="fa fa-shopping-cart"></i> '.tr('Ultimi prezzi di acquisto').'
         </button>
         <div id="prezziacquisto" class="hide"></div>
     </div>
 
     <div class="col-md-4 text-center">
         <button type="button" class="btn btn-sm btn-info btn-block '.($disabled ? 'disabled' : '').'" '.($disabled ? 'disabled' : '').' onclick="$(\'#prezzi\').toggleClass(\'hide\'); $(\'#prezzi\').load(\''.base_path()."/ajax_complete.php?module=Articoli&op=getprezzi&idarticolo=' + ( $('#idarticolo option:selected').val() || $('#idarticolo').val()) + '&idanagrafica=".$options['idanagrafica'].'\');">
-            <i class="fa fa-search"></i> '.tr('Ultimi prezzi al cliente').'
+            <i class="fa fa-handshake-o"></i> '.($options['dir'] == 'entrata' ? tr('Ultimi prezzi al cliente') : tr('Ultimi prezzi dal fornitore')).'
         </button>
         <div id="prezzi" class="hide"></div>
     </div>
 
     <div class="col-md-4 text-center">
         <button type="button" class="btn btn-sm btn-info btn-block '.($disabled ? 'disabled' : '').'" '.($disabled ? 'disabled' : '').' onclick="$(\'#prezzivendita\').toggleClass(\'hide\'); $(\'#prezzivendita\').load(\''.base_path()."/ajax_complete.php?module=Articoli&op=getprezzivendita&idarticolo=' + ( $('#idarticolo option:selected').val() || $('#idarticolo').val()) + '&idanagrafica=".$options['idanagrafica'].'\');">
-            <i class="fa fa-search"></i> '.tr('Ultimi prezzi di vendita').'
+            <i class="fa fa-money"></i> '.tr('Ultimi prezzi di vendita').'
         </button>
         <div id="prezzivendita" class="hide"></div>
     </div>
 </div>
-<br>';
-}
+<br>
 
-echo '
 <script>
 var direzione = "'.$options['dir'].'";
 globals.aggiunta_articolo = {
@@ -179,7 +176,7 @@ $("#idarticolo").on("change", function() {
 
     $("#um").selectSetNew($data.um, $data.um);
     // Aggiornamento automatico di guadagno e margine
-    
+
 });
 
 $(document).on("change", "input[name^=qta], input[name^=prezzo_unitario], input[name^=sconto]", function() {
@@ -298,10 +295,9 @@ function aggiornaPrezzoArticolo() {
     $("#prezzo_unitario").val(prezzo_previsto).trigger("change");
 
     // Aggiornamento automatico di guadagno e margine
-    if (direzione == "entrata") {
+    if (direzione === "entrata") {
         aggiorna_guadagno();
     }
-
 }
 
 /**
@@ -314,10 +310,9 @@ function aggiornaScontoArticolo() {
     $("#sconto").val(sconto_previsto).trigger("change");
 
     // Aggiornamento automatico di guadagno e margine
-    if (direzione == "entrata") {
+    if (direzione === "entrata") {
         aggiorna_guadagno();
     }
-
 }
 
 /**

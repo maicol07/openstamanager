@@ -103,11 +103,6 @@ if (!$elenco_promemoria->isEmpty()) {
             $title = 'Elimina promemoria...';
         }
 
-        // data_conclusione contratto
-        if (date('Y', strtotime($contratto['data_conclusione'])) < 1971) {
-            $contratto['data_conclusione'] = '';
-        }
-
         // Informazioni sugli impianti
         $info_impianti = '';
         if (!empty($promemoria['idimpianti'])) {
@@ -145,7 +140,7 @@ if (!$elenco_promemoria->isEmpty()) {
         echo '
             <tr>
                 <td>'.Translator::dateToLocale($promemoria['data_richiesta']).'</td>
-                <td>'.$promemoria['tipointervento'].'</td>
+                <td>'.$promemoria->tipo->descrizione.'</td>
                 <td>'.nl2br($promemoria['richiesta']).'</td>
                 <td>'.$info_intervento.'</td>
                 <td>'.$info_sede.'</td>

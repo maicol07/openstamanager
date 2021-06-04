@@ -150,6 +150,8 @@ $sconto = $contratto->sconto;
 $totale_imponibile = abs($contratto->totale_imponibile);
 $iva = abs($contratto->iva);
 $totale = abs($contratto->totale);
+$sconto_finale = $contratto->getScontoFinale();
+$netto_a_pagare = $contratto->netto;
 
 // Totale totale imponibile
 echo '
@@ -213,6 +215,34 @@ echo '
             <td></td>
         </tr>';
 
+// SCONTO FINALE
+if (!empty($sconto_finale)) {
+    echo '
+        <tr>
+            <td colspan="5" class="text-right">
+                <b>'.tr('Sconto finale', [], ['upper' => true]).':</b>
+            </td>
+            <td class="text-right">
+                '.moneyFormat($sconto_finale, 2).'
+            </td>
+            <td></td>
+        </tr>';
+}
+
+// NETTO A PAGARE
+if ($totale != $netto_a_pagare) {
+    echo '
+        <tr>
+            <td colspan="5" class="text-right">
+                <b>'.tr('Netto a pagare', [], ['upper' => true]).':</b>
+            </td>
+            <td class="text-right">
+                '.moneyFormat($netto_a_pagare, 2).'
+            </td>
+            <td></td>
+        </tr>';
+}
+
 echo '
     </table>
 </div>';
@@ -225,16 +255,14 @@ async function modificaRiga(button) {
     let type = riga.data("type");
 
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
 
-    if (valid) {
-        // Chiusura tooltip
-        if ($(button).hasClass("tooltipstered"))
-            $(button).tooltipster("close");
+    // Chiusura tooltip
+    if ($(button).hasClass("tooltipstered"))
+        $(button).tooltipster("close");
 
-        // Apertura modal
-        openModal("'.tr('Modifica riga').'", "'.$module->fileurl('row-edit.php').'?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&riga_id=" + id + "&riga_type=" + type);
-    }
+    // Apertura modal
+    openModal("'.tr('Modifica riga').'", "'.$module->fileurl('row-edit.php').'?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&riga_id=" + id + "&riga_type=" + type);
 }
 
 function rimuoviRiga(button) {

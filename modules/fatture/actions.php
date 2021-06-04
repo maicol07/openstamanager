@@ -250,7 +250,7 @@ switch (post('op')) {
                     }
 
                     foreach ($riepiloghi as $riepilogo) {
-                        $totale_documento = sum([$totale_documento, $riepilogo['ImponibileImporto'], $riepilogo['Imposta']]);
+                        $totale_documento = sum([$totale_documento, $riepilogo['ImponibileImporto'], $riepilogo['Imposta'], -$riepilogo['Arrotondamento']]);
                     }
 
                     $totale_documento = abs($totale_documento);
@@ -297,6 +297,12 @@ switch (post('op')) {
 
             // Azzeramento collegamento della rata contrattuale alla pianificazione
             $dbo->query('UPDATE co_fatturazione_contratti SET iddocumento=0 WHERE iddocumento='.prepare($id_record));
+            
+            // Eliminazione allegati collegati
+            Uploads::deleteLinked([
+                'id_module' => $id_module,
+                'id_record' => $id_record,
+            ]);
 
             flash()->info(tr('Fattura eliminata!'));
         } catch (InvalidArgumentException $e) {
@@ -308,12 +314,11 @@ switch (post('op')) {
     // Duplicazione fattura
     case 'copy':
         $new = $fattura->replicate();
-        $new->numero = Fattura::getNextNumero($new->data, $new->direzione, $new->id_segment);
         $new->save();
 
         $id_record = $new->id;
 
-        $righe = $fattura->getRighe();
+        $righe = $fattura->getRighe()->where('id', '!=', $fattura->id_riga_bollo);
         foreach ($righe as $riga) {
             $new_riga = $riga->replicate();
             $new_riga->setDocument($new);
@@ -545,9 +550,6 @@ switch (post('op')) {
         }
 
         $qta = post('qta');
-        if (!empty($record['is_reversed'])) {
-            $qta = -$qta;
-        }
 
         $riga->descrizione = post('descrizione');
         $riga->um = post('um') ?: null;
@@ -690,14 +692,28 @@ switch (post('op')) {
 
             $fattura = Fattura::build($documento->anagrafica, $tipo, post('data'), post('id_segment'));
 
-            $fattura->idpagamento = $documento->idpagamento;
+            if (!empty($documento->idpagamento)) {
+                $fattura->idpagamento = $documento->idpagamento;
+            } else {
+                $fattura->idpagamento = setting('Tipo di pagamento predefinito');
+            }
+
             $fattura->idsede_destinazione = $documento->idsede;
             $fattura->id_ritenuta_contributi = post('id_ritenuta_contributi') ?: null;
+            $fattura->idreferente = $documento->idreferente;
 
             $fattura->save();
 
             $id_record = $fattura->id;
         }
+
+        if (!empty($documento->sconto_finale)) {
+            $fattura->sconto_finale = $documento->sconto_finale;
+        } elseif (!empty($documento->sconto_finale_percentuale)) {
+            $fattura->sconto_finale_percentuale = $documento->sconto_finale_percentuale;
+        }
+
+        $fattura->save();
 
         $calcolo_ritenuta_acconto = post('calcolo_ritenuta_acconto') ?: null;
         $id_ritenuta_acconto = post('id_ritenuta_acconto') ?: null;
@@ -709,10 +725,11 @@ switch (post('op')) {
         foreach ($righe as $riga) {
             if (post('evadere')[$riga->id] == 'on') {
                 $qta = post('qta_da_evadere')[$riga->id];
+                $articolo = ArticoloOriginale::find($riga->idarticolo);
 
                 $copia = $riga->copiaIn($fattura, $qta);
-                $copia->id_conto = $id_conto;
 
+                $copia->id_conto = ($documento->direzione == 'entrata' ? ($articolo->idconto_vendita ?: $id_conto) : ($articolo->idconto_acquisto ?: $id_conto));
                 $copia->calcolo_ritenuta_acconto = $calcolo_ritenuta_acconto;
                 $copia->id_ritenuta_acconto = $id_ritenuta_acconto;
                 $copia->id_rivalsa_inps = $id_rivalsa_inps;

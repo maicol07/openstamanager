@@ -94,7 +94,7 @@ if ($module['name'] == 'Ordini cliente') {
                     }
                 echo '
                 </div>
-                
+
                 <div class="col-md-3">';
                     if (!empty($record['idreferente'])) {
                         echo Plugins::link('Referenti', $record['idanagrafica'], null, null, 'class="pull-right"');
@@ -110,7 +110,7 @@ if ($module['name'] == 'Ordini cliente') {
 				<div class="col-md-3">
 					{[ "type": "select", "label": "'.tr('Pagamento').'", "name": "idpagamento", "required": 0, "ajax-source": "pagamenti", "value": "$idpagamento$" ]}
 				</div>
-			</div>';
+            </div>';
 
             if ($dir == 'entrata') {
                 ?>
@@ -119,15 +119,18 @@ if ($module['name'] == 'Ordini cliente') {
                     {[ "type": "text", "label": "<?php echo tr('Numero ordine cliente'); ?>", "name": "numero_cliente", "required":0, "value": "<?php echo $record['numero_cliente']; ?>", "help": "<?php echo tr('<span>Obbligatorio per valorizzare CIG/CUP. &Egrave; possible inserire: </span><ul><li>N. determina</li><li>RDO</li><li>Ordine MEPA</li></ul>'); ?>" ]}
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-3">
                     {[ "type": "date", "label": "<?php echo tr('Data ordine cliente'); ?>", "name": "data_cliente", "value": "<?php echo $record['data_cliente']; ?>" ]}
                 </div>
-            </div>
 
+                <div class="col-md-3">
+                    {[ "type": "number", "label": "<?php echo 'Sconto finale'; ?>", "name": "sconto_finale", "value": "<?php echo $ordine->sconto_finale_percentuale ?: $ordine->sconto_finale; ?>", "icon-after": "choice|untprc|<?php echo empty($ordine->sconto_finale) ? 'PRC' : 'UNT'; ?>", "help": "<?php echo tr('Sconto finale, utilizzabile per applicare sconti sul Netto a pagare del documento'); ?>." ]}
+                </div>
+            </div>
                 <?php
             }
             ?>
-
+            
 			<div class="row">
 				<div class="col-md-12">
 					{[ "type": "textarea", "label": "<?php echo tr('Note'); ?>", "name": "note", "value": "$note$" ]}
@@ -285,18 +288,15 @@ function gestioneDescrizione(button) {
 
 async function gestioneRiga(button, options) {
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
+
+    // Lettura titolo e chiusura tooltip
+    let title = $(button).tooltipster("content");
+    $(button).tooltipster("close")
 
     // Apertura modal
-    if (valid) {
-        // Lettura titolo e chiusura tooltip
-        let title = $(button).tooltipster("content");
-        $(button).tooltipster("close")
-
-        // Apertura modal
-        options = options ? options : "is_riga";
-        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
-    }
+    options = options ? options : "is_riga";
+    openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
 }
 
 /**

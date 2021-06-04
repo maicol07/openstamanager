@@ -17,15 +17,12 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-/*
- * Header di default.
- * I contenuti di questo file vengono utilizzati per generare l'header delle stampe nel caso non esista un file header.php all'interno della stampa.
- *
- * Per modificare l'header della stampa basta aggiungere un file header.php all'interno della cartella della stampa con i contenuti da mostrare (vedasi templates/fatture/header.php).
- *
- * La personalizzazione specifica dell'header deve comunque seguire lo standard della cartella custom: anche se il file header.php non esiste nella stampa originaria, se si vuole personalizzare l'header bisogna crearlo all'interno della cartella custom.
- */
-echo '
-    <div class="col-xs-12 text-right" >
-        <p><b>'.$f_ragionesociale.'</p>
-    </div>';
+use Modules\Anagrafiche\Anagrafica;
+
+$anagrafica = Anagrafica::find($id_record);
+
+// Variabili da sostituire
+return [
+    'ragione_sociale' => $anagrafica->ragione_sociale,
+    'codice' => $anagrafica->codice,
+];

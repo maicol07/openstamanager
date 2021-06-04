@@ -20,6 +20,8 @@
 use Modules\Anagrafiche\Anagrafica;
 use Modules\Fatture\Gestori\Bollo;
 use Modules\Iva\Aliquota;
+use Modules\Interventi\Intervento;
+use Carbon\Carbon;
 
 include_once __DIR__.'/../../core.php';
 
@@ -89,6 +91,26 @@ if ($dir == 'entrata') {
         ]).'.</b>
 </div>';
     }
+
+    // Verifica la data dell'intervento rispetto alla data della fattura
+    $righe_interventi = $fattura->getRighe()->where('idintervento', '!=', NULL);
+    if (!empty($righe_interventi)) {
+        foreach($righe_interventi as $riga_intervento){
+            $intervento = Intervento::find($riga_intervento->idintervento);
+
+            if((new Carbon($intervento->fine))->diffInDays(new Carbon($fattura->data), false) < 0){
+                $fatturazione_futura = true; 
+                break;
+            }
+        }
+
+        if($fatturazione_futura){
+            echo '
+<div class="alert alert-warning">
+    <i class="fa fa-warning"></i> '.tr("Stai fatturando un'attività futura rispetto alla data di fatturazione.").'</b>
+</div>';
+        }
+    }
 }
 ?>
 <form action="" method="post" id="edit-form">
@@ -111,8 +133,9 @@ if ($dir == 'entrata') {
                     $campi_mancanti = [];
 
                     //di default è un azienda e chiedo la partita iva
-                    if (empty($rs2[0]['piva']) and (empty($rs2[0]['tipo']) or $rs2[0]['tipo'] == 'Azienda')) {
+                    if (empty($rs2[0]['piva']) and empty($rs2[0]['codice_fiscale']) and (empty($rs2[0]['tipo']) or $rs2[0]['tipo'] == 'Azienda')) {
                         array_push($campi_mancanti, 'Partita IVA');
+                        array_push($campi_mancanti, 'Codice fiscale');
                     }
 
                     //se è un privato o un ente pubblico controllo il codice fiscale
@@ -147,7 +170,7 @@ if ($dir == 'entrata') {
                 <div class="col-md-2">
                     {[ "type": "text", "label": "'.tr('Numero fattura/protocollo').'", "required": 1, "name": "numero","class": "text-center alphanumeric-mask", "value": "$numero$" ]}
                 </div>';
-                    $label = tr('Numero fattura del fornitore');
+                    $label = tr('N. fattura del fornitore');
                     $size = 2;
                 } else {
                     $label = tr('Numero fattura');
@@ -159,7 +182,7 @@ if ($dir == 'entrata') {
 				{[ "type": "hidden", "label": "Segmento", "name": "id_segment", "class": "text-center", "value": "$id_segment$" ]}
 
 				<div class="col-md-<?php echo $size; ?>">
-					{[ "type": "text", "label": "<?php echo $label; ?>", "name": "numero_esterno", "class": "text-center", "value": "$numero_esterno$", "help": "<?php echo (empty($record['numero_esterno']) and $dir == 'entrata') ? tr('Il numero della fattura sarà generato automaticamente in fase di emissione.') : ''; ?>" ]}
+					{[ "type": "text", "label": "<?php echo $label; ?>", "required": "<?php echo (($dir=='uscita')? 1 : 0); ?>", "name": "numero_esterno", "class": "text-center", "value": "$numero_esterno$", "help": "<?php echo (empty($record['numero_esterno']) and $dir == 'entrata') ? tr('Il numero della fattura sarà generato automaticamente in fase di emissione.') : ''; ?>" ]}
 				</div>
 
 				<div class="col-md-2">
@@ -278,11 +301,13 @@ elseif ($record['stato'] == 'Bozza') {
 				<div class="col-md-3">
 					<!-- Nella realtà la fattura accompagnatoria non può esistere per la fatturazione elettronica, in quanto la risposta dal SDI potrebbe non essere immediata e le merci in viaggio. Dunque si può emettere una documento di viaggio valido per le merci ed eventualmente una fattura pro-forma per l'incasso della stessa, emettendo infine la fattura elettronica differita. -->
 
-					{[ "type": "select", "label": "<?php echo tr('Tipo documento'); ?>", "name": "idtipodocumento", "required": 1, "values": "query=SELECT id, CONCAT_WS(\" - \",codice_tipo_documento_fe, descrizione) AS descrizione FROM co_tipidocumento WHERE dir='<?php echo $dir; ?>' AND (reversed = 0 OR id = <?php echo $record['idtipodocumento']; ?>)", "value": "$idtipodocumento$", "readonly": <?php echo intval($record['stato'] != 'Bozza' && $record['stato'] != 'Annullata'); ?>, "help": "<?php echo ($database->fetchOne('SELECT tipo FROM an_anagrafiche WHERE idanagrafica = '.prepare($record['idanagrafica']))['tipo'] == 'Ente pubblico') ? 'FPA12 - fattura verso PA (Ente pubblico)' : 'FPR12 - fattura verso soggetti privati (Azienda o Privato)'; ?>" ]}
+					{[ "type": "select", "label": "<?php echo tr('Tipo documento'); ?>", "name": "idtipodocumento", "required": 1, "values": "query=SELECT id, CONCAT_WS(\" - \",codice_tipo_documento_fe, descrizione) AS descrizione FROM co_tipidocumento WHERE dir='<?php echo $dir; ?>' AND (reversed = 0 OR id = <?php echo $record['idtipodocumento']; ?>) ORDER BY codice_tipo_documento_fe", "value": "$idtipodocumento$", "readonly": <?php echo intval($record['stato'] != 'Bozza' && $record['stato'] != 'Annullata'); ?>, "help": "<?php echo ($database->fetchOne('SELECT tipo FROM an_anagrafiche WHERE idanagrafica = '.prepare($record['idanagrafica']))['tipo'] == 'Ente pubblico') ? 'FPA12 - fattura verso PA (Ente pubblico)' : 'FPR12 - fattura verso soggetti privati (Azienda o Privato)'; ?>" ]}
 				</div>
 
 				<div class="col-md-3">
-					{[ "type": "select", "label": "<?php echo tr('Pagamento'); ?>", "name": "idpagamento", "required": 1, "ajax-source": "pagamenti", "value": "$idpagamento$", "extra": "onchange=\"$('#id_banca_azienda').val($(this).selectData().id_banca_<?php echo $conto; ?>).change(); \" " ]}
+                    <?php echo (!empty($record['idpagamento']) ? Modules::link('Pagamenti', $record['idpagamento'], null, null, 'class="pull-right"') : ''); ?>
+
+					{[ "type": "select", "label": "<?php echo tr('Pagamento'); ?>", "name": "idpagamento", "required": 1, "ajax-source": "pagamenti", "value": "$idpagamento$", "extra": "onchange=\"$('#id_banca_azienda').selectSetNew( $(this).selectData().id_banca_<?php echo $conto; ?>, $(this).selectData().descrizione_banca_<?php echo $conto; ?> ).change(); \" " ]}
 				</div>
 
 				<div class="col-md-3">
@@ -327,7 +352,7 @@ elseif ($record['stato'] == 'Bozza') {
                         <strike>';
                         }
 
-                        echo (empty($scadenza->da_pagare) ? '<i class="fa fa-exclamation-triangle"></i>' : '').moneyFormat($scadenza->da_pagare);
+                        echo(empty($scadenza->da_pagare) ? '<i class="fa fa-exclamation-triangle"></i>' : '').moneyFormat($scadenza->da_pagare);
 
                         if ($pagamento_iniziato) {
                             echo '
@@ -350,7 +375,7 @@ elseif ($record['stato'] == 'Bozza') {
 
             <div class="row">
 				<div class="col-md-3">
-					{[ "type": "checkbox", "label": "<?php echo tr('Split payment'); ?>", "name": "split_payment", "value": "$split_payment$", "help": "<?php echo tr('Abilita lo split payment per questo documento. Le aliquote iva con natura N6 (reverse charge) non saranno disponibili.'); ?>", "placeholder": "<?php echo tr('Split payment'); ?>" ]}
+					{[ "type": "checkbox", "label": "<?php echo tr('Split payment'); ?>", "name": "split_payment", "value": "$split_payment$", "help": "<?php echo tr('Abilita lo split payment per questo documento. Le aliquote iva con natura N6.X (reverse charge) non saranno disponibili.'); ?>", "placeholder": "<?php echo tr('Split payment'); ?>" ]}
 				</div>
 
 				<?php
@@ -366,6 +391,7 @@ elseif ($record['stato'] == 'Bozza') {
                 ?>
 
                 <div class="col-md-3">
+                    <?php echo (!empty($record['id_ritenuta_contributi']) ? Modules::link('Ritenute contributi', $record['id_ritenuta_contributi'], null, null, 'class="pull-right"') : ''); ?>
                     {[ "type": "select", "label": "<?php echo tr('Ritenuta contributi'); ?>", "name": "id_ritenuta_contributi", "value": "$id_ritenuta_contributi$", "values": "query=SELECT *, CONCAT(descrizione,(IF(percentuale>0, CONCAT(\" - \", percentuale, \"% sul \", percentuale_imponibile, \"% imponibile\"), \"\"))) AS descrizione FROM co_ritenuta_contributi", "help": "<?php echo tr('Ritenuta contributi da applicare alle righe della fattura.'); ?>"  ]}
                 </div>
 
@@ -740,15 +766,17 @@ if ($dir == 'uscita' && $fattura->isFE()) {
 
                 var div = $("#controlla_totali");
                 div.removeClass("alert-info");
+                var calculated = parseFloat(data.calculated, 10).toLocale();
+                var stored = parseFloat(data.stored, 10).toLocale();
 
-                if (data.stored == null) {
+                if (stored == null) {
                     div.addClass("alert-info").html("'.tr("Il file XML non contiene il nodo ''ImportoTotaleDocumento'': impossibile controllare corrispondenza dei totali").'.")
-                } else if (data.stored == data.calculated){
+                } else if (stored == calculated){
                     div.addClass("alert-success").html("'.tr('Il totale del file XML corrisponde a quello calcolato dal gestionale').'.")
                 } else {
                     div.addClass("alert-warning").html("'.tr('Il totale del file XML non corrisponde a quello calcolato dal gestionale: previsto _XML_, calcolato _CALC_', [
-                        '_XML_' => '" + data.stored + " " + globals.currency + "',
-                        '_CALC_' => '" + data.calculated + " " + globals.currency + "',
+                        '_XML_' => '" + stored + " " + globals.currency + "',
+                        '_CALC_' => '" + calculated + " " + globals.currency + "',
                     ]).'.")
                 }
 
@@ -852,18 +880,15 @@ function gestioneDescrizione(button) {
 
 async function gestioneRiga(button, options) {
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
+
+    // Lettura titolo e chiusura tooltip
+    let title = $(button).tooltipster("content");
+    $(button).tooltipster("close")
 
     // Apertura modal
-    if (valid) {
-        // Lettura titolo e chiusura tooltip
-        let title = $(button).tooltipster("content");
-        $(button).tooltipster("close")
-
-        // Apertura modal
-        options = options ? options : "is_riga";
-        openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
-    }
+    options = options ? options : "is_riga";
+    openModal(title, "'.$structure->fileurl('row-add.php').'?id_module='.$id_module.'&id_record='.$id_record.'&" + options);
 }
 
 /**

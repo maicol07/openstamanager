@@ -28,13 +28,16 @@ $query = 'SELECT
     or_ordini.numero_esterno,
     data,
     SUM(or_righe_ordini.qta) AS qta_ordinata,
+    SUM(or_righe_ordini.qta - or_righe_ordini.qta_evasa) AS qta_impegnata,
     or_righe_ordini.um
 FROM or_ordini
     INNER JOIN or_righe_ordini ON or_ordini.id = or_righe_ordini.idordine
+    INNER JOIN or_statiordine ON or_ordini.idstatoordine=or_statiordine.id
 WHERE idarticolo = '.prepare($articolo->id)."
      AND (SELECT dir FROM or_tipiordine WHERE or_tipiordine.id=or_ordini.idtipoordine) = '|dir|'
      AND (or_righe_ordini.qta - or_righe_ordini.qta_evasa) > 0
      AND or_righe_ordini.confermato = 1
+     AND or_statiordine.impegnato = 1
 GROUP BY or_ordini.id
 HAVING qta_ordinata > 0";
 
@@ -52,14 +55,14 @@ echo '
 			<div class="panel-body" style="min-height:98px;">';
 
 $ordini = $dbo->fetchArray(str_replace('|dir|', 'entrata', $query));
-$impegnato = sum(array_column($ordini, 'qta_ordinata'));
+$impegnato = sum(array_column($ordini, 'qta_impegnata'));
 if (!empty($ordini)) {
     echo '
                 <table class="table table-bordered table-condensed table-striped">
                     <thead>
                         <tr>
                             <th>'.tr('Descrizione').'</th>
-                            <th>'.tr('Qta').'</th>
+                            <th class="text-right">'.$record['um'].'</th>
                         </tr>
                     </thead>
 
@@ -68,18 +71,20 @@ if (!empty($ordini)) {
     $modulo = Modules::get('Ordini cliente');
     foreach ($ordini as $documento) {
         $numero = !empty($documento['numero_esterno']) ? $documento['numero_esterno'] : $documento['numero'];
-        $qta = $documento['qta_ordinata'];
+        $qta = $documento['qta_impegnata'];
 
         echo '
                     <tr>
                         <td>
-                            '.Modules::link($modulo['id'], $documento['id'], tr('Ordine num. _NUM_ del _DATE_', [
-                '_NUM_' => $numero,
-                '_DATE_' => dateFormat($documento['data']),
-            ])).'
+                            <small>
+                                '.Modules::link($modulo['id'], $documento['id'], tr('Ordine num. _NUM_ del _DATE_', [
+                    '_NUM_' => $numero,
+                    '_DATE_' => dateFormat($documento['data']),
+                ])).'
+                            </small>
                         </td>
                         <td class="text-right">
-                            '.numberFormat($qta).' '.$documento['um'].'
+                            <small>'.numberFormat($qta).'</small>
                         </td>
                     </tr>';
     }
@@ -87,10 +92,10 @@ if (!empty($ordini)) {
     echo '
                     <tr>
                         <td class="text-right">
-                            <b>'.tr('Totale').'</b>
+                            <small><b>'.tr('Totale').'</b></small>
                         </td>
                         <td class="text-right">
-                            '.numberFormat($impegnato).'
+                            <small>'.numberFormat($impegnato).'</small>
                         </td>
                     </tr>
 
@@ -124,7 +129,7 @@ if (!empty($ordini)) {
                     <thead>
                         <tr>
                             <th>'.tr('Descrizione').'</th>
-                            <th>'.tr('Qta').'</th>
+                            <th class="text-right">'.$record['um'].'</th>
                         </tr>
                     </thead>
 
@@ -138,13 +143,15 @@ if (!empty($ordini)) {
         echo '
                     <tr>
                         <td>
-                            '.Modules::link($modulo['id'], $documento['id'], tr('Ordine num. _NUM_ del _DATE_', [
-                                '_NUM_' => $numero,
-                                '_DATE_' => dateFormat($documento['data']),
-                            ])).'
+                            <small>
+                                '.Modules::link($modulo['id'], $documento['id'], tr('Ordine num. _NUM_ del _DATE_', [
+                                    '_NUM_' => $numero,
+                                    '_DATE_' => dateFormat($documento['data']),
+                                ])).'
+                                </small>
                         </td>
                         <td class="text-right">
-                            '.numberFormat($qta).' '.$documento['um'].'
+                            <small>'.numberFormat($qta).'</small>
                         </td>
                     </tr>';
     }
@@ -152,10 +159,10 @@ if (!empty($ordini)) {
     echo '
                     <tr>
                         <td class="text-right">
-                            <b>'.tr('Totale').'</b>
+                            <small><b>'.tr('Totale').'</b></small>
                         </td>
                         <td class="text-right">
-                            '.numberFormat($ordinato).'
+                            <small>'.numberFormat($ordinato).'</small>
                         </td>
                     </tr>
 
@@ -175,7 +182,7 @@ echo '
  */
 $qta_presente = $articolo->qta > 0 ? $articolo->qta : 0;
 $diff = ($qta_presente - $impegnato + $ordinato) * -1;
-$da_ordinare = $diff < 0 ? 0 : $diff;
+$da_ordinare = (($diff <= 0) ? 0 : $diff);
 
 echo '
 	<div class="col-md-3">

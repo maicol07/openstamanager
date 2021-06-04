@@ -34,7 +34,12 @@ $final_module = Modules::get($name);
 // IVA predefinita
 $id_iva = $id_iva ?: setting('Iva predefinita');
 
-$righe = $documento->getRighe()->where('qta_rimanente', '>', 0);
+if($final_module['name']=='Interventi'){
+    $righe = $documento->getRighe()->where('qta_rimanente', '>', 0)->where('is_descrizione', '=', 0);
+}else{
+    $righe = $documento->getRighe()->where('qta_rimanente', '>', 0);
+}
+
 if (empty($righe)) {
     echo '
 <p>'.tr('Non ci sono elementi da evadere').'...</p>';
@@ -138,9 +143,9 @@ if (!empty($options['create_document'])) {
     }
 
     // Selezione fornitore per Ordine fornitore
-    if ($options['op'] == 'add_ordine_cliente') {
-        $tipo_anagrafica = tr('Fornitore');
-        $ajax = 'fornitori';
+    if ($options['op'] == 'add_ordine_cliente' || $options['op'] == 'add_intervento' || $options['op'] == 'add_ordine_fornitore') {
+        $tipo_anagrafica = $options['op'] == 'add_intervento' ? tr('Cliente') : tr('Fornitore');
+        $ajax = $options['op'] == 'add_intervento' ? 'clienti' : 'fornitori';
 
         echo '
             <div class="col-md-6">
@@ -244,9 +249,9 @@ echo '
             <thead>
                 <tr>
                     <th>'.tr('Descrizione').'</th>
-                    <th width="10%">'.tr('Q.tà').'</th>
+                    <th width="10%" class="text-center">'.tr('Q.tà').'</th>
                     <th width="15%">'.tr('Q.tà da evadere').'</th>
-                    <th width="20%">'.tr('Subtot.').'</th>';
+                    <th width="20%" class="text-center">'.tr('Subtot.').'</th>';
 
 if (!empty($options['serials'])) {
     echo '
@@ -262,12 +267,11 @@ foreach ($righe as $i => $riga) {
     // Descrizione
     echo '
                 <tr data-local_id="'.$i.'">
-                    <td>
+                    <td style="vertical-align:middle">
                         <span class="hidden" id="id_articolo_'.$i.'">'.$riga['idarticolo'].'</span>
 
                         <input type="hidden" id="prezzo_unitario_'.$i.'" name="subtot['.$riga['id'].']" value="'.$riga['prezzo_unitario'].'" />
                         <input type="hidden" id="sconto_unitario_'.$i.'" name="sconto['.$riga['id'].']" value="'.$riga['sconto_unitario'].'" />
-                        <input type="hidden" id="iva_unitaria_'.$i.'" name="iva['.$riga['id'].']" value="'.$riga['iva_unitaria'].'" />
                         <input type="hidden" id="max_qta_'.$i.'" value="'.($riga['qta_rimanente']).'" />';
 
     // Checkbox - da evadere?
@@ -283,27 +287,25 @@ foreach ($righe as $i => $riga) {
 
     // Q.tà rimanente
     echo '
-                    <td class="text-center">
+                    <td class="text-center" style="vertical-align:middle">
                         '.numberFormat($riga['qta_rimanente']).'
                     </td>';
 
     // Q.tà da evadere
     echo '
-                    <td>
+                    <td style="vertical-align:middle">
                         {[ "type": "number", "name": "qta_da_evadere['.$riga['id'].']", "id": "qta_'.$i.'", "required": 1, "value": "'.$riga['qta_rimanente'].'", "decimals": "qta", "min-value": "0", "extra": "'.(($riga['is_descrizione']) ? 'readonly' : '').' onkeyup=\"ricalcolaTotaleRiga('.$i.');\"" ]}
                     </td>';
 
     echo '
-                    <td>
-                        <big id="subtotale_'.$i.'">'.moneyFormat($riga->totale).'</big><br/>
-
-                        <small style="color:#777;" id="subtotaledettagli_'.$i.'">'.numberFormat($riga->totale_imponibile).' + '.numberFormat($riga->iva).'</small>
+                    <td style="vertical-align:middle" class="text-right">
+                        <span id="subtotale_'.$i.'">'.($riga->isSconto() ? moneyFormat(-$riga->sconto) : moneyFormat($riga->totale_imponibile)).'</span>
                     </td>';
 
     // Seriali
     if (!empty($options['serials'])) {
         echo '
-                    <td>';
+                    <td style="vertical-align:middle">';
 
         if (!empty($riga['abilita_serial'])) {
             $serials = $riga->serials;
@@ -322,10 +324,6 @@ foreach ($righe as $i => $riga) {
             }
         }
 
-        if (empty($riga['abilita_serial']) || empty($serials)) {
-            echo '-';
-        }
-
         echo '
                     </td>';
     }
@@ -339,11 +337,11 @@ echo '
             </tbody>
 
             <tr>
-                <td colspan="'.(!empty($options['serials']) ? 4 : 3).'" class="text-right">
+                <td colspan="'.(!empty($options['serials']) ? 3 : 2).'" class="text-right">
                     <b>'.tr('Totale').':</b>
                 </td>
-                <td class="text-right" colspan="2">
-                    <big id="totale"></big>
+                <td class="text-right">
+                    <span id="totale"></span>
                 </td>
             </tr>
         </table>
@@ -451,19 +449,17 @@ function controllaMagazzino() {
 function ricalcolaTotaleRiga(r) {
     let prezzo_unitario = $("#prezzo_unitario_" + r).val();
     let sconto = $("#sconto_unitario_" + r).val();
-    let iva = $("#iva_unitaria_" + r).val();
 
     let max_qta_input = $("#max_qta_" + r);
     let qta_max = max_qta_input.val() ? max_qta_input.val() : 0;
 
     prezzo_unitario = parseFloat(prezzo_unitario);
     sconto = parseFloat(sconto);
-    iva = parseFloat(iva);
     qta_max = parseFloat(qta_max);
 
     let prezzo_scontato = prezzo_unitario - sconto;
 
-    let qta = $("#qta_" + r).val().toEnglish();
+    let qta = $("#qta_" + r).val();
 
     // Se inserisco una quantità da evadere maggiore di quella rimanente, la imposto al massimo possibile
     if (qta > qta_max) {
@@ -483,10 +479,10 @@ function ricalcolaTotaleRiga(r) {
     serial_select.data("maximum", qta);
     start_superselect();
 
-    let subtotale = (prezzo_scontato * qta + iva * qta).toLocale();
+    let subtotale = (prezzo_scontato * qta).toLocale();
 
     $("#subtotale_" + r).html(subtotale + " " + globals.currency);
-    $("#subtotaledettagli_" + r).html((prezzo_scontato * qta).toLocale() + " + " + (iva * qta).toLocale());
+
 
     ricalcolaTotale();
 }
@@ -496,7 +492,7 @@ function ricalcolaTotale() {
     let totale_qta = 0;
 
     $("input[id*=qta_]").each(function() {
-        let qta = $(this).val().toEnglish();
+        let qta = $(this).val();
         let r = $(this).attr("id").replace("qta_", "");
 
         if (!$("#checked_" + r).is(":checked") || isNaN(qta)) {
@@ -505,16 +501,14 @@ function ricalcolaTotale() {
 
         let prezzo_unitario = $("#prezzo_unitario_" + r).val();
         let sconto = $("#sconto_unitario_" + r).val();
-        let iva = $("#iva_unitaria_" + r).val();
 
         prezzo_unitario = parseFloat(prezzo_unitario);
         sconto = parseFloat(sconto);
-        iva = parseFloat(iva);
-
+    
         let prezzo_scontato = prezzo_unitario - sconto;
 
         if(prezzo_scontato) {
-            totale += prezzo_scontato * qta + iva * qta;
+            totale += prezzo_scontato * qta;
         }
 
         totale_qta += qta;

@@ -145,6 +145,8 @@ class FatturaOrdinaria extends FatturaElettronica
                     $articolo = ArticoloOriginale::build($codice, $riga['Descrizione'], $categoria);
                     $articolo->prezzo_acquisto = $riga['PrezzoUnitario'];
                     $articolo->id_fornitore = $fattura->idanagrafica;
+                    $articolo->um = $riga['UnitaMisura'];
+                    $articolo->idconto_acquisto = $conto[$key];                    
                     $articolo->save();
 
                     $direzione = 'uscita';
@@ -208,10 +210,6 @@ class FatturaOrdinaria extends FatturaElettronica
             $qta = $riga['Quantita'] ?: 1;
             $qta = $riga['PrezzoUnitario'] < 0 ? -$qta : $qta;
 
-            if ($fattura->isNota()) {
-                $qta = -$qta;
-            }
-
             // Prezzo e quantità
             $obj->prezzo_unitario = $prezzo;
             $obj->qta = $qta;
@@ -271,13 +269,13 @@ class FatturaOrdinaria extends FatturaElettronica
         $diff = $totale_documento ? abs($totale_documento) - abs($fattura->totale) : abs($totale_righe) - abs($fattura->totale_imponibile);
         if (!empty($diff)) {
             // Rimozione dell'IVA calcolata automaticamente dal gestionale
-            $iva_arrotondamento = database()->fetchOne('SELECT * FROM co_iva WHERE id='.prepare($iva[0]));
+            $iva_arrotondamento = database()->fetchOne('SELECT * FROM co_iva WHERE percentuale=0 AND deleted_at IS NULL');
             $diff = $diff * 100 / (100 + $iva_arrotondamento['percentuale']);
 
             $obj = Riga::build($fattura);
 
             $obj->descrizione = tr('Arrotondamento calcolato in automatico');
-            $obj->id_iva = $iva[0];
+            $obj->id_iva = $iva_arrotondamento['id'];
             $obj->idconto = $conto[0];
             $obj->prezzo_unitario = round($diff, 4);
             $obj->qta = 1;

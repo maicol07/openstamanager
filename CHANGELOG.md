@@ -4,7 +4,10 @@ Tutti i maggiori cambiamenti di questo progetto saranno documentati in questo fi
 
 Il formato utilizzato è basato sulle linee guida di [Keep a Changelog](http://keepachangelog.com/), e il progetto segue il [Semantic Versioning](http://semver.org/) per definire le versioni delle release.
 
-- [2.4.21 (2021-01-)](#2421-2021-01-14)
+- [2.4.24 (2021-00-00)](#2424-2021-00-00)
+- [2.4.23 (2021-05-18)](#2423-2021-05-18)
+- [2.4.22 (2021-03-01)](#2422-2021-03-01)
+- [2.4.21 (2021-01-14)](#2421-2021-01-14)
 - [2.4.20 (2020-12-31)](#2420-2020-12-31)
 - [2.4.19 (2020-11-10)](#2419-2020-11-10)
 - [2.4.18 (2020-10-30)](#2418-2020-10-30)
@@ -32,7 +35,41 @@ Il formato utilizzato è basato sulle linee guida di [Keep a Changelog](http://k
 - [2.2 (2016-11-10)](#22-2016-11-10)
 - [2.1 (2015-04-02)](#21-2015-04-02)
 
-## 2.4.22
+## 2.4.24 (2021-00-00)
+
+### Aggiunto (Added)
+ - Aggiunta nel calendario della Dashboard visualizzazione dei preventivi pianificabili in corrispondenza alla data di accettazione e conclusione.
+
+### Fixed
+ - 
+
+## 2.4.23 (2021-05-18)
+
+### Aggiunto (Added)
+ - Nuovo *Sconto finale* per gli **Ordini**, **Preventivi**, **DDT** e **Contratti**, influenza il valore *Netto a pagare* del documento.
+ - Nuovo filtro in attività per mostrare al tecnico solo le attività assegnate. 
+ - Nuovo filtro in contratti per mostrare al cliente solo i contratti collegati. 
+ - Nuovo pulsante **Duplica Template** per copiare un template già esistente.
+ - Aggiunto controllo nelle fatture di vendita per segnalare l'eventuale fatturazione di un'attività con la data di una sessione futura rispetto alla data della fattura.
+ - Aggiunta possibilità di creare un ordine fornitore da un preventivo.
+ - Aggiunto eventuale numero di telefono e/o cellulare nella stampa dei ddt con sede di destinazione diversa.
+ - Aggiunta azione di gruppo in articoli per modificare il prezzo di vendita applicando una percentuale di sconto/rincaro al prezzo già esistente.
+ - Aggiunta colonna unità di misura **UM** in movimenti di magazzino.
+ - Aggiunta colonna **Tecnici assegnati** nel widget promemoria attività.
+ - Aggiunto flag nella tabella **Spedizioni** per rendere obbligatoria la selezione del vettore nei ddt.
+ - Aggiunta importazione del campo referente tra i documenti.
+ - Aggiunta stampa dettaglio anagrafica e dati aziendali nel modulo **Anagrafiche**.
+ - Aggiunta ora evasione negli ordini e in stampa.
+ - Aggiunta possibilità di duplicare una sessione di lavoro.
+ - Aggiunta colonna Prev. evasione nel modulo **Ordini**.
+ - Aggiunta descrizione modificabile al momento della creazione di una revisione in un **Preventivo**.
+
+### Fixed
+ - Aggiornamento prezzo di listino quando viene cambiato il prezzo di acquisto (se collegato ad un fornitore).
+ - Fix plugin **Pianificazione fatturazione** in **Interventi**
+ - Rimossa l'obbligatorietà di inserire la data del documento nel modulo **Gestione documentale**
+
+## 2.4.22 (2021-03-01)
 
 ### Aggiunto (Added)
  - Introduzione di nuove **Aliquote IVA** con specifiche più dettagliate

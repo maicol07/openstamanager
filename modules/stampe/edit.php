@@ -19,6 +19,8 @@
 
 include_once __DIR__.'/../../core.php';
 
+use Models\PrintTemplate;
+
 ?><form action="" method="post" id="edit-form">
 	<input type="hidden" name="backto" value="record-edit">
 	<input type="hidden" name="op" value="update">
@@ -40,7 +42,36 @@ include_once __DIR__.'/../../core.php';
 				<div class="col-md-6">
                     {[ "type": "text", "label": "<?php echo tr('Nome del file'); ?>", "name": "filename", "required": 1, "value": "$filename$" ]}
 				</div>
+
+               
+
 			</div>
+
+            <div class="row">
+
+                <div class="col-md-3">
+					{[ "type": "select", "label": "<?php echo tr('Modulo'); ?>", "name": "module", "required": 1, "values": "query=SELECT id, name AS descrizione FROM zz_modules WHERE ( enabled = 1 AND options != 'custom' ) OR id = <?php echo $record['id_module']; ?> ORDER BY name ASC", "value": "<?php echo $record['id_module']; ?>", "disabled": "1" ]}
+				</div>
+
+                <div class="col-md-3">
+                    {[ "type": "checkbox", "label": "<?php echo tr('Attiva'); ?>", "name": "enabled", "value": "$enabled$", "disabled": "1" ]}
+                </div>
+
+                <div class="col-md-3">
+					{[ "type": "number", "label": "<?php echo tr('Ordine'); ?>", "name": "order", "required": 0, "value": "$order$", "decimals":0 ]}
+				</div>
+
+                <?php
+                    if(empty($stampa_predefinita = PrintTemplate::where('predefined', true)->where('id_module', $record['id_module'])->orderBy('id')->first())){
+                        $stampa_predefinita->name = 'Nessuna';
+                    }
+                ?>
+                
+                <div class="col-md-3">
+                    {[ "type": "checkbox", "label": "<?php echo tr('Predefinita'); ?>", "help" : "<?php echo tr("Attiva per impostare questa stampa come predefinita. Attualmente la stampa predefinita per questo modulo è: ".$stampa_predefinita->name); ?>", "name": "predefined", "value": "$predefined$", "disabled": "<?php echo intval($record['predefined']); ?>" ]}
+                </div>
+
+            </div>
 
 			<div class="row">
 
@@ -54,7 +85,8 @@ include_once __DIR__.'/../../core.php';
 
 <?php
 // Variabili utilizzabili
-$variables = include Modules::filepath($record['id_module'], 'variables.php');
+$module = Modules::get($record['id_module']);
+$variables = $module->getPlaceholders($id_record);
 
 echo '
 <!-- Istruzioni per il contenuto -->

@@ -19,6 +19,7 @@
 
 namespace HTMLBuilder\Manager;
 
+use Models\Setting;
 use Models\Upload;
 
 /**
@@ -40,7 +41,6 @@ class FileManager implements ManagerInterface
     {
         $options['readonly'] = !empty($options['readonly']) ? true : false;
         $options['showpanel'] = isset($options['showpanel']) ? $options['showpanel'] : true;
-        $options['label'] = isset($options['label']) ? $options['label'] : tr('Allegato').':';
 
         $options['id_plugin'] = !empty($options['id_plugin']) ? $options['id_plugin'] : null;
 
@@ -83,7 +83,7 @@ class FileManager implements ManagerInterface
 
         <div class="box-tools pull-right">';
 
-                if (!empty($category)) {
+                if (!empty($category) && !in_array($category, ['Fattura Elettronica'])) {
                     $result .= '
             <button type="button" class="btn btn-box-tool category-save hide">
                 <i class="fa fa-check"></i>
@@ -133,13 +133,13 @@ class FileManager implements ManagerInterface
                     <i class="fa fa-external-link"></i> '.$r['name'].'
                 </a>
 
-                <small> ('.$file->extension.')'.((!empty($file->size)) ? ' ('.\Util\FileSystem::formatBytes($file->size).')' : '').' '.(($r['name'] == 'Logo stampe' or $r['name'] == 'Filigrana stampe') ? '<i class="fa fa-file-text-o"></i>' : '').'</small>'.'
+                <small> ('.$file->extension.')'.((!empty($file->size)) ? ' ('.\Util\FileSystem::formatBytes($file->size).')' : '').' '.(((setting('Logo stampe') == $r['filename']) || (setting('Filigrana stampe') == $r['filename'])) ? '<i class="fa fa-file-text-o"></i>' : '').'</small>'.'
             </td>
 
             <td>'.\Translator::timestampToLocale($r['created_at']).'</td>
 
             <td class="text-center">
-                <a class="btn btn-xs btn-primary" href="'.base_path().'/actions.php?id_module='.$options['id_module'].'&op=download_file&id='.$r['id'].'&filename='.$r['filename'].'" target="_blank">
+                <a class="btn btn-xs btn-primary" href="'.base_path().'/actions.php?id_module='.$options['id_module'].'&op=download-allegato&id='.$r['id'].'&filename='.$r['filename'].'" target="_blank">
                     <i class="fa fa-download"></i>
                 </a>';
 
@@ -158,7 +158,11 @@ class FileManager implements ManagerInterface
 
                     if (!$options['readonly']) {
                         $result .= '
-                <a class="btn btn-xs btn-danger ask" data-backto="record-edit" data-msg="'.tr('Vuoi eliminare questo file?').'" data-op="unlink_file" data-filename="'.$r['filename'].'" data-id_record="'.$r['id_record'].'" data-id_plugin="'.$options['id_plugin'].'" data-before="show_'.$attachment_id.'" data-callback="reload_'.$attachment_id.'">
+                <button type="button" class="btn btn-xs btn-warning" data-href="'.base_path().'/actions.php?op=visualizza-modifica-allegato&id_module='.$options['id_module'].'&id_allegato='.$r['id'].'" data-title="'.tr('Modifica allegato').'">
+                    <i class="fa fa-edit"></i>
+                </button>
+
+                <a class="btn btn-xs btn-danger ask" data-backto="record-edit" data-msg="'.tr('Vuoi eliminare questo file?').'" data-op="rimuovi-allegato" data-filename="'.$r['filename'].'" data-id_record="'.$r['id_record'].'" data-id_plugin="'.$options['id_plugin'].'" data-before="show_'.$attachment_id.'" data-callback="reload_'.$attachment_id.'">
                     <i class="fa fa-trash"></i>
                 </a>';
                     }
@@ -184,14 +188,7 @@ class FileManager implements ManagerInterface
         // Form per l'upload di un nuovo file
         if (!$options['readonly']) {
             $result .= '
-    <b>'.$options['label'].'</b>
     <div id="upload-form" class="row">
-        <div class="col-md-6">
-            {[ "type": "text", "placeholder": "'.tr('Nome').'", "name": "nome_allegato", "class": "unblockable" ]}
-        </div>
-        <div class="col-md-6">
-            {[ "type": "text", "placeholder": "'.tr('Categoria').'", "name": "categoria_allegato", "id": "categoria_allegato", "class": "unblockable" ]}
-        </div>
         <div class="col-md-12">
             <div class="dropzone dz-clickable" id="dragdrop">
 
@@ -245,13 +242,8 @@ $(document).ready(function() {
         addRemoveLinks: false,
         autoProcessQueue: true,
         autoQueue: true,
-        url: "'.base_path().'/actions.php?op=link_file&id_module='.$options['id_module'].'&id_record='.$options['id_record'].'&id_plugin='.$options['id_plugin'].'",
+        url: "'.base_path().'/actions.php?op=aggiungi-allegato&id_module='.$options['id_module'].'&id_record='.$options['id_record'].'&id_plugin='.$options['id_plugin'].'",
         init: function (file, xhr, formData) {
-            this.on("sending", function(file, xhr, formData) {
-                formData.append("categoria", $("#categoria_allegato").val());
-                formData.append("nome_allegato", $("#nome_allegato").val());
-            });
-
             this.on("success", function (file) {
                 dragdrop.removeFile(file);
             });
@@ -292,7 +284,7 @@ $(document).ready(function() {
                 id_module: "'.$options['id_module'].'",
                 id_plugin: "'.$options['id_plugin'].'",
                 id_record: "'.$options['id_record'].'",
-                op: "upload_category",
+                op: "modifica-categoria-allegato",
                 category: nome.text(),
                 name: input.val(),
             },
@@ -313,20 +305,7 @@ $(document).ready(function() {
         return [filename, ext];
     }
 
-    // Auto-completamento nome
-    $("#'.$attachment_id.' #blob").change(function(){
-        var nome = $("#'.$attachment_id.' #nome_allegato");
-
-        if (!nome.val()) {
-            var fullPath = $(this).val();
-
-            var filename = getFilenameAndExtension(fullPath);
-
-            nome.val(filename[0]);
-        }
-    });
-
-    // Autocompletamento categoria
+    // Auto-completamento categoria
     $("#'.$attachment_id.' #categoria_allegato").autocomplete({
         source: '.json_encode($source).',
         minLength: 0
@@ -335,7 +314,7 @@ $(document).ready(function() {
     });
 
     var data = {
-        op: "link_file",
+        op: "aggiungi-allegato",
         id_module: "'.$options['id_module'].'",
         id_plugin: "'.$options['id_plugin'].'",
         id_record: "'.$options['id_record'].'",
@@ -344,16 +323,6 @@ $(document).ready(function() {
     // Upload
     $("#'.$attachment_id.' #upload").click(function(){
         $form = $("#'.$attachment_id.' #upload-form");
-
-        if($form.find("input[name=nome_allegato]").val() == "" || $form.find("input[name=blob]").val() == "") {
-            swal({
-                type: "error",
-                title: "'.tr('Errore').'",
-                text:  "'.tr('Alcuni campi obbligatori non sono stati compilati correttamente.').'",
-            });
-
-            return;
-        }
 
         $form.ajaxSubmit({
             url: globals.rootdir + "/actions.php",

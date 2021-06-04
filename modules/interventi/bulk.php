@@ -86,7 +86,7 @@ switch (post('op')) {
         $accodare = post('accodare');
         $id_segment = post('id_segment');
 
-        $interventi = $dbo->fetchArray('SELECT *, IFNULL((SELECT MIN(orario_inizio) FROM in_interventi_tecnici WHERE in_interventi_tecnici.idintervento = in_interventi.id), in_interventi.data_richiesta) AS data, in_statiintervento.descrizione AS stato, in_interventi.codice AS codice_intervento FROM in_interventi INNER JOIN in_statiintervento ON in_interventi.idstatointervento=in_statiintervento.idstatointervento WHERE in_statiintervento.is_completato=1 AND in_interventi.id NOT IN (SELECT idintervento FROM co_righe_documenti WHERE idintervento IS NOT NULL) AND in_interventi.id_preventivo IS NULL AND in_interventi.id NOT IN (SELECT idintervento FROM co_promemoria WHERE idintervento IS NOT NULL) AND in_interventi.id IN ('.implode(',', $id_records).')');
+        $interventi = $dbo->fetchArray('SELECT *, IFNULL((SELECT MIN(orario_inizio) FROM in_interventi_tecnici WHERE in_interventi_tecnici.idintervento = in_interventi.id), in_interventi.data_richiesta) AS data, in_statiintervento.descrizione AS stato, in_interventi.codice AS codice_intervento FROM in_interventi INNER JOIN in_statiintervento ON in_interventi.idstatointervento=in_statiintervento.idstatointervento WHERE in_statiintervento.is_completato=1 AND in_interventi.id NOT IN (SELECT idintervento FROM co_righe_documenti WHERE idintervento IS NOT NULL) AND in_interventi.id_preventivo IS NULL AND in_interventi.id_contratto IS NULL AND in_interventi.id_ordine IS NULL AND in_interventi.id NOT IN (SELECT idintervento FROM co_promemoria WHERE idintervento IS NOT NULL)  AND in_interventi.id IN ('.implode(',', $id_records).')');
 
         // Lettura righe selezionate
         foreach ($interventi as $intervento) {
@@ -126,8 +126,12 @@ switch (post('op')) {
             flash()->info(tr('_NUM_ interventi fatturati.', [
                 '_NUM_' => $n_interventi,
             ]));
-        } else {
-            flash()->warning(tr('Nessuna attività fatturata!'));
+        }
+
+        if (!empty(array_diff($id_records, $interventi))) {
+            flash()->warning(tr('_NUM_ interventi non sono stati fatturati.', [
+                '_NUM_' => sizeof(array_diff($id_records, $interventi)),
+            ]));
         }
 
     break;
@@ -223,10 +227,27 @@ switch (post('op')) {
         flash()->info(tr('Attività duplicate correttamente!'));
 
         break;
+
+        case 'delete-bulk':
+            foreach ($id_records as $id) {
+                $intervento = Intervento::find($id);
+                try {
+                    $intervento->delete();
+                } catch (InvalidArgumentException $e) {
+                }
+            }
+
+        flash()->info(tr('Interventi eliminati!'));
+        break;
 }
 
-return [
-    'export-bulk' => [
+if (App::debug()) {
+    $operations['delete-bulk'] = [
+        'text' => '<span><i class="fa fa-trash"></i> '.tr('Elimina selezionati').'</span> <span class="label label-danger" >beta</span>',
+    ];
+}
+
+    $operations['export-bulk'] = [
         'text' => '<span><i class="fa fa-file-archive-o"></i> '.tr('Esporta stampe'),
         'data' => [
             'title' => tr('Vuoi davvero esportare queste stampe in un archivio ZIP?'),
@@ -235,9 +256,9 @@ return [
             'class' => 'btn btn-lg btn-warning',
             'blank' => true,
         ],
-    ],
+    ];
 
-    'crea_fattura' => [
+    $operations['crea_fattura'] = [
         'text' => '<span><i class="fa fa-file-code-o"></i> '.tr('Fattura _TYPE_', ['_TYPE_' => strtolower($module['name'])]),
         'data' => [
            'title' => tr('Fatturare gli _TYPE_ selezionati?', ['_TYPE_' => strtolower($module['name'])]).' <small><i class="fa fa-question-circle-o tip" title="'.tr('Verranno fatturati solo gli interventi completati non collegati a contratti o preventivi').'."></i></small>',
@@ -247,9 +268,9 @@ return [
             'class' => 'btn btn-lg btn-warning',
             'blank' => false,
         ],
-    ],
+    ];
 
-    'cambia_stato' => [
+    $operations['cambia_stato'] = [
         'text' => '<span><i class="fa fa-refresh"></i> '.tr('Cambia stato'),
         'data' => [
             'title' => tr('Vuoi davvero cambiare lo stato per questi interventi?'),
@@ -259,9 +280,9 @@ return [
             'class' => 'btn btn-lg btn-warning',
             'blank' => false,
         ],
-    ],
+    ];
 
-    'copy-bulk' => [
+    $operations['copy-bulk'] = [
         'text' => '<span><i class="fa fa-clone"></i> '.tr('Duplica attività'),
         'data' => [
             'title' => tr('Vuoi davvero fare una copia degli interventi selezionati?'),
@@ -273,5 +294,6 @@ return [
             'class' => 'btn btn-lg btn-warning',
             'blank' => false,
         ],
-    ],
-];
+    ];
+
+return $operations;

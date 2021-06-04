@@ -98,13 +98,13 @@ redirectOperation($id_module, isset($id_parent) ? $id_parent : $id_record);
 // Interfaccia per la modifica dell'ordine e della visibilità delle colonne (Amministratore)
 if ($user->is_admin && string_contains($module['option'], '|select|')) {
     echo '
-<button type="button" class="btn btn-xs btn-primary pull-right" onclick="modificaColonne(this)">
+<a class="btn btn-xs btn-default pull-right" style="margin-top: -1.25rem;" onclick="modificaColonne(this)">
     <i class="fa fa-th-list"></i> '.tr('Modifica colonne').'
-</button>
+</a><div class="clearfix" >&nbsp;</div>
 
 <script>
 function modificaColonne(button) {
-    openModal("'.tr('Modifica colonne').'", globals.rootdir + "/actions.php?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&op=aggiorna_colonne")
+    openModal("'.tr('Modifica colonne').'", globals.rootdir + "/actions.php?id_module=" + globals.id_module + "&op=aggiorna_colonne")
 }
 </script>';
 }

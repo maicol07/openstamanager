@@ -30,6 +30,10 @@ abstract class Document extends Model implements ReferenceInterface, DocumentInt
      * @var bool
      */
     public static $movimenta_magazzino = true;
+    protected $casts = [
+        'sconto_finale' => 'float',
+        'sconto_finale_percentuale' => 'float',
+    ];
 
     /**
      * Restituisce il valore della variabile statica $movimenta_magazzino per il documento.
@@ -210,6 +214,52 @@ abstract class Document extends Model implements ReferenceInterface, DocumentInt
         ]);
 
         return $result;
+    }
+
+    /**
+     * Imposta lo sconto finale.
+     *
+     * @param $sconto
+     * @param $tipo
+     */
+    public function setScontoFinale($sconto, $tipo)
+    {
+        if ($tipo == 'PRC') {
+            $this->sconto_finale_percentuale = $sconto;
+            $this->sconto_finale = 0;
+        } else {
+            $this->sconto_finale = $sconto;
+            $this->sconto_finale_percentuale = 0;
+        }
+    }
+
+    /**
+     * Restituisce lo sconto finale.
+     */
+    public function getScontoFinale()
+    {
+        $netto = $this->calcola('netto');
+
+        if (!empty($this->sconto_finale_percentuale)) {
+            $sconto = $netto * ($this->sconto_finale_percentuale / 100);
+        } else {
+            $sconto = $this->sconto_finale;
+        }
+
+        return $sconto;
+    }
+
+    /**
+     * Calcola il netto a pagare del documento.
+     *
+     * @return float
+     */
+    public function getNettoAttribute()
+    {
+        $netto = $this->calcola('netto');
+        $sconto_finale = $this->getScontoFinale();
+
+        return $netto - $sconto_finale;
     }
 
     /**

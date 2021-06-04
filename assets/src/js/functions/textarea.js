@@ -26,6 +26,41 @@ function initTextareaInput(input) {
     return true;
 }
 
+function initCharCounter(input) {
+    let $input = $(input);
+
+    if (input.hasAttribute('maxlength')) {
+        $input.maxlength({
+            warningClass: "help-block",
+            limitReachedClass: "help-block text-danger",
+            preText: '',
+            separator: ' / ',
+            postText: '',
+            showMaxLength: true,
+            placement: 'bottom-right-inside',
+            utf8: true,
+            appendToParent: true,
+            alwaysShow: false,
+            threshold: 150
+        });
+
+    } else {
+        $input.attr('maxlength', '65535');
+
+        $input.maxlength({
+            warningClass: "help-block",
+            limitReachedClass: "help-block text-danger",
+            showMaxLength: false,
+            placement: 'bottom-right-inside',
+            utf8: true,
+            appendToParent: true,
+            alwaysShow: true
+        });
+    }
+
+    return true;
+}
+
 function waitCKEditor(input) {
     setTimeout(function () {
         initEditorInput(input);
@@ -38,9 +73,7 @@ function waitCKEditor(input) {
  */
 function initEditorInput(input) {
     if (window.CKEDITOR && CKEDITOR.status === "loaded") {
-        $(document).ready(function () {
-            initCKEditor(input);
-        })
+        initCKEditor(input);
     } else {
         waitCKEditor(input);
     }
@@ -55,16 +88,20 @@ function initCKEditor(input) {
     // Controllo su istanza già esistente
     let instance = CKEDITOR.instances[name];
     if (instance) {
-        return;
+        instance.destroy();
     }
-
+    
     // Avvio di CKEditor
     CKEDITOR.replace(name, {
-        toolbar: globals.ckeditorToolbar,
+        toolbar: (input.hasAttribute('use_full_ckeditor')) ? globals.ckeditorToolbar_Full : globals.ckeditorToolbar,
         language: globals.locale,
         scayt_autoStartup: true,
         scayt_sLang: globals.full_locale,
         disableNativeSpellChecker: false,
+        fullPage: (input.hasAttribute('use_full_ckeditor')) ? true : false,
+        allowedContent: (input.hasAttribute('use_full_ckeditor')) ? true : false,
+        extraPlugins: 'scayt',
+        skin: 'moono-lisa',
     });
 
     // Gestione di eventi noti

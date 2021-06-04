@@ -27,6 +27,8 @@ use Modules\Ordini\Components\Riga;
 use Modules\Ordini\Components\Sconto;
 use Modules\Ordini\Ordine;
 use Modules\Ordini\Tipo;
+use Modules\Preventivi\Preventivo;
+use Plugins\DettagliArticolo\DettaglioPrezzo;
 
 $module = Modules::get($id_module);
 
@@ -54,79 +56,82 @@ switch (post('op')) {
         break;
 
     case 'update':
-        $idstatoordine = post('idstatoordine');
-        $idpagamento = post('idpagamento');
-        $idsede = post('idsede');
+        if (isset($id_record)) {
+            $idstatoordine = post('idstatoordine');
+            $idpagamento = post('idpagamento');
+            $idsede = post('idsede');
 
-        $totale_imponibile = get_imponibile_ordine($id_record);
-        $totale_ordine = get_totale_ordine($id_record);
+            $totale_imponibile = get_imponibile_ordine($id_record);
+            $totale_ordine = get_totale_ordine($id_record);
 
-        $tipo_sconto = post('tipo_sconto_generico');
-        $sconto = post('sconto_generico');
+            $tipo_sconto = post('tipo_sconto_generico');
+            $sconto = post('sconto_generico');
 
-        if ($dir == 'uscita') {
-            $idrivalsainps = post('id_rivalsa_inps');
-            $idritenutaacconto = post('id_ritenuta_acconto');
-            $bollo = post('bollo');
-        } else {
-            $idrivalsainps = 0;
-            $idritenutaacconto = 0;
-            $bollo = 0;
-        }
-
-        // Leggo la descrizione del pagamento
-        $query = 'SELECT descrizione FROM co_pagamenti WHERE id='.prepare($idpagamento);
-        $rs = $dbo->fetchArray($query);
-        $pagamento = $rs[0]['descrizione'];
-
-        // Query di aggiornamento
-        $dbo->update('or_ordini', [
-            'idanagrafica' => post('idanagrafica'),
-            'idreferente' => post('idreferente'),
-            'data' => post('data'),
-            'numero' => post('numero'),
-            'numero_esterno' => post('numero_esterno'),
-            'note' => post('note'),
-            'note_aggiuntive' => post('note_aggiuntive'),
-
-            'idagente' => post('idagente'),
-            'idstatoordine' => $idstatoordine,
-            'idpagamento' => $idpagamento,
-            'idsede' => $idsede,
-            'idconto' => post('idconto'),
-            'idrivalsainps' => $idrivalsainps,
-            'idritenutaacconto' => $idritenutaacconto,
-
-            'bollo' => 0,
-            'rivalsainps' => 0,
-            'ritenutaacconto' => 0,
-
-            'numero_cliente' => post('numero_cliente'),
-            'data_cliente' => post('data_cliente'),
-
-            'id_documento_fe' => post('numero_cliente'),
-            'codice_commessa' => post('codice_commessa'),
-            'codice_cup' => post('codice_cup'),
-            'codice_cig' => post('codice_cig'),
-            'num_item' => post('num_item'),
-        ], ['id' => $id_record]);
-
-        if ($dbo->query($query)) {
-            $query = 'SELECT descrizione FROM or_statiordine WHERE id='.prepare($idstatoordine);
-            $rs = $dbo->fetchArray($query);
-
-            // Ricalcolo inps, ritenuta e bollo (se l'ordine non è stato evaso)
-            if ($dir == 'entrata') {
-                if ($rs[0]['descrizione'] != 'Evaso') {
-                    ricalcola_costiagg_ordine($id_record);
-                }
+            if ($dir == 'uscita') {
+                $idrivalsainps = post('id_rivalsa_inps');
+                $idritenutaacconto = post('id_ritenuta_acconto');
+                $bollo = post('bollo');
             } else {
-                if ($rs[0]['descrizione'] != 'Evaso') {
-                    ricalcola_costiagg_ordine($id_record, $idrivalsainps, $idritenutaacconto, $bollo);
-                }
+                $idrivalsainps = 0;
+                $idritenutaacconto = 0;
+                $bollo = 0;
             }
 
-            flash()->info(tr('Ordine modificato correttamente!'));
+            // Leggo la descrizione del pagamento
+            $query = 'SELECT descrizione FROM co_pagamenti WHERE id='.prepare($idpagamento);
+            $rs = $dbo->fetchArray($query);
+            $pagamento = $rs[0]['descrizione'];
+
+            $ordine->idanagrafica = post('idanagrafica');
+            $ordine->idreferente = post('idreferente');
+            $ordine->data = post('data');
+            $ordine->numero = post('numero');
+            $ordine->numero_esterno = post('numero_esterno');
+            $ordine->note = post('note');
+            $ordine->note_aggiuntive = post('note_aggiuntive');
+
+            $ordine->idagente = post('idagente');
+            $ordine->idstatoordine = $idstatoordine;
+            $ordine->idpagamento = $idpagamento;
+            $ordine->idsede = $idsede;
+            $ordine->idconto = post('idconto');
+            $ordine->idrivalsainps = $idrivalsainps;
+            $ordine->idritenutaacconto = $idritenutaacconto;
+
+            $ordine->bollo = 0;
+            $ordine->rivalsainps = 0;
+            $ordine->ritenutaacconto = 0;
+
+            $ordine->numero_cliente = post('numero_cliente');
+            $ordine->data_cliente = post('data_cliente');
+
+            $ordine->id_documento_fe = post('numero_cliente');
+            $ordine->codice_commessa = post('codice_commessa');
+            $ordine->codice_cup = post('codice_cup');
+            $ordine->codice_cig = post('codice_cig');
+            $ordine->num_item = post('num_item');
+
+            $ordine->setScontoFinale(post('sconto_finale'), post('tipo_sconto_finale'));
+
+            $ordine->save();
+
+            if ($dbo->query($query)) {
+                $query = 'SELECT descrizione FROM or_statiordine WHERE id='.prepare($idstatoordine);
+                $rs = $dbo->fetchArray($query);
+
+                // Ricalcolo inps, ritenuta e bollo (se l'ordine non è stato evaso)
+                if ($dir == 'entrata') {
+                    if ($rs[0]['descrizione'] != 'Evaso') {
+                        ricalcola_costiagg_ordine($id_record);
+                    }
+                } else {
+                    if ($rs[0]['descrizione'] != 'Evaso') {
+                        ricalcola_costiagg_ordine($id_record, $idrivalsainps, $idritenutaacconto, $bollo);
+                    }
+                }
+
+                flash()->info(tr('Ordine modificato correttamente!'));
+            }
         }
 
         break;
@@ -177,6 +182,7 @@ switch (post('op')) {
 
         $articolo->costo_unitario = post('costo_unitario') ?: 0;
         $articolo->data_evasione = post('data_evasione') ?: null;
+        $articolo->ora_evasione = post('ora_evasione') ?: null;
         $articolo->confermato = post('confermato') ?: 0;
         $articolo->setPrezzoUnitario(post('prezzo_unitario'), post('idiva'));
         $articolo->setSconto(post('sconto'), post('tipo_sconto'));
@@ -191,16 +197,17 @@ switch (post('op')) {
 
         // Impostare data evasione su tutte le righe
         if (post('data_evasione_all') == 1) {
-            $righe = $ordine->getRighe();
+            $righe = $ordine->getRighe()->where('is_descrizione', '=', '0');
 
             foreach ($righe as $riga) {
                 $riga->data_evasione = post('data_evasione') ?: null;
+                $riga->ora_evasione = post('ora_evasione') ?: null;
                 $riga->save();
             }
         }
         // Impostare confermato su tutte le righe
         if (post('confermato_all') == 1) {
-            $righe = $ordine->getRighe();
+            $righe = $ordine->getRighe()->where('is_descrizione', '=', '0');
 
             foreach ($righe as $riga) {
                 $riga->confermato = post('confermato') ?: 0;
@@ -254,6 +261,7 @@ switch (post('op')) {
 
         $riga->costo_unitario = post('costo_unitario') ?: 0;
         $riga->data_evasione = post('data_evasione') ?: null;
+        $riga->ora_evasione = post('ora_evasione') ?: null;
         $riga->confermato = post('confermato') ?: 0;
         $riga->setPrezzoUnitario(post('prezzo_unitario'), post('idiva'));
         $riga->setSconto(post('sconto'), post('tipo_sconto'));
@@ -261,6 +269,26 @@ switch (post('op')) {
         $riga->qta = post('qta');
 
         $riga->save();
+
+        // Impostare data evasione su tutte le righe
+        if (post('data_evasione_all') == 1) {
+            $righe = $ordine->getRighe()->where('is_descrizione', '=', '0');
+
+            foreach ($righe as $riga) {
+                $riga->data_evasione = post('data_evasione') ?: null;
+                $riga->ora_evasione = post('ora_evasione') ?: null;
+                $riga->save();
+            }
+        }
+        // Impostare confermato su tutte le righe
+        if (post('confermato_all') == 1) {
+            $righe = $ordine->getRighe()->where('is_descrizione', '=', '0');
+
+            foreach ($righe as $riga) {
+                $riga->confermato = post('confermato') ?: 0;
+                $riga->save();
+            }
+        }
 
         if (post('idriga') != null) {
             flash()->info(tr('Riga modificata!'));
@@ -371,11 +399,20 @@ switch (post('op')) {
             $ordine->codice_cup = $documento->codice_cup;
             $ordine->codice_cig = $documento->codice_cig;
             $ordine->num_item = $documento->num_item;
+            $ordine->idreferente = $documento->idreferente;
 
             $ordine->save();
 
             $id_record = $ordine->id;
         }
+
+        if (!empty($documento->sconto_finale)) {
+            $ordine->sconto_finale = $documento->sconto_finale;
+        } elseif (!empty($documento->sconto_finale_percentuale)) {
+            $ordine->sconto_finale_percentuale = $documento->sconto_finale_percentuale;
+        }
+
+        $ordine->save();
 
         $righe = $documento->getRighe();
         foreach ($righe as $riga) {
@@ -437,12 +474,90 @@ switch (post('op')) {
                 // Impostazione al prezzo di acquisto per Articoli
                 if ($copia->isArticolo()) {
                     $articolo = $copia->articolo;
-                    $fornitore = $articolo->dettaglioFornitore($anagrafica->id); // Informazioni del fornitore
-                    $copia->setPrezzoUnitario($fornitore ? $fornitore->prezzo_acquisto : $articolo->prezzo_acquisto, $copia->aliquota->id);
+
+                    $fornitore = DettaglioPrezzo::dettagli($riga->idarticolo, $anagrafica->id, $dir, $qta)->first();
+                    if(empty($fornitore)){
+                        $fornitore = DettaglioPrezzo::dettaglioPredefinito($riga->idarticolo, $anagrafica->id, $dir)->first(); 
+                    }
+
+                    $prezzo_unitario = $fornitore->prezzo_unitario-($fornitore->prezzo_unitario*$fornitore->percentuale/100);
+
+                    $copia->setPrezzoUnitario($fornitore ? $prezzo_unitario : $articolo->prezzo_acquisto, $copia->aliquota->id);
+                    $copia->setSconto($fornitore->sconto_percentuale ?: 0, 'PRC');
                 }
 
                 $copia->save();
             }
+        }
+
+        // Modifica finale dello stato
+        if (post('create_document') == 'on') {
+            $ordine->idstatoordine = post('id_stato');
+            $ordine->save();
+        }
+        
+        ricalcola_costiagg_ordine($id_record);
+
+        flash()->info(tr('Ordine _NUM_ aggiunto!', [
+            '_NUM_' => $ordine->numero,
+        ]));
+
+        break;
+
+    // Aggiunta di un ordine fornitore da un preventivo
+    case 'add_ordine_fornitore':
+        $preventivo = Preventivo::find(post('id_documento'));
+
+        // Creazione dell' ordine al volo
+        if (post('create_document') == 'on') {
+            $anagrafica = Anagrafica::find(post('idanagrafica'));
+            $tipo = Tipo::where('dir', $dir)->first();
+
+            $ordine = Ordine::build($anagrafica, $tipo, post('data'));
+            $ordine->save();
+
+            $id_record = $ordine->id;
+        }
+
+        $righe = $preventivo->getRighe();
+        foreach ($righe as $riga) {
+            if (post('evadere')[$riga->id] == 'on' and !empty(post('qta_da_evadere')[$riga->id])) {
+                $qta = post('qta_da_evadere')[$riga->id];
+
+                $copia = $riga->copiaIn($ordine, $qta, false);
+                $copia->save();
+
+                // Ripristino dei valori di default per campi potenzialmente impostati
+                $copia->original_id = null;
+                $copia->original_type = null;
+                $copia->qta = $qta;
+                $copia->qta_evasa = 0;
+                $copia->costo_unitario = 0;
+                $copia->setSconto(0, 'EUR');
+
+                // Impostazione al prezzo di acquisto per Articoli
+                if ($copia->isArticolo()) {
+                    $articolo = $copia->articolo;
+
+                    $fornitore = DettaglioPrezzo::dettagli($riga->idarticolo, $anagrafica->id, $dir, $qta)->first();
+                    if(empty($fornitore)){
+                        $fornitore = DettaglioPrezzo::dettaglioPredefinito($riga->idarticolo, $anagrafica->id, $dir)->first(); 
+                    }
+                    
+                    $prezzo_unitario = $fornitore->prezzo_unitario-($fornitore->prezzo_unitario*$fornitore->percentuale/100);
+
+                    $copia->setPrezzoUnitario($fornitore ? $prezzo_unitario : $articolo->prezzo_acquisto, $copia->aliquota->id);
+                    $copia->setSconto($fornitore->sconto_percentuale ?: 0, 'PRC');
+                }
+
+                $copia->save();
+            }
+        }
+
+        // Modifica finale dello stato
+        if (post('create_document') == 'on') {
+            $ordine->idstatoordine = post('id_stato');
+            $ordine->save();
         }
 
         ricalcola_costiagg_ordine($id_record);

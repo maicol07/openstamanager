@@ -148,6 +148,8 @@ $sconto = $preventivo->sconto;
 $totale_imponibile = abs($preventivo->totale_imponibile);
 $iva = abs($preventivo->iva);
 $totale = abs($preventivo->totale);
+$sconto_finale = $preventivo->getScontoFinale();
+$netto_a_pagare = $preventivo->netto;
 
 // Totale imponibile scontato
 echo '
@@ -211,6 +213,34 @@ echo '
             <td></td>
         </tr>';
 
+// SCONTO FINALE
+if (!empty($sconto_finale)) {
+    echo '
+        <tr>
+            <td colspan="5" class="text-right">
+                <b>'.tr('Sconto finale', [], ['upper' => true]).':</b>
+            </td>
+            <td class="text-right">
+                '.moneyFormat($sconto_finale, 2).'
+            </td>
+            <td></td>
+        </tr>';
+}
+
+// NETTO A PAGARE
+if ($totale != $netto_a_pagare) {
+    echo '
+        <tr>
+            <td colspan="5" class="text-right">
+                <b>'.tr('Netto a pagare', [], ['upper' => true]).':</b>
+            </td>
+            <td class="text-right">
+                '.moneyFormat($netto_a_pagare, 2).'
+            </td>
+            <td></td>
+        </tr>';
+}
+
 // Margine
 $margine = $preventivo->margine;
 $margine_class = ($margine <= 0 and $preventivo->totale > 0) ? 'danger' : 'success';
@@ -251,16 +281,14 @@ async function modificaRiga(button) {
     let type = riga.data("type");
 
     // Salvataggio via AJAX
-    let valid = await salvaForm(button, $("#edit-form"));
+    await salvaForm("#edit-form", {}, button);
 
-    if (valid) {
-        // Chiusura tooltip
-        if ($(button).hasClass("tooltipstered"))
-            $(button).tooltipster("close");
+    // Chiusura tooltip
+    if ($(button).hasClass("tooltipstered"))
+        $(button).tooltipster("close");
 
-        // Apertura modal
-        openModal("'.tr('Modifica riga').'", "'.$module->fileurl('row-edit.php').'?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&riga_id=" + id + "&riga_type=" + type);
-    }
+    // Apertura modal
+    openModal("'.tr('Modifica riga').'", "'.$module->fileurl('row-edit.php').'?id_module=" + globals.id_module + "&id_record=" + globals.id_record + "&riga_id=" + id + "&riga_type=" + type);
 }
 
 function rimuoviRiga(button) {
@@ -305,7 +333,7 @@ $(document).ready(function() {
 			dropOnEmpty: true,
 			scroll: true,
 			update: function(event, ui) {
-                let order = $(".table tr[data-id]").toArray().map(a => $(a).data("id"))
+                let order = $(".table .sortable tr[data-id]").toArray().map(a => $(a).data("id"))
 
 				$.post(globals.rootdir + "/actions.php", {
 					id: ui.item.data("id"),

@@ -154,7 +154,7 @@ switch (post('op')) {
             $intervento->id_preventivo = post('idpreventivo');
             $intervento->id_contratto = post('idcontratto');
             $intervento->id_ordine = post('idordine');
-            $intervento->richiesta = post('richiesta_add');
+            $intervento->richiesta = post('richiesta');
             $intervento->idsede_destinazione = $idsede_destinazione;
             $intervento->data_scadenza = $data_scadenza;
 
@@ -188,6 +188,10 @@ switch (post('op')) {
             }
         } else {
             $id_record = post('id_intervento');
+
+            $intervento = Intervento::find($id_record);
+            $intervento->richiesta = post('richiesta');
+            $intervento->save();
 
             $idcontratto = $dbo->fetchOne('SELECT idcontratto FROM co_promemoria WHERE idintervento = :id', [
                 ':id' => $id_record,
@@ -394,6 +398,7 @@ switch (post('op')) {
         break;
 
     // Aggiunta di un documento in ordine
+    case 'add_intervento':
     case 'add_documento':
         $class = post('class');
         $id_documento = post('id_documento');
@@ -413,14 +418,17 @@ switch (post('op')) {
         if (post('create_document') == 'on') {
             $stato = Stato::find(post('id_stato_intervento'));
             $tipo = TipoSessione::find(post('id_tipo_intervento'));
+            
+            $anagrafica = post('idanagrafica') ? Anagrafica::find(post('idanagrafica')) : $documento->anagrafica;
 
-            $intervento = Intervento::build($documento->anagrafica, $tipo, $stato, post('data'));
+            $intervento = Intervento::build($anagrafica, $tipo, $stato, post('data'));
             $intervento->idsede_destinazione = $id_sede;
 
             $intervento->id_documento_fe = $documento->id_documento_fe;
             $intervento->codice_cup = $documento->codice_cup;
             $intervento->codice_cig = $documento->codice_cig;
             $intervento->num_item = $documento->num_item;
+            $intervento->idreferente = $documento->idreferente;
 
             $intervento->save();
 
@@ -507,8 +515,8 @@ switch (post('op')) {
 
         $ore = 1;
 
-        $inizio = date('Y-m-d H:\0\0');
-        $fine = date_modify(date_create(date('Y-m-d H:\0\0')), '+'.$ore.' hours')->format('Y-m-d H:\0\0');
+        $inizio = post('orario_inizio') ?: date('Y-m-d H:\0\0');
+        $fine = post('orario_fine') ?: date_modify(date_create(date('Y-m-d H:\0\0')), '+'.$ore.' hours')->format('Y-m-d H:\0\0');
 
         add_tecnico($id_record, $id_tecnico, $inizio, $fine, $idcontratto);
         break;
